@@ -7,17 +7,17 @@ from pydantic import BaseModel, Field
 
 class DisplayConfig(BaseModel):
     screen_index: int = Field(default=1, description="Индекс целевого экрана")
-    width: int = Field(default=800, description="Ширина экрана 800px")
+    width: int = Field(default=1024, description="Ширина экрана 1024px")
     height: int = Field(default=600, description="Высота экрана 600px")
     target_fps: int = Field(default=60, description="Целевая кадровая частота")
     fallback_geometry: Tuple[int, int, int, int] = Field(
-        default=(1920, 0, 800, 600),
+        default=(2560, 833, 1024, 600),
         description="Резервные координаты при отсутствии физического 2-го экрана"
     )
 
 class LayoutConfig(BaseModel):
     sidebar_width: int = Field(default=80, description="Ширина сайдбара")
-    workspace_width: int = Field(default=720, description="Ширина рабочей области")
+    workspace_width: int = Field(default=944, description="Ширина рабочей области")
     button_size: int = Field(default=64, description="Размер кнопок сайдбара")
     button_margin: int = Field(default=8, description="Отступы кнопок")
     corner_radius: int = Field(default=12, description="Радиус скругления элементов")

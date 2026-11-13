@@ -33,11 +33,13 @@ class WindowManager:
                 return hwnd
             del self._cached_hwnds[process_name]
 
-        # Ищем PID процесса через psutil
+        # Ищем PID процесса через psutil (сравниваем с учетом регистра и без .exe)
         target_pids = set()
+        clean_target = process_name.lower().removesuffix(".exe")
         for proc in psutil.process_iter(['name', 'pid']):
             try:
-                if proc.info['name'] and proc.info['name'].lower() == process_name.lower():
+                pname = (proc.info['name'] or '').lower().removesuffix(".exe")
+                if pname == clean_target:
                     target_pids.add(proc.info['pid'])
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
@@ -49,16 +51,16 @@ class WindowManager:
 
         def enum_windows_callback(hwnd, _):
             nonlocal found_hwnd
-            if not win32gui.IsWindowVisible(hwnd):
-                return True
             try:
                 _, pid = win32process.GetWindowThreadProcessId(hwnd)
                 if pid in target_pids:
-                    # Проверяем, что окно имеет заголовок или размер
+                    # Проверяем размер окна
                     rect = win32gui.GetWindowRect(hwnd)
                     width = rect[2] - rect[0]
                     height = rect[3] - rect[1]
-                    if width > 100 and height > 100:
+                    title = win32gui.GetWindowText(hwnd)
+                    # Если окно имеет размеры или заголовок
+                    if (width > 80 and height > 80) or title:
                         found_hwnd = hwnd
                         return False
             except Exception:

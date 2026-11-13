@@ -8,10 +8,10 @@ from core.config import load_config, AppConfig
 @pytest.mark.unit
 def test_default_config_values():
     config = AppConfig()
-    assert config.display.width == 800
+    assert config.display.width == 1024
     assert config.display.height == 600
     assert config.layout.sidebar_width == 80
-    assert config.layout.workspace_width == 720
+    assert config.layout.workspace_width == 944
     assert config.stealth.enable_stealth_focus is True
     assert config.dimmer.night_mode_opacity == 0.85
 
@@ -33,4 +33,4 @@ def test_load_config_from_file(tmp_path):
 @pytest.mark.unit
 def test_load_nonexistent_config():
     cfg = load_config(Path("/nonexistent/path/config.json"))
-    assert cfg.display.width == 800
+    assert cfg.display.width == 1024

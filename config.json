@@ -1,14 +1,14 @@
 {
   "display": {
     "screen_index": 1,
-    "width": 800,
+    "width": 1024,
     "height": 600,
     "target_fps": 60,
-    "fallback_geometry": [1920, 0, 800, 600]
+    "fallback_geometry": [2560, 833, 1024, 600]
   },
   "layout": {
     "sidebar_width": 80,
-    "workspace_width": 720,
+    "workspace_width": 944,
     "button_size": 64,
     "button_margin": 8,
     "corner_radius": 12

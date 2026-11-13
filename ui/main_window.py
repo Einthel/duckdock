@@ -134,7 +134,7 @@ class MainWindow(QMainWindow):
 
         lbl_desc = QLabel(
             "Вкладка активна. Менеджер окон автоматически находит процесс по имени,\n"
-            "снимает рамки заголовка (WS_CAPTION) и бесшовно вписывает окно в зону 720x600.\n\n"
+            "снимает рамки заголовка (WS_CAPTION) и бесшовно вписывает окно в рабочую область.\n\n"
             "Если приложение не запущено, окно ожидает запуска в фоне."
         )
         lbl_desc.setStyleSheet("color: #94a3b8; font-size: 13px; line-height: 1.4;")
@@ -159,12 +159,13 @@ class MainWindow(QMainWindow):
         hwnd = self.window_manager.find_window_by_process_name(process_name)
         if hwnd:
             self.window_manager.strip_window_decorations(hwnd)
-            # Вписываем в координаты: глобальный X окна + 80px, глобальный Y, W: 720, H: 600
-            wx = self.x() + self.config.layout.sidebar_width
+            # Вписываем в координаты: глобальный X окна + ширина сайдбара, Y окна, остаток ширины, высота
+            sidebar_w = self.config.layout.sidebar_width
+            wx = self.x() + sidebar_w
             wy = self.y()
-            self.window_manager.tile_window(
-                hwnd, (wx, wy, self.config.layout.workspace_width, self.config.display.height)
-            )
+            ww = max(100, self.width() - sidebar_w)
+            wh = self.height()
+            self.window_manager.tile_window(hwnd, (wx, wy, ww, wh))
 
     def _on_dimmer_toggle(self):
         self.dimmer.toggle(self.config.dimmer.night_mode_opacity)
@@ -173,7 +174,7 @@ class MainWindow(QMainWindow):
         self.focus_guardian.input_lock_mode = locked
 
     def reposition_to_subscreen(self):
-        """Определить координаты 7" экрана и переместить окно туда."""
+        """Определить координаты экрана и адаптировать размеры окна под целевой монитор."""
         screens = QGuiApplication.screens()
         target_screen: Optional[QScreen] = None
 
@@ -187,12 +188,26 @@ class MainWindow(QMainWindow):
 
         if target_screen:
             geom = target_screen.geometry()
-            # Обновляем координаты для защитника фокуса
-            self.focus_guardian.subscreen_rect = (geom.x(), geom.y(), geom.width(), geom.height())
-            self.move(geom.x(), geom.y())
+            target_x = geom.x()
+            target_y = geom.y()
+            target_w = geom.width()
+            target_h = geom.height()
         else:
             fb = self.config.display.fallback_geometry
-            self.move(fb[0], fb[1])
+            target_x, target_y, target_w, target_h = fb
+
+        # Адаптируем размер окна и рабочей зоны
+        self.focus_guardian.subscreen_rect = (target_x, target_y, target_w, target_h)
+        self.setFixedSize(target_w, target_h)
+        self.move(target_x, target_y)
+
+        # Рабочая зона занимает всю ширину за вычетом сайдбара
+        sidebar_w = self.config.layout.sidebar_width
+        workspace_w = max(100, target_w - sidebar_w)
+        self.workspace.setFixedSize(workspace_w, target_h)
+
+        if hasattr(self, "dimmer"):
+            self.dimmer.setGeometry(0, 0, target_w, target_h)
 
     def _apply_stealth_winapi(self):
         """Применить WS_EX_NOACTIVATE через WinAPI."""
