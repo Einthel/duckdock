@@ -28,6 +28,10 @@ class EventBus(QObject):
     # Внешние окна
     external_window_tiled = Signal(str, int)  # app_name, hwnd
 
+    # Аудиомикшер
+    master_volume_changed = Signal(float, bool)  # level (0.0-1.0), is_muted
+    session_volume_changed = Signal(int, float, bool)  # pid, level (0.0-1.0), is_muted
+
     # События тача и фокуса
     touch_detected = Signal(int, int)  # x, y на 2-м экране
     primary_focus_lost = Signal(int)   # hwnd потерявшего фокус окна на основном экране

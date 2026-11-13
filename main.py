@@ -20,7 +20,8 @@ os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = (
     "--enable-gpu-rasterization "
     "--enable-zero-copy "
     "--disable-gpu-compositing "
-    "--disable-features=UseEcoQoSForBackgroundProcess"
+    "--disable-features=UseEcoQoSForBackgroundProcess,WebGPU "
+    "--disable-webgpu"
 )
 
 # 3. Импорты PySide6
@@ -31,7 +32,7 @@ from core.config import load_config
 from ui.main_window import MainWindow
 
 def main():
-    print("[*] Запуск DuckDock / TouchWM v0.1.0...")
+    print("[*] Запуск DuckDock / TouchWM v0.1.3...")
     
     # Создание приложения Qt
     app = QApplication(sys.argv)

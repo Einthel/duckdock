@@ -20,6 +20,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+*.zip
 
 # Virtual Environment
 .venv/
@@ -49,3 +50,4 @@ Desktop.ini
 # Local overrides
 .env
 local_config.json
+.serena/
