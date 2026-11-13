@@ -116,21 +116,44 @@ flowchart TD
 
 ### Спринт 4: Полнофункциональный медиахаб YouTube на iGPU (P1)
 
-* **Цель:** Энергоэффективный медиаплеер с изоляцией на iGPU, блокировкой рекламы и крупными тач-контролами.
+* **Цель:** Энергоэффективный медиаплеер с изоляцией на iGPU, постоянным профилем Google, защитой от зависания плеера при блокировке рекламы, кастомной тач-темой под 944×600 и сквозным управлением треками.
 
-1. **Постоянный профиль Chromium и кэш**:
-   - Создание изолированного `QWebEngineProfile` с хранением cookies и кэша в `%LOCALAPPDATA%/DuckDock/web_profile` (сохранение авторизации Google).
+1. **Постоянный профиль Chromium и обход Google Auth Block (`core/web_profile.py`)**:
+   - Создание синглтона `WebProfileManager` с путями в `%LOCALAPPDATA%/DuckDock/web_profile/storage` и `.../cache`.
+   - Настройка `QWebEngineProfile.HttpCacheType.DiskHttpCache` с жестким лимитом `256 МБ` (`setHttpCacheMaximumSize(256 * 1024 * 1024)`).
+   - Подмена `User-Agent` на чистый десктопный Chrome (Windows x64) для исключения ошибки авторизации Google *"This browser or app may not be secure"*.
+   - Включение `PlaybackRequiresUserGesture = False` для бесшовного автовоспроизведения.
 
-2. **Блокировщик рекламы (`core/web_interceptor.py`)**:
-   - Перехватчик URL-запросов `QWebEngineUrlRequestInterceptor` для блокировки рекламных скриптов, трекеров и видеовставок (`googlesyndication`, `doubleclick`, рекламные домены).
+2. **Двухуровневый блокировщик рекламы (`core/web_interceptor.py` + JS-сторож)**:
+   - **Сетевой уровень (`AdBlockInterceptor`)**: перехват `QWebEngineUrlRequestInterceptor`, отсекающий баннерные и трекерные домены (`googlesyndication.com`, `doubleclick.net`, `googleadservices.com`, `youtube.com/api/stats/ads`, `play.google.com/log`).
+   - **DOM/JS уровень (`resources/js/ytm_touch_adblock.js`)**: предотвращение черного экрана/зависания плеера:
+     - Наблюдение через `MutationObserver` за появлением `.ad-showing`.
+     - Принудительная перемотка видеорекламы (`video.currentTime = video.duration`) и ускорение `playbackRate = 16.0`.
+     - Автоклик по кнопкам пропуска `.ytp-ad-skip-button`, `.ytp-ad-skip-button-modern`.
+     - Автоудаление промо-баннеров (`ytmusic-mealbar-promo-renderer`, диалоги Premium).
 
-3. **Touch CSS/JS Injection**:
-   - Автоматическая инжекция пользовательских стилей (`QWebEngineScript`):
-     - Увеличение элементов управления воспроизведением, прогресс-бара и кнопок навигации.
-     - Скрытие лишних полей и шапок, оптимизация под разрешение 1024×600 / 800×600.
+3. **Touch UI Injection под геометрию 944×600 (`resources/css/ytm_touch_theme.css`)**:
+   - Инжекция через `QWebEngineScript` на этапе `DocumentReady`:
+     - Полное скрытие верхней навигационной панели (`ytmusic-nav-bar`) для освобождения вертикального пространства.
+     - Увеличение высоты панели плеера (`ytmusic-player-bar`) до 84px с темным фоном `#0f1117`.
+     - Кнопка воспроизведения/паузы увеличена до 64×64px (scale 1.3), кнопки Prev/Next — 48×48px.
+     - Полоса прогресса (`#progress-bar`, `tp-yt-paper-slider`) расширена до 14px с крупным ползунком 24×24px.
+     - Автоматическое подавление диалогов неактивности (`ytmusic-you-there-renderer`).
 
-4. **Системный Media Overlay (SMTC)**:
-   - Подключение `winsdk.windows.media.control` (Windows Media Control) для отображения глобального статуса воспроизведения (название трека, исполнитель, кнопки ⏮ / ⏯ / ⏭) поверх любого окна.
+4. **Сквозной Mini Media Bar в Сайдбаре (`ui/sidebar.py`, `core/event_bus.py`)**:
+   - Двунаправленный мост между страницей YouTube Music и оболочкой через `runJavaScript` / `EventBus`:
+     - Снятие названия трека и исполнителя (`.title.ytmusic-player-bar`, `.byline.ytmusic-player-bar`).
+     - Сигналы `bus.media_state_changed` и `bus.media_action_requested` (`toggle_play`, `next`, `prev`).
+   - Компактный сенсорный блок в нижней части сайдбара (ширина 80px): название трека бегущей строкой + крупные кнопки ⏮ ⏯ ⏭.
+   - Строгий инвариант `Qt.NoFocus` на всех кнопках управления плеером для сохранения фокуса на основном экране 27".
+
+5. **Этапы реализации и критерии приемки**:
+   - **4.1**: `core/web_profile.py` — профиль, кэш 256МБ, UA Chrome, тест сохранения cookies.
+   - **4.2**: `core/web_interceptor.py` — блокировка сетевых ad-запросов.
+   - **4.3**: `resources/css/ytm_touch_theme.css` + `resources/js/ytm_touch_adblock.js` — стили и авто-скип.
+   - **4.4**: Интеграция в `ui/modules/youtube_view.py`.
+   - **4.5**: Интеграция `MiniMediaBar` в `ui/sidebar.py` с сохранением Stealth Focus.
+   - **4.6**: Модульные тесты профиля и интерцептора в `tests/unit/test_web_profile.py`.
 
 ---
 
