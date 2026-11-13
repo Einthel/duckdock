@@ -1,0 +1,42 @@
+{
+  "display": {
+    "screen_index": 1,
+    "width": 800,
+    "height": 600,
+    "target_fps": 60,
+    "fallback_geometry": [1920, 0, 800, 600]
+  },
+  "layout": {
+    "sidebar_width": 80,
+    "workspace_width": 720,
+    "button_size": 64,
+    "button_margin": 8,
+    "corner_radius": 12
+  },
+  "stealth": {
+    "enable_stealth_focus": true,
+    "anti_cursor_warp": true,
+    "focus_restore_delay_ms": 80,
+    "cursor_restore_delay_ms": 25,
+    "lock_input_mode": false
+  },
+  "dimmer": {
+    "default_opacity": 0.0,
+    "night_mode_opacity": 0.85,
+    "step": 0.05
+  },
+  "tracked_apps": [
+    {
+      "name": "happ",
+      "process_name": "happ.exe",
+      "tab_index": 2,
+      "auto_tile": true
+    },
+    {
+      "name": "aida64",
+      "process_name": "aida64.exe",
+      "tab_index": 1,
+      "auto_tile": false
+    }
+  ]
+}

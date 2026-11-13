@@ -1,0 +1,44 @@
+"""
+Централизованная шина событий (EventBus) для слабой связанности компонентов.
+Основана на сигналах PySide6 QtCore.QObject.
+"""
+from typing import Any, Dict, Tuple
+from PySide6.QtCore import QObject, Signal
+
+class EventBus(QObject):
+    """
+    Синглтон шины событий DuckDock.
+    Обеспечивает слабую связанность между UI, сервисами WinAPI и датчиками.
+    """
+    _instance = None
+
+    # Навигация и переключение вкладок
+    tab_changed = Signal(int)  # index страницы (0: Media, 1: Sensors, 2: External/happ, 3: Audio, 4: Showcase)
+
+    # Управление яркостью (Dimmer)
+    dimmer_opacity_changed = Signal(float)  # 0.0 - 0.95
+    dimmer_toggle_requested = Signal()
+
+    # Режим ввода текста / Stealth Focus
+    input_lock_toggled = Signal(bool)  # True = lock input (disable stealth), False = stealth on
+
+    # Телеметрия датчиков
+    sensors_updated = Signal(dict)  # {"cpu_temp": 45, "gpu_temp": 50, ...}
+
+    # Внешние окна
+    external_window_tiled = Signal(str, int)  # app_name, hwnd
+
+    # События тача и фокуса
+    touch_detected = Signal(int, int)  # x, y на 2-м экране
+    primary_focus_lost = Signal(int)   # hwnd потерявшего фокус окна на основном экране
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(EventBus, cls).__new__(cls)
+        return cls._instance
+
+    def __init__(self):
+        super().__init__()
+
+# Глобальный экземпляр
+bus = EventBus()
