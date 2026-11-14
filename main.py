@@ -16,12 +16,14 @@ from core.dpi import init_dpi_awareness
 init_dpi_awareness()
 
 # 2. Настройка Chromium флагов под легковесный рендеринг на iGPU (AMD Radeon Graphics)
+# и обход детекции автоматизации WebEngine в Google Accounts
 os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = (
     "--enable-gpu-rasterization "
     "--enable-zero-copy "
     "--disable-gpu-compositing "
     "--disable-features=UseEcoQoSForBackgroundProcess,WebGPU "
-    "--disable-webgpu"
+    "--disable-webgpu "
+    "--disable-blink-features=AutomationControlled"
 )
 
 # 3. Импорты PySide6
@@ -32,7 +34,7 @@ from core.config import load_config
 from ui.main_window import MainWindow
 
 def main():
-    print("[*] Запуск DuckDock / TouchWM v0.1.3...")
+    print("[*] Запуск DuckDock / TouchWM v0.1.5...")
     
     # Создание приложения Qt
     app = QApplication(sys.argv)

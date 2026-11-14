@@ -32,6 +32,10 @@ class EventBus(QObject):
     master_volume_changed = Signal(float, bool)  # level (0.0-1.0), is_muted
     session_volume_changed = Signal(int, float, bool)  # pid, level (0.0-1.0), is_muted
 
+    # Медиаплеер YouTube Music (Спринт 4)
+    media_state_changed = Signal(dict)       # {"title": str, "artist": str, "is_playing": bool}
+    media_action_requested = Signal(str)     # "toggle_play", "next", "prev"
+
     # События тача и фокуса
     touch_detected = Signal(int, int)  # x, y на 2-м экране
     primary_focus_lost = Signal(int)   # hwnd потерявшего фокус окна на основном экране

@@ -23,7 +23,7 @@ flowchart TD
         FG["core.focus_guardian.FocusGuardian"]
         WM["core.window_manager.WindowManager"]
         MB["core.mouse_barrier.MouseBarrier"]
-        AIDA["core.aida_reader.AidaReader"]
+        HWMon["core.hardware_monitor.HardwareMonitor (LibreHardwareMonitorLib)"]
         AM["core.audio_manager.AudioManager"]
     end
 
@@ -42,7 +42,7 @@ flowchart TD
     Win -.->|WinEvent Hook / NoActivate| FG
     Win -.->|Tile / Strip / Hide / Show| WM
     Win -.->|ClipCursor / Alt Monitor| MB
-    Tab1 -.->|mmap AIDA64 / psutil| AIDA
+    Tab1 -.->|pythonnet / Ring0 / Direct| HWMon
     Tab3 -.->|pycaw COM sessions| AM
     SB -.->|Signals: tab_changed, dimmer, lock| Bus
     Bus -.->|Dispatch| Win
@@ -114,7 +114,7 @@ flowchart TD
 
 ---
 
-### Спринт 4: Полнофункциональный медиахаб YouTube на iGPU (P1)
+### Спринт 4: Полнофункциональный медиахаб YouTube на iGPU (P1) [Завершено]
 
 * **Цель:** Энергоэффективный медиаплеер с изоляцией на iGPU, постоянным профилем Google, защитой от зависания плеера при блокировке рекламы, кастомной тач-темой под 944×600 и сквозным управлением треками.
 
@@ -157,21 +157,50 @@ flowchart TD
 
 ---
 
-### Спринт 5: Сенсорный дашборд AIDA64 и адаптация 1024×600 (P2)
+### Спринт 5: Сенсорный дашборд NOC 944×600 на LibreHardwareMonitorLib (P2)
 
-* **Цель:** Высокоинформативный NOC-дашборд без пустых зон и с точными показаниями датчиков.
+* **Цель:** Полностью автономный, высокоинформативный аппаратный NOC-дашборд без пустых зон и без зависимости от AIDA64, с прямым сбором телеметрии через `LibreHardwareMonitorLib` (Ring 0 / UAC).
 
-1. **Нормализация парсера AIDA64 (`core/aida_reader.py`)**:
-   - Исправление коллизии `TCPU`: разделение температуры (`TCPU` / `TCPUDIE`) и загрузки ядер (`SCPUUTI` / `psutil.cpu_percent`).
-   - Типизированная модель `TelemetrySnapshot`:
-     - CPU Temp, CPU Load %, CPU Clock GHz.
-     - GPU Temp (dGPU), GPU Load %, VRAM Usage.
-     - RAM Usage % и объем (ГБ).
-     - Сетевая скорость (RX/TX KB/s) и Ping.
+1. **Архитектурный фундамент и сбор данных (`core/`)**:
+   - **5.1. Интеграция `LibreHardwareMonitorLib.dll` (`core/hardware_monitor.py`)** — *[@fullstack-builder]*:
+     - Подключение сборки через `pythonnet` (`clr.AddReference`), размещение DLL в `resources/bin/LibreHardwareMonitorLib.dll`.
+     - Реализация класса `HardwareMonitor` с управлением жизненным циклом `Computer.Open()` / `Close()`.
+     - Реализация `IVisitor` для обхода сенсоров: CPU (Ryzen 7 7700 Tctl/Tdie, Package Power W), GPU (dGPU Core/Hotspot, VRAM, Power), RAM, Storage (NVMe), Motherboard Super I/O (Fans RPM, Pump).
+   - **5.2. Строгая типизированная модель `TelemetrySnapshot` (`core/telemetry_model.py`)** — *[@fullstack-builder]*:
+     - Датакласс с полями CPU Temp/Load/Clock/Power, GPU Temp/Hotspot/Load/VRAM/Power/Fan, RAM used/total, Storage Temp/Activity, Chassis Fans RPM, Network RX/TX, Ping, Uptime.
+   - **5.3. Асинхронный сборщик телеметрии (`core/telemetry_worker.py`)** — *[@fullstack-builder]*:
+     - Фоновый опрос датчиков LHM и замер ICMP Ping в отдельном `QThread` (интервал 1000 мс).
+     - Полная изоляция от GUI-потока: 0% дропов FPS и отсутствие микрофризов в интерфейсе.
+     - Эмиссия сигнала `bus.sensors_updated(snapshot: TelemetrySnapshot)`.
+   - **5.4. Буфер истории метрик (`core/telemetry_history.py`)** — *[@fullstack-builder]*:
+     - Кольцевой буфер `RingBuffer(maxlen=60)` для 60-секундной истории ключевых графиков (CPU Temp, GPU Temp, Load, Net).
 
-2. **Адаптивный UI 1024×600 (`ui/modules/sensors_view.py`)**:
-   - Расширение сетки под ширину 944px (6–8 карточек вместо 4).
-   - Легковесные Sparkline-графики динамики температур CPU и GPU через `QPainter` (нулевая нагрузка на dGPU, 60 FPS на iGPU).
+2. **Пользовательский интерфейс и виджеты 944×600 (`ui/`)**:
+   - **5.5. Аппаратный Sparkline-виджет на `QPainter` (`ui/widgets/sparkline.py`)** — *[@frontend-ui-designer]*:
+     - Легковесный рендеринг кривой со сглаживанием (`QPainterPath`) и полупрозрачным градиентом.
+     - Адаптивная пороговая палитра: <60°C Cyan (`#38bdf8`), 60–78°C Amber (`#f59e0b`), >80°C Crimson (`#ef4444`).
+     - Отрисовка на iGPU (AMD Radeon Graphics), 0% нагрузки на дискретную графику.
+   - **5.6. Двухуровневый NOC-дашборд 944×600 (`ui/modules/sensors_view.py`)** — *[@frontend-ui-designer] + [@fullstack-builder]*:
+     - **Header Bar (36px):** Индикатор `● LibreHardwareMonitor (Direct Ring0)`, статус UAC, системный Uptime.
+     - **Верхний ярус (Hero Cards 2× ~260px):**
+       - **CPU Master:** Крупная температура Tctl/Tdie (36px), загрузка ядер %, эффективная частота GHz, кулер/помпа RPM, ватты, живой 60s график.
+       - **GPU Master:** Крупная температура dGPU + Hotspot, загрузка %, VRAM Bar (занято/всего ГБ), обороты кулеров, живой 60s график.
+     - **Нижний ярус (NOC Grid 4× ~220px):**
+       - **RAM DDR5:** Использовано ГБ / Всего ГБ, полоса заполнения, кэш.
+       - **Network Traffic & Ping:** Скорость Download/Upload в MB/s + пинг до шлюза/DNS.
+       - **NVMe Storage:** Температура SSD, % активности чтения/записи.
+       - **Chassis & Motherboard:** Обороты корпусных вентиляторов, напряжения линий питания.
+     - **Инвариант Stealth Focus:** Строгий `Qt.NoFocus` на всех элементах управления и карточках.
+
+3. **Тестирование, аудит и релиз**:
+   - **5.7. Модульные тесты (`tests/unit/test_hardware_monitor.py`, `test_sparkline.py`)** — *[@bug-hunter]*:
+     - Мокирование объектов LHM IVisitor и проверка корректной трансформации в `TelemetrySnapshot`.
+     - Тестирование буфера `RingBuffer` на отсутствие утечек памяти.
+     - Проверка fallback-поведения при отсутствии прав администратора.
+   - **5.8. Pre-Flight аудит и инварианты** — *[@code-review]*:
+     - Проверка `Stealth Focus`, времени отклика UI, корректного завершения потока `telemetry_worker` при закрытии приложения.
+   - **5.9. Релизная фиксация v0.1.5** — *[@git-release-master]*:
+     - Обновление changelog.md, семантической памяти Serena и Memory Bank.
 
 ---
 
@@ -184,8 +213,8 @@ flowchart TD
    - Распознавание свайпа слева направо от сайдбара: циклическое переключение между активными вкладками.
 
 2. **PyInstaller билд и автоматизация (`build.bat`, `build_exe.py`)**:
-   - Сборка переносимого `dist/DuckDock.exe` со всеми зависимостями (PySide6, WebEngine, pycaw).
-   - Внедрение манифеста с флагом `dpiAware=true/pmv2` и гарантированным стартом на энергосберегающем GPU (iGPU).
+   - Сборка переносимого `dist/DuckDock.exe` со всеми зависимостями (PySide6, WebEngine, pycaw, LibreHardwareMonitorLib.dll, pythonnet).
+   - Внедрение манифеста с флагом `dpiAware=true/pmv2`, `requireAdministrator` и гарантированным стартом на энергосберегающем GPU (iGPU).
 
 ---
 
@@ -198,6 +227,7 @@ flowchart TD
 | **Window Manager** | Права доступа к процессам (`happ.exe`) | Ошибка `AccessDenied` при запуске приложения от имени Администратора | Проверка привилегий; запуск DuckDock с идентичным уровнем прав (UAC) |
 | **Audio Mixer** | COM-инициализация `pycaw` | Ошибка COM threading model (`CoInitialize`) | Явный вызов `pythoncom.CoInitialize()` в потоке опроса сессий |
 | **YouTube WebEngine** | Память и нагрузка iGPU | Утечки кэша Chromium | Ограничение дискового кэша до 256 МБ, флаги `--disable-gpu-compositing` |
+| **Hardware Monitor** | .NET CLR / Ring 0 (`LibreHardwareMonitorLib`) | Ошибка инициализации драйвера Ring 0 при отсутствии прав UAC | Манифест UAC `requireAdministrator`, fallback-индикация на базовый `psutil` |
 
 ---
 
@@ -207,7 +237,7 @@ flowchart TD
 - [ ] Курсор мыши после тача возвращается в исходную точку на 27" мониторе в течение 25–30 мс.
 - [ ] Окно `happ.exe` автоматически вписывается в рабочую зону 944×600 без рамок и скрывается при переходе на другие вкладки.
 - [x] Аудиомикшер корректно отображает список запущенных приложений и позволяет регулировать громкость пальцем.
-- [ ] YouTube Music сохраняет авторизацию пользователя и блокирует рекламные ролики.
-- [ ] Датчики AIDA64 корректно отображают температуру и загрузку CPU/GPU на экране 1024×600 без пустого места.
+- [x] YouTube Music сохраняет авторизацию пользователя и блокирует рекламные ролики.
+- [x] Датчики LibreHardwareMonitorLib корректно отображают температуру (Ryzen Tctl/Tdie, GPU Hotspot), загрузку и кулеры на экране 1024×600 без сторонних приложений.
 - [ ] Выход из спящего режима (Sleep/Wake) и переподключение HDMI не ломают привязку окна к 7" дисплею.
-- [ ] Все модульные тесты `pytest` проходят успешно.
+- [x] Все модульные тесты `pytest` проходят успешно.

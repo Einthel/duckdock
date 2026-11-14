@@ -363,6 +363,8 @@ class MainWindow(QMainWindow):
 
     def _cleanup(self):
         """Освобождение системных ресурсов WinAPI при выходе."""
+        if hasattr(self, "page_sensors") and hasattr(self.page_sensors, "cleanup"):
+            self.page_sensors.cleanup()
         if hasattr(self, "page_audio") and hasattr(self.page_audio, "poll_timer") and self.page_audio.poll_timer.isActive():
             self.page_audio.poll_timer.stop()
         if hasattr(self, "process_watcher"):
@@ -377,6 +379,10 @@ class MainWindow(QMainWindow):
             self.focus_guardian.stop_hook()
         except Exception:
             pass
+
+    def close(self):
+        self._cleanup()
+        return super().close()
 
     def closeEvent(self, event):
         self._cleanup()

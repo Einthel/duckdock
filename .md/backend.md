@@ -1,6 +1,6 @@
 # DuckDock / TouchWM: Архитектурная спецификация модулей
 
-> **Статус:** v0.1.3 (Актуальная спецификация)  
+> **Статус:** v0.1.5 (Актуальная спецификация)  
 > **Целевая среда:** Windows 10/11 x64, 27" Primary (dGPU) + 7" 1024×600 JRP7813S Touchscreen (iGPU AMD Radeon Graphics).
 
 ---
@@ -25,10 +25,20 @@ flowchart TD
         TF["core.touch_filter.TouchFilter"]
         AIDA["core.aida_reader.AidaReader"]
         AM["core.audio_manager.AudioManager"]
+        WP["core.web_profile.WebProfileManager"]
+        ABI["core.web_interceptor.AdBlockInterceptor"]
+        HM["core.hardware_monitor.HardwareMonitor (LHM Ring 0 / psutil)"]
+        TW["core.telemetry_worker.TelemetryWorker (QThread 1000ms)"]
+        TH["core.telemetry_history.TelemetryHistory & RingBuffer"]
+        TM["core.telemetry_model.TelemetrySnapshot"]
+        WP --> ABI
+        TW -->|Poll 1000ms| HM
+        TW -.->|Data Contract| TM
     end
 
     subgraph Presentation ["Графический интерфейс (UI Layer)"]
         Win --> SB["ui.sidebar.SidebarDock (80x600)"]
+        SB --> MMB["ui.sidebar.MiniMediaBar (64x54)"]
         Win --> Stack["QStackedWidget (944x600)"]
         Win --> Dimmer["ui.dimmer_overlay.DimmerOverlay"]
 
@@ -37,21 +47,73 @@ flowchart TD
         Stack --> Tab2["Happ.exe Tiling View (Вкладка 2)"]
         Stack --> Tab3["ui.modules.audio_view.AudioMixerView (Вкладка 3)"]
         Stack --> Tab4["ui.showcase_view.ShowcaseView (Вкладка 4)"]
+
+        Tab1 --> SPK["ui.widgets.sparkline.SparklineWidget (QPainter)"]
     end
 
     Win -.->|WS_EX_NOACTIVATE / WinEvent Hook| FG
     Win -.->|Tile / Strip / Hide / Show| WM
     Win -.->|ClipCursor / Screen Boundary| MB
     Win -.->|Touch Message Filter| TF
-    Tab1 -.->|mmap AIDA64 / psutil| AIDA
+    Tab0 -.->|QWebEnginePage / Scripts| WP
     Tab3 -.->|Windows Core Audio API| AM
+    Tab1 -.->|60s Metric Buffer| TH
+    TW -.->|Signal: snapshot_ready| Tab1
+    TW -.->|Signal: sensors_updated| Bus
     SB -.->|Signals: tab_changed, dimmer, lock| Bus
+    MMB -.->|Signals: media_action_requested| Bus
+    Tab0 -.->|Signals: media_state_changed| Bus
     Bus -.->|Dispatch| Win
 ```
 
 ---
 
 ## 2. Контракты ядра (Core Contracts)
+
+### `HardwareMonitor` (`core/hardware_monitor.py`)
+Аппаратный мониторинг датчиков через динамическую загрузку `LibreHardwareMonitorLib.dll` (CLR / pythonnet) с бесшовным fallback на `psutil`:
+* `open() -> bool`: Инициализация LHM `Computer`, активация датчиков CPU, GPU, RAM, Storage, Motherboard, Fan Controllers.
+* `close() -> None`: Безопасное освобождение неуправляемых ресурсов Ring 0 драйвера.
+* `get_telemetry() -> TelemetrySnapshot`: Комплексный опрос датчиков с нормализацией в строго типизированную модель `TelemetrySnapshot`.
+* `is_admin() -> bool`: Проверка повышенных привилегий Windows UAC (`IsUserAnAdmin`).
+* Приоритезация дискретного GPU (NVIDIA/AMD dGPU) над интегрированным iGPU.
+* Точный парсинг термодатчиков AMD Ryzen (`Tctl/Tdie`, `Core Max`) и Hotspot dGPU.
+
+### `TelemetryWorker` (`core/telemetry_worker.py`)
+Асинхронный рабочий поток опроса датчиков в изолированном `QThread`:
+* Интервал опроса по умолчанию 1000 мс (0% дропов кадров и микрофризов в интерфейсе).
+* `snapshot_ready = Signal(object)`: Передача готового `TelemetrySnapshot` в UI.
+* `measure_network_latency(hosts, timeout) -> float`: Неблокирующий замер сетевого пинга к DNS 1.1.1.1/8.8.8.8 через TCP:53 без привилегий RAW Sockets.
+* Публикация данных в глобальную шину `bus.sensors_updated(snapshot.to_dict())`.
+* Корректная остановка потока `stop()` с `wait()` при выходе из приложения.
+
+### `TelemetrySnapshot` (`core/telemetry_model.py`)
+Строго типизированная модель данных телеметрии (Dataclass / Pydantic):
+* Метрики CPU: `cpu_name`, `cpu_temp`, `cpu_load`, `cpu_clock`, `cpu_power`.
+* Метрики GPU: `gpu_name`, `gpu_temp`, `gpu_hotspot`, `gpu_load`, `gpu_vram_used`, `gpu_vram_total`, `gpu_power`, `gpu_fan_rpm`.
+* Метрики RAM: `ram_used_gb`, `ram_total_gb`, `ram_load_pct`.
+* Метрики Storage: `storage_name`, `storage_temp`, `storage_activity`.
+* Охлаждение: `cpu_fan_rpm`, `pump_rpm`, `chassis_fans_rpm: List[int]`, `vrm_temp`.
+* Сеть и статус: `net_rx_kbps`, `net_tx_kbps`, `ping_ms`, `uptime_seconds`, `is_lhm_active`, `is_admin`, `timestamp`.
+* Вспомогательные методы: `to_dict()`, `from_dict()`, `vram_pct`.
+
+### `TelemetryHistory` & `RingBuffer` (`core/telemetry_history.py`)
+Буфер скользящего окна метрик для построения графиков:
+* `RingBuffer(maxlen=60, default_value=None)`: Кольцевой буфер фиксированного объема на базе `collections.deque` ($O(1)$ вставка, без утечек памяти).
+* `TelemetryHistory(maxlen=60)`: Фасад управления историей ключевых метрик (`cpu_temp`, `cpu_load`, `gpu_temp`, `gpu_load`, `ram_load`, `net_rx`, `net_tx`, `ping`).
+* Методы `add_snapshot(snapshot: TelemetrySnapshot)` и получение списков для Sparkline `to_list()`.
+
+### `WebProfileManager` (`core/web_profile.py`)
+Синглтон управления изолированным постоянным профилем Chromium `QWebEngineProfile`:
+* `get_instance(base_dir=None) -> WebProfileManager`: Получение синглтона с путями в `%LOCALAPPDATA%/DuckDock/web_profile`.
+* `get_profile() -> Optional[QWebEngineProfile]`: Возвращает настроенный постоянный профиль (`ForcePersistentCookies`, кэш 256 МБ, User-Agent Chrome Desktop Windows x64).
+* Автоматическая инжекция CSS-темы `resources/css/ytm_touch_theme.css` и JS-сторожа `resources/js/ytm_touch_adblock.js` через `QWebEngineScript` (`DocumentReady`, `MainWorld`).
+
+### `AdBlockInterceptor` (`core/web_interceptor.py`)
+Сетевой фильтр сетевых запросов (`QWebEngineUrlRequestInterceptor`):
+* `interceptRequest(info: QWebEngineUrlRequestInfo) -> None`: Блокировка рекламных доменов и аналитических трекеров (`googlesyndication.com`, `doubleclick.net`, `googleadservices.com`, `google-analytics.com`, `adservice.google.com`, `/api/stats/ads`, `play.google.com/log`).
+* `is_blocked_url(url: str) -> bool`: Проверка сигнатур блокировки для произвольного URL.
+* `blocked_count: int`: Счетчик заблокированных сетевых вызовов.
 
 ### `AudioManager` (`core/audio_manager.py`)
 Потокобезопасный синглтон-фасад к Windows Core Audio API через `pycaw` и `comtypes`.
@@ -96,18 +158,35 @@ flowchart TD
 
 Централизованный диспетчер сигналов Qt:
 * `tab_changed = Signal(int)`: Переключение активной вкладки рабочего пространства (0–4).
-* `dimmer_toggled = Signal(bool)`: Включение/выключение сквозного затемнения.
-* `lock_requested = Signal()`: Запрос блокировки сенсорного экрана.
-* `audio_master_changed = Signal(float, bool)`: Оповещение об изменении общего звука `(volume, is_muted)`.
-* `audio_session_changed = Signal(int, float, bool)`: Изменение сессии процесса `(pid, volume, is_muted)`.
+* `dimmer_opacity_changed = Signal(float)`: Изменение прозрачности диммера (0.0 - 0.95).
+* `dimmer_toggle_requested = Signal()`: Запрос включения/выключения затемнения.
+* `input_lock_toggled = Signal(bool)`: Переключение режима ввода текста / Stealth Focus.
+* `sensors_updated = Signal(dict)`: Оповещение об обновлении аппаратной телеметрии (CPU, GPU, RAM, Storage, Fan, Network, Ping).
+* `external_window_tiled = Signal(str, int)`: Уведомление о тайлинге стороннего окна `(app_name, hwnd)`.
+* `master_volume_changed = Signal(float, bool)`: Оповещение об изменении общего звука `(volume, is_muted)`.
+* `session_volume_changed = Signal(int, float, bool)`: Изменение сессии процесса `(pid, volume, is_muted)`.
+* `media_state_changed = Signal(dict)`: Обновление метаданных трека и воспроизведения YouTube `{"title": str, "artist": str, "is_playing": bool}`.
+* `media_action_requested = Signal(str)`: Управление медиаплеером (`"toggle_play"`, `"next"`, `"prev"`).
+* `touch_detected = Signal(int, int)`: Координаты касания на втором экране `(x, y)`.
+* `primary_focus_lost = Signal(int)`: HWND окна основного экрана, потерявшего фокус.
 
 ---
 
 ## 4. Спецификация сенсорных компонентов UI (`ui/`)
 
 * **Главное окно (`ui/main_window.py`)**: Размер 1024×600, `Qt.FramelessWindowHint`, `Qt.WA_ShowWithoutActivating`, горизонтальный `QHBoxLayout` (сайдбар 80px + стек 944px).
-* **Сайдбар (`ui/sidebar.py`)**: Ширина 80px, сенсорные кнопки 64×64px с отступами, политика `Qt.NoFocus`.
-* **Сенсорный слайдер (`TouchSlider` в `ui/modules/audio_view.py`)**:
-  - `QSlider` с переопределенным `mousePressEvent`.
-  - Мгновенный расчет позиции через `QStyle.sliderValueFromPosition` (установка значения в 1 тач без перетаскивания).
+* **Сайдбар (`ui/sidebar.py`)**: Ширина 80px, сенсорные кнопки 64×60px с отступами, политика `Qt.NoFocus`.
+* **Mini Media Bar (`ui/sidebar.py`)**: Сквозной компактный плеер (64×54px), бегущая строка `MarqueeLabel`, кнопки ⏮ ⏯ ⏭ (`Qt.NoFocus`), клик по бару открывает вкладку YouTube.
+* **Сенсорный аудиомикшер (`ui/modules/audio_view.py`)**:
+  - Сенсорный слайдер `TouchSlider` (`QSlider` с мгновенным расчетом позиции `QStyle.sliderValueFromPosition`, `Qt.NoFocus`).
+  - Карточки аудиосессий с иконками `QFileIconProvider` и кнопками мгновенного Mute.
+* **Аппаратный NOC-дашборд 944×600 (`ui/modules/sensors_view.py`)**:
+  - Header Bar (36px): Статус `● LibreHardwareMonitor (Direct Ring0)` / `● Fallback psutil`, UAC бейдж, системный аптайм.
+  - Верхний ярус (Hero Cards 2× ~250px): Карточки CPU Master и GPU Master с крупными термоиндикаторами (36px), загрузкой, тактовой частотой, энергопотреблением, оборотами кулеров/помпы и живыми графиками Sparkline.
+  - Нижний ярус (NOC Grid 4× ~220px): Карточки RAM DDR5 (GB/ProgressBar/Sparkline), Network & Ping (MB/s / Ping ms / Sparkline), NVMe Storage (SSD Temp/Activity), Chassis & Motherboard (вентиляторы корпуса / VRM).
+  - Инвариант `Stealth Focus`: `Qt.NoFocus` на всех виджетах дашборда.
+* **Аппаратный Sparkline-виджет (`ui/widgets/sparkline.py`)**:
+  - Высокопроизводительный рендеринг кривых Безье `QPainterPath` с полупрозрачным градиентом `QLinearGradient`.
+  - Трехуровневая адаптивная цветовая шкала: Cyan (<60°C), Amber (60–78°C), Crimson (>=80°C).
+  - Маяк последней точки (Beacon dot) и сетка уровней, полная изоляция отрисовки на iGPU.
 * **Кинетическая прокрутка**: `QScroller.grabGesture(..., QScroller.LeftMouseButtonGesture)` во всех скролл-списках.

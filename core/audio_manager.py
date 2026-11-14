@@ -12,7 +12,7 @@ try:
     import comtypes
     from pycaw.pycaw import AudioUtilities
     PYCAW_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError, Exception):
     PYCAW_AVAILABLE = False
     AudioUtilities = None
 
