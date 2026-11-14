@@ -1,6 +1,7 @@
 """
 Модуль типизированной конфигурации DuckDock.
 """
+import sys
 from pathlib import Path
 from typing import List, Tuple
 from pydantic import BaseModel, Field
@@ -31,7 +32,7 @@ class StealthConfig(BaseModel):
 
 class DimmerConfig(BaseModel):
     default_opacity: float = Field(default=0.0, description="Начальная непрозрачность слоя")
-    night_mode_opacity: float = Field(default=0.85, description="Непрозрачность ночного режима")
+    night_mode_opacity: float = Field(default=0.50, description="Непрозрачность ночного режима")
     step: float = Field(default=0.05, description="Шаг регулировки яркости")
 
 class TrackedAppConfig(BaseModel):
@@ -50,7 +51,16 @@ class AppConfig(BaseModel):
 def load_config(config_path: Path | str | None = None) -> AppConfig:
     """Загрузить конфигурацию из файла config.json или вернуть дефолтную."""
     if config_path is None:
-        config_path = Path(__file__).resolve().parent.parent / "config.json"
+        if getattr(sys, "frozen", False):
+            exe_dir = Path(sys.executable).resolve().parent
+            if (exe_dir / "config.json").exists():
+                config_path = exe_dir / "config.json"
+            elif hasattr(sys, "_MEIPASS") and (Path(sys._MEIPASS) / "config.json").exists():
+                config_path = Path(sys._MEIPASS) / "config.json"
+            else:
+                config_path = Path(__file__).resolve().parent.parent / "config.json"
+        else:
+            config_path = Path(__file__).resolve().parent.parent / "config.json"
     else:
         config_path = Path(config_path)
 

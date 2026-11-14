@@ -48,8 +48,31 @@ class ShowcaseView(QWidget):
     def __init__(self, config=None, parent=None):
         super().__init__(parent)
         self.config = config
+        self.lbl_dimmer_status = None
         self.setStyleSheet(SHOWCASE_QSS)
         self._init_ui()
+        bus.dimmer_opacity_changed.connect(self._on_dimmer_opacity_changed)
+        self.destroyed.connect(self._on_destroyed)
+
+    def _on_destroyed(self, *args):
+        try:
+            bus.dimmer_opacity_changed.disconnect(self._on_dimmer_opacity_changed)
+        except Exception:
+            pass
+
+    def _on_dimmer_opacity_changed(self, opacity: float):
+        if opacity > 0.05:
+            self.btn_test_dimmer.setText(f"☀️ Выключить затемнение ({int(opacity * 100)}%)")
+            self.btn_test_dimmer.setStyleSheet("background-color: #f59e0b; color: #000000;")
+            if self.lbl_dimmer_status:
+                self.lbl_dimmer_status.setText(f"Активен ({int(opacity * 100)}%)")
+                self.lbl_dimmer_status.setStyleSheet("color: #f59e0b; font-size: 14px; font-weight: bold;")
+        else:
+            self.btn_test_dimmer.setText("🌙 Включить ночной режим (Диммер)")
+            self.btn_test_dimmer.setStyleSheet("")
+            if self.lbl_dimmer_status:
+                self.lbl_dimmer_status.setText("Выключен (0%)")
+                self.lbl_dimmer_status.setStyleSheet("color: #38bdf8; font-size: 14px; font-weight: bold;")
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
@@ -100,7 +123,7 @@ class ShowcaseView(QWidget):
         card_qol = self._create_card(
             "СЕРВИСНЫЕ ФУНКЦИИ (QoL)",
             [
-                ("Software Dimmer:", "0.0 - 0.95 (Transparent)"),
+                ("Software Dimmer:", "Выключен (0%)"),
                 ("Mouse Barrier:", "Alt Key Bypass"),
                 ("Display Hotplug:", "WM_DISPLAYCHANGE Listener"),
             ]
@@ -113,11 +136,11 @@ class ShowcaseView(QWidget):
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(10)
 
-        btn_test_dimmer = QPushButton("Тест Диммера (Ночной режим)")
-        btn_test_dimmer.setProperty("class", "test-btn")
-        btn_test_dimmer.setFocusPolicy(Qt.NoFocus)
-        btn_test_dimmer.clicked.connect(lambda: bus.dimmer_toggle_requested.emit())
-        btn_layout.addWidget(btn_test_dimmer)
+        self.btn_test_dimmer = QPushButton("🌙 Включить ночной режим (Диммер)")
+        self.btn_test_dimmer.setProperty("class", "test-btn")
+        self.btn_test_dimmer.setFocusPolicy(Qt.NoFocus)
+        self.btn_test_dimmer.clicked.connect(lambda: bus.dimmer_toggle_requested.emit())
+        btn_layout.addWidget(self.btn_test_dimmer)
 
         layout.addLayout(btn_layout)
         layout.addStretch()
@@ -138,6 +161,8 @@ class ShowcaseView(QWidget):
             lbl.setProperty("class", "diag-label")
             val = QLabel(val_text)
             val.setProperty("class", "diag-value")
+            if label_text == "Software Dimmer:":
+                self.lbl_dimmer_status = val
             row.addWidget(lbl)
             row.addStretch()
             row.addWidget(val)

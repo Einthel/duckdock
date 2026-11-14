@@ -13,7 +13,7 @@ def test_default_config_values():
     assert config.layout.sidebar_width == 80
     assert config.layout.workspace_width == 944
     assert config.stealth.enable_stealth_focus is True
-    assert config.dimmer.night_mode_opacity == 0.85
+    assert config.dimmer.night_mode_opacity == 0.50
 
 @pytest.mark.unit
 def test_load_config_from_file(tmp_path):
