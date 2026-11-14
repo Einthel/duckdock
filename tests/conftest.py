@@ -9,6 +9,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
+# Инициализация COM до старта QApplication для предотвращения RPC_E_CHANGED_MODE
+try:
+    import comtypes
+except Exception:
+    pass
+
 from PySide6.QtWidgets import QApplication
 
 @pytest.fixture(scope="session")

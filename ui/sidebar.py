@@ -1,8 +1,11 @@
 """
-Сайдбар управления DuckDock (80x600) с крупными кнопками 64x64 под касания пальцем.
+Сайдбар управления DuckDock (80x600) с крупными кнопками под касания пальцем
+и сквозным сенсорным Mini Media Bar для управления воспроизведением.
 """
-from PySide6.QtWidgets import QFrame, QVBoxLayout, QPushButton, QSpacerItem, QSizePolicy
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtWidgets import (
+    QFrame, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QSpacerItem, QSizePolicy
+)
+from PySide6.QtCore import Qt, QSize, QTimer
 from core.event_bus import bus
 
 SIDEBAR_QSS = """
@@ -37,6 +40,38 @@ QPushButton.sidebar-btn[active="true"] {
     border-color: #60a5fa;
 }
 
+/* Сквозной Mini Media Bar */
+QFrame#mini_media_bar {
+    background-color: #161b26;
+    border: 1px solid #232b3e;
+    border-radius: 10px;
+}
+
+QLabel#media_title {
+    color: #60a5fa;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 2px;
+}
+
+QPushButton.mini-media-btn {
+    background-color: #1e2430;
+    color: #cbd5e1;
+    border: 1px solid #2d3748;
+    border-radius: 6px;
+    font-size: 11px;
+}
+
+QPushButton.mini-media-btn:hover {
+    background-color: #2563eb;
+    color: #ffffff;
+    border-color: #60a5fa;
+}
+
+QPushButton.mini-media-btn:pressed {
+    background-color: #1d4ed8;
+}
+
 QPushButton.action-btn {
     background-color: #1e2430;
     color: #94a3b8;
@@ -57,6 +92,117 @@ QPushButton.action-btn[toggled_state="true"] {
 }
 """
 
+
+class MarqueeLabel(QLabel):
+    """Сенсорная метка с бегущей строкой названия трека."""
+
+    def __init__(self, text: str = "YouTube Music", parent=None):
+        super().__init__(text, parent)
+        self.setObjectName("media_title")
+        self.setAlignment(Qt.AlignCenter)
+        self.setFocusPolicy(Qt.NoFocus)
+        self._raw_text = text
+        self._offset = 0
+        self._timer = QTimer(self)
+        self._timer.setInterval(280)
+        self._timer.timeout.connect(self._on_tick)
+
+    def set_track_text(self, text: str):
+        self._raw_text = text or "YouTube Music"
+        self._offset = 0
+        if len(self._raw_text) > 8:
+            if not self._timer.isActive():
+                self._timer.start()
+            self._on_tick()
+        else:
+            self._timer.stop()
+            self.setText(self._raw_text)
+
+    def _on_tick(self):
+        if not self._raw_text:
+            return
+        if len(self._raw_text) <= 8:
+            self.setText(self._raw_text)
+            return
+        padded = self._raw_text + "   •   "
+        self._offset = (self._offset + 1) % len(padded)
+        self.setText(padded[self._offset:self._offset + 8])
+
+
+class MiniMediaBar(QFrame):
+    """
+    Компактный сенсорный медиабар в сайдбаре (ширина 64px).
+    Обеспечивает сквозное управление треками и отображение названия бегущей строкой.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setObjectName("mini_media_bar")
+        self.setFixedWidth(64)
+        self.setFixedHeight(54)
+        self.setFocusPolicy(Qt.NoFocus)
+
+        self._is_playing = False
+        self._init_ui()
+
+        # Подписка на изменение состояния медиаплеера
+        bus.media_state_changed.connect(self._on_media_state_changed)
+
+    def _init_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(2, 4, 2, 4)
+        layout.setSpacing(2)
+
+        # Название трека бегущей строкой
+        self.lbl_title = MarqueeLabel("YouTube", self)
+        layout.addWidget(self.lbl_title)
+
+        # Кнопки ⏮ ⏯ ⏭
+        btn_layout = QHBoxLayout()
+        btn_layout.setContentsMargins(0, 0, 0, 0)
+        btn_layout.setSpacing(2)
+
+        self.btn_prev = QPushButton("⏮")
+        self.btn_prev.setProperty("class", "mini-media-btn")
+        self.btn_prev.setFixedSize(QSize(18, 22))
+        self.btn_prev.setFocusPolicy(Qt.NoFocus)
+        self.btn_prev.clicked.connect(lambda: bus.media_action_requested.emit("prev"))
+        btn_layout.addWidget(self.btn_prev)
+
+        self.btn_play = QPushButton("▶")
+        self.btn_play.setProperty("class", "mini-media-btn")
+        self.btn_play.setFixedSize(QSize(22, 22))
+        self.btn_play.setFocusPolicy(Qt.NoFocus)
+        self.btn_play.clicked.connect(lambda: bus.media_action_requested.emit("toggle_play"))
+        btn_layout.addWidget(self.btn_play)
+
+        self.btn_next = QPushButton("⏭")
+        self.btn_next.setProperty("class", "mini-media-btn")
+        self.btn_next.setFixedSize(QSize(18, 22))
+        self.btn_next.setFocusPolicy(Qt.NoFocus)
+        self.btn_next.clicked.connect(lambda: bus.media_action_requested.emit("next"))
+        btn_layout.addWidget(self.btn_next)
+
+        layout.addLayout(btn_layout)
+
+    def _on_media_state_changed(self, state: dict):
+        title = state.get("title", "")
+        artist = state.get("artist", "")
+        is_playing = state.get("is_playing", False)
+
+        display_text = f"{title} - {artist}" if artist and title else (title or "YouTube")
+        self.lbl_title.set_track_text(display_text)
+
+        self._is_playing = is_playing
+        self.btn_play.setText("⏸" if is_playing else "▶")
+
+    def mousePressEvent(self, event):
+        """Быстрый переход на вкладку YouTube по касанию панели мини-бара."""
+        bus.tab_changed.emit(0)
+        if event is not None:
+            super().mousePressEvent(event)
+
+
 class SidebarDock(QFrame):
     """Сайдбар для сенсорного экрана 80x600."""
 
@@ -75,7 +221,7 @@ class SidebarDock(QFrame):
     def _init_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(8)
+        layout.setSpacing(6)
 
         # 1. YouTube / Media
         self.btn_yt = self._create_nav_button("▶", "YouTube & Media", 0)
@@ -98,23 +244,27 @@ class SidebarDock(QFrame):
         layout.addWidget(self.btn_showcase)
 
         # Распорка между навигацией и сервисными кнопками
-        layout.addSpacerItem(QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding))
+        layout.addSpacerItem(QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Expanding))
 
-        # 6. Lock Focus (Stealth vs Text Input)
+        # 6. Mini Media Bar (Сквозной плеер в сайдбаре)
+        self.mini_media_bar = MiniMediaBar(self)
+        layout.addWidget(self.mini_media_bar)
+
+        # 7. Lock Focus (Stealth vs Text Input)
         self.btn_lock = QPushButton("🔒")
         self.btn_lock.setObjectName("lock_toolB")
         self.btn_lock.setProperty("class", "action-btn")
-        self.btn_lock.setFixedSize(QSize(64, 64))
+        self.btn_lock.setFixedSize(QSize(64, 48))
         self.btn_lock.setFocusPolicy(Qt.NoFocus)
         self.btn_lock.setToolTip("Stealth Focus Mode (Click to allow keyboard input)")
         self.btn_lock.clicked.connect(self._toggle_input_lock)
         layout.addWidget(self.btn_lock)
 
-        # 7. Sleep / Dimmer
+        # 8. Sleep / Dimmer
         self.btn_dimmer = QPushButton("🌙")
         self.btn_dimmer.setObjectName("sleep_toolB")
         self.btn_dimmer.setProperty("class", "action-btn")
-        self.btn_dimmer.setFixedSize(QSize(64, 64))
+        self.btn_dimmer.setFixedSize(QSize(64, 48))
         self.btn_dimmer.setFocusPolicy(Qt.NoFocus)
         self.btn_dimmer.setToolTip("Toggle Screen Dimmer / Night Mode")
         self.btn_dimmer.clicked.connect(self._toggle_dimmer)
@@ -125,7 +275,7 @@ class SidebarDock(QFrame):
     def _create_nav_button(self, icon: str, tooltip: str, tab_index: int) -> QPushButton:
         btn = QPushButton(icon)
         btn.setProperty("class", "sidebar-btn")
-        btn.setFixedSize(QSize(64, 64))
+        btn.setFixedSize(QSize(64, 60))
         btn.setFocusPolicy(Qt.NoFocus)
         btn.setToolTip(tooltip)
         btn.clicked.connect(lambda: self._on_tab_clicked(tab_index))
