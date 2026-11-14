@@ -82,7 +82,7 @@ class MainWindow(QMainWindow):
         if self.config.stealth.enable_stealth_focus:
             self.focus_guardian.start_hook()
 
-        # 2. Инициализация Touch Event Filter (Anti-Cursor Warp)
+        # 2. Инициализация Touch Event Filter & Swipe Engine
         if self.config.stealth.anti_cursor_warp:
             self.touch_filter = TouchCursorFilter(self.focus_guardian, self)
             qapp = QApplication.instance()
@@ -116,11 +116,13 @@ class MainWindow(QMainWindow):
             | Qt.WindowStaysOnTopHint
         )
         self.setAttribute(Qt.WA_ShowWithoutActivating, True)
+        self.setAttribute(Qt.WA_AcceptTouchEvents, True)
         self.setFixedSize(self.config.display.width, self.config.display.height)
         self.setStyleSheet(MAIN_QSS)
 
     def _init_ui(self):
         self.central_widget = QWidget(self)
+        self.central_widget.setAttribute(Qt.WA_AcceptTouchEvents, True)
         self.setCentralWidget(self.central_widget)
 
         self.root_layout = QHBoxLayout(self.central_widget)
@@ -129,6 +131,7 @@ class MainWindow(QMainWindow):
 
         # 1. Сайдбар (80x600)
         self.sidebar = SidebarDock(self)
+        self.sidebar.setAttribute(Qt.WA_AcceptTouchEvents, True)
         self.root_layout.addWidget(self.sidebar)
 
         # 2. Рабочая область
@@ -197,8 +200,19 @@ class MainWindow(QMainWindow):
         bus.dimmer_toggle_requested.connect(self._on_dimmer_toggle)
         bus.input_lock_toggled.connect(self._on_input_lock_toggled)
 
+    def switch_tab_by_offset(self, offset: int):
+        """Переключение активной вкладки со смещением (+1: следующая, -1: предыдущая)."""
+        if not hasattr(self, "workspace") or self.workspace.count() == 0:
+            return
+        total = self.workspace.count()
+        current = self.workspace.currentIndex()
+        new_tab = (current + offset) % total
+        bus.tab_changed.emit(new_tab)
+
     def _on_tab_changed(self, index: int):
         self.workspace.setCurrentIndex(index)
+        if hasattr(self, "dimmer"):
+            self.dimmer.raise_()
 
         # Управление видимостью окон сторонних приложений (Спринт 2)
         for app in self.config.tracked_apps:
@@ -252,7 +266,9 @@ class MainWindow(QMainWindow):
         print(f"[-] Окно процесса {process_name} (HWND {hwnd}) закрыто.")
 
     def _on_dimmer_toggle(self):
-        self.dimmer.toggle(self.config.dimmer.night_mode_opacity)
+        if hasattr(self, "dimmer"):
+            self.dimmer.toggle(self.config.dimmer.night_mode_opacity)
+            self.dimmer.raise_()
 
     def _on_input_lock_toggled(self, locked: bool):
         self.focus_guardian.input_lock_mode = locked
@@ -340,6 +356,7 @@ class MainWindow(QMainWindow):
 
         if hasattr(self, "dimmer"):
             self.dimmer.setGeometry(0, 0, target_w, target_h)
+            self.dimmer.raise_()
 
         # Перепозиционируем активное внешнее приложение под новую геометрию
         if hasattr(self, "workspace"):
@@ -360,9 +377,17 @@ class MainWindow(QMainWindow):
         super().resizeEvent(event)
         if hasattr(self, "dimmer"):
             self.dimmer.setGeometry(0, 0, self.width(), self.height())
+            self.dimmer.raise_()
 
     def _cleanup(self):
         """Освобождение системных ресурсов WinAPI при выходе."""
+        if hasattr(self, "touch_filter"):
+            qapp = QApplication.instance()
+            if qapp:
+                try:
+                    qapp.removeEventFilter(self.touch_filter)
+                except Exception:
+                    pass
         if hasattr(self, "page_sensors") and hasattr(self.page_sensors, "cleanup"):
             self.page_sensors.cleanup()
         if hasattr(self, "page_audio") and hasattr(self.page_audio, "poll_timer") and self.page_audio.poll_timer.isActive():
@@ -379,6 +404,21 @@ class MainWindow(QMainWindow):
             self.focus_guardian.stop_hook()
         except Exception:
             pass
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            try:
+                bus.tab_changed.disconnect(self._on_tab_changed)
+            except Exception:
+                pass
+            try:
+                bus.dimmer_toggle_requested.disconnect(self._on_dimmer_toggle)
+            except Exception:
+                pass
+            try:
+                bus.input_lock_toggled.disconnect(self._on_input_lock_toggled)
+            except Exception:
+                pass
 
     def close(self):
         self._cleanup()

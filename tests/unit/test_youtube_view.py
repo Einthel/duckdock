@@ -97,7 +97,7 @@ def test_sidebar_contains_mini_media_bar(qapp):
     assert hasattr(sidebar, "mini_media_bar")
     assert sidebar.mini_media_bar is not None
     assert sidebar.btn_lock.focusPolicy() == Qt.NoFocus
-    assert sidebar.btn_dimmer.focusPolicy() == Qt.NoFocus
+    assert not hasattr(sidebar, "btn_dimmer")
 
 
 @pytest.mark.unit

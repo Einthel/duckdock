@@ -5,6 +5,7 @@
 и внедрение CSS/JS скриптов тач-интерфейса и блокировки рекламы.
 """
 import os
+import sys
 from pathlib import Path
 from typing import Optional
 from PySide6.QtCore import QObject
@@ -123,7 +124,12 @@ class WebProfileManager:
         if not HAS_WEBENGINE or self.profile is None:
             return
 
-        project_root = Path(__file__).resolve().parent.parent
+        if getattr(sys, "frozen", False):
+            project_root = Path(getattr(sys, "_MEIPASS", Path(sys.executable).resolve().parent))
+            if not (project_root / "resources" / "css" / "ytm_touch_theme.css").exists():
+                project_root = Path(sys.executable).resolve().parent
+        else:
+            project_root = Path(__file__).resolve().parent.parent
         css_file = project_root / "resources" / "css" / "ytm_touch_theme.css"
         js_file = project_root / "resources" / "js" / "ytm_touch_adblock.js"
 

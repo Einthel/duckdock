@@ -147,6 +147,13 @@ class MiniMediaBar(QFrame):
 
         # Подписка на изменение состояния медиаплеера
         bus.media_state_changed.connect(self._on_media_state_changed)
+        self.destroyed.connect(self._on_destroyed)
+
+    def _on_destroyed(self, *args):
+        try:
+            bus.media_state_changed.disconnect(self._on_media_state_changed)
+        except Exception:
+            pass
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
@@ -217,6 +224,19 @@ class SidebarDock(QFrame):
         self._input_locked = False
 
         self._init_ui()
+        bus.tab_changed.connect(self._sync_tab)
+        self.destroyed.connect(self._on_destroyed)
+
+    def _on_destroyed(self, *args):
+        try:
+            bus.tab_changed.disconnect(self._sync_tab)
+        except Exception:
+            pass
+
+    def _sync_tab(self, index: int):
+        if self._active_tab != index:
+            self._active_tab = index
+            self._update_button_states()
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
@@ -260,16 +280,6 @@ class SidebarDock(QFrame):
         self.btn_lock.clicked.connect(self._toggle_input_lock)
         layout.addWidget(self.btn_lock)
 
-        # 8. Sleep / Dimmer
-        self.btn_dimmer = QPushButton("🌙")
-        self.btn_dimmer.setObjectName("sleep_toolB")
-        self.btn_dimmer.setProperty("class", "action-btn")
-        self.btn_dimmer.setFixedSize(QSize(64, 48))
-        self.btn_dimmer.setFocusPolicy(Qt.NoFocus)
-        self.btn_dimmer.setToolTip("Toggle Screen Dimmer / Night Mode")
-        self.btn_dimmer.clicked.connect(self._toggle_dimmer)
-        layout.addWidget(self.btn_dimmer)
-
         self._update_button_states()
 
     def _create_nav_button(self, icon: str, tooltip: str, tab_index: int) -> QPushButton:
@@ -301,6 +311,3 @@ class SidebarDock(QFrame):
         self.btn_lock.style().unpolish(self.btn_lock)
         self.btn_lock.style().polish(self.btn_lock)
         bus.input_lock_toggled.emit(self._input_locked)
-
-    def _toggle_dimmer(self):
-        bus.dimmer_toggle_requested.emit()

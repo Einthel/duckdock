@@ -60,7 +60,9 @@ flowchart TD
     Tab1 -.->|60s Metric Buffer| TH
     TW -.->|Signal: snapshot_ready| Tab1
     TW -.->|Signal: sensors_updated| Bus
-    SB -.->|Signals: tab_changed, dimmer, lock| Bus
+    SB -.->|Signals: tab_changed, lock| Bus
+    Tab4 -.->|Signal: dimmer_toggle_requested| Bus
+    TF -.->|Signal: tab_changed (2-finger swipe)| Bus
     MMB -.->|Signals: media_action_requested| Bus
     Tab0 -.->|Signals: media_state_changed| Bus
     Bus -.->|Dispatch| Win
@@ -138,8 +140,22 @@ flowchart TD
 * `save_cursor_pos() -> None`: Запоминание координат курсора перед тач-событием.
 * `restore_cursor_pos() -> None`: Возврат курсора на запомненные координаты основного монитора.
 
-### `TouchFilter` (`core/touch_filter.py`)
-* `is_touch_event(msg: int, wparam: int, lparam: int) -> bool`: Дифференциация сенсорных касаний от кликов физической мыши.
+### `TouchCursorFilter` & Swipe Engine (`core/touch_filter.py`)
+Перехват тач-событий сенсорного экрана, защита от дрифта курсора (Anti-Cursor Warp) и распознавание кинетических жестов:
+* Распознавание двухпальцевого вертикального свайпа (`len(points) == 2`, `|avg_dy| >= 70px`, `dt <= 500ms`, `dy0 * dy1 > 0`, `|avg_dy| > 1.3 * |avg_dx|`):
+  * Свайп снизу вверх (`avg_dy <= -70px`): циклическое переключение на следующий экран (`+1`).
+  * Свайп сверху вниз (`avg_dy >= +70px`): циклическое переключение на предыдущий экран (`-1`).
+* Подавление паразитного клика мыши (`_suppress_mouse_release = True`) после успешного распознавания свайпа.
+* Свободный пропуск одиночных тапов (включая сайдбар) элементам UI без задержек.
+* Восстановление курсора на координаты основного 27" экрана через `FocusGuardian`.
+
+### `DimmerOverlay` (`ui/dimmer_overlay.py`)
+Сквозной слой аппаратного затемнения (Software Dimmer) экрана 1024×600:
+* Плавная анимация изменения уровня яркости через `QVariantAnimation` (200 мс, `QEasingCurve.Type.OutCubic`).
+* `toggle(target_level=0.50)`: бинарное переключение между 0.0 (день) и 0.50 (ночь).
+* Плавный реверс анимации на лету при повторном клике без рывков и скачков значений.
+* Сквозной клик: `Qt.WA_TransparentForMouseEvents`, `Qt.WA_NoSystemBackground`, `Qt.WA_ShowWithoutActivating` и `Qt.NoFocus`.
+* Оптимизация `paintEvent`: возврат без отрисовки при `opacity <= 0.001` (0% нагрузки на GPU).
 
 ### `WindowManager` (`core/window_manager.py`)
 Низкоуровневые манипуляции окнами сторонних процессов через WinAPI.

@@ -40,9 +40,14 @@ def _resolve_dll_path(custom_path: Optional[str] = None) -> Path:
         return Path(custom_path)
     
     # Режим сборки PyInstaller
-    if hasattr(sys, "_MEIPASS"):
-        base_dir = Path(sys._MEIPASS)
-        candidate = base_dir / "resources" / "bin" / "LibreHardwareMonitorLib.dll"
+    if getattr(sys, "frozen", False):
+        if hasattr(sys, "_MEIPASS"):
+            base_dir = Path(sys._MEIPASS)
+            candidate = base_dir / "resources" / "bin" / "LibreHardwareMonitorLib.dll"
+            if candidate.is_file():
+                return candidate
+        exe_dir = Path(sys.executable).resolve().parent
+        candidate = exe_dir / "resources" / "bin" / "LibreHardwareMonitorLib.dll"
         if candidate.is_file():
             return candidate
 

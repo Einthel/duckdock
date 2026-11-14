@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-11-14
+
+### Added
+- **Спринт 6: Тач-жесты (Swipe Engine), кинетика Dimmer и автономная сборка**:
+  - `core/touch_filter.py`:
+    - Движок распознавания двухпальцевого вертикального свайпа (`TouchCursorFilter`):
+      - Свайп снизу вверх (`avg_dy <= -70px`) — переключение на следующий экран (`+1`).
+      - Свайп сверху вниз (`avg_dy >= +70px`) — переключение на предыдущий экран (`-1`).
+      - Строгая фильтрация ложных жестов: $len(points) == 2$, $dt \le 500\text{ ms}$, сонаправленность $dy_0 \cdot dy_1 > 0$, отсечение горизонтальных/диагональных движений $|avg\_dy| > 1.3 \cdot |avg\_dx|$.
+      - Подавление синтетического клика мыши после завершения жеста (`_suppress_mouse_release = True`).
+      - Свободный пропуск одиночных тапов (включая сайдбар) элементам UI без задержек.
+  - `resources/manifest.xml`:
+    - Windows PE манифест с правами `requireAdministrator` (Ring 0 драйвер LHM) и `PerMonitorV2` DPI Awareness.
+  - `build_exe.py` & `build.bat`:
+    - Автономный сборщик PyInstaller в режиме `--onedir` (`dist/DuckDock/`) со временем старта <300 мс.
+    - Бандлинг ресурсов: `resources/bin/LibreHardwareMonitorLib.dll`, `resources/css/`, `resources/js/`, `config.json`.
+    - Твик реестра Windows: автоматическая регистрация `GpuPreference=1;` в `HKCU\Software\Microsoft\DirectX\UserGpuPreferences` для изоляции на iGPU.
+    - Автоматическая генерация автономного архива `dist/DuckDock-v0.2.0.zip` (184.9 МБ).
+    - Вспомогательный переносимый скрипт `register_igpu.bat`.
+  - `tests/unit/test_gestures.py`:
+    - 10 сценариев модульного тестирования синтетических тач-событий (свайпы вверх/вниз, таймауты, амплитуда, пинч/зум, циклический переключатель).
+
+### Changed
+  - `ui/dimmer_overlay.py`:
+    - Кинетическая анимация изменения прозрачности через `QVariantAnimation` (200 мс, `QEasingCurve.Type.OutCubic`).
+    - Бинарный переключатель `toggle(target_level=0.50)` между 0.0 (день) и 0.50 (ночь).
+    - Плавный реверс анимации на лету при повторном нажатии без скачков.
+    - Оптимизация `paintEvent` (0% нагрузки на GPU при opacity=0.0).
+    - Строгое сохранение инвариантов `Qt.WA_TransparentForMouseEvents`, `Qt.WA_ShowWithoutActivating` и `Qt.NoFocus`.
+  - `config.json` & `core/config.py`:
+    - Значение `"night_mode_opacity"` обновлено с `0.85` до `0.50` (50% затемнение).
+  - `ui/showcase_view.py`:
+    - Управление ночным режимом строго через кнопку `🌙 Включить ночной режим (Диммер)` в разделе «Диагностика».
+    - Кнопка диммера удалена из сайдбара (`SidebarDock`) в соответствии со спецификацией.
+  - `core/config.py`, `core/web_profile.py`, `core/hardware_monitor.py`:
+    - Бесшовный fallback поиска конфигурации и ассетов (`config.json`, DLL, CSS, JS) при запуске из `--onedir` скомпилированного пакета (`sys.executable / sys._MEIPASS`).
+  - `tests/unit/test_dimmer.py`:
+    - 12 комплексных тестов кинетики анимации, смены направления на лету, устойчивости к быстрому клику и сквозной интеграции.
+
+### Fixed
+  - Устранена потенциальная рассинхронизация тач-свайпов и мышиного клика.
+  - Обеспечен чистый импорт `sys` в модуле `core/web_profile.py`.
+
 ## [0.1.5] - 2026-11-14
 
 ### Added

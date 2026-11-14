@@ -1,26 +1,34 @@
 @echo off
 setlocal enabledelayedexpansion
-title DuckDock / TouchWM - Build EXE
+title DuckDock / TouchWM - Build Standalone Distribution
 cd /d "%~dp0"
 
 echo ===================================================
-echo   DuckDock / TouchWM - PyInstaller Builder
+echo   DuckDock / TouchWM - Standalone Builder (v0.2.0)
+echo   Target: --onedir (dist/DuckDock/) + ZIP Archive
 echo ===================================================
 echo.
 
-if not exist ".venv\Scripts\python.exe" (
-    echo [!] Окружение .venv не найдено. Запустите сначала dev.bat или run.bat.
-    pause
-    exit /b 1
+if exist ".venv\Scripts\python.exe" (
+    set "PY_EXE=.venv\Scripts\python.exe"
+) else (
+    set "PY_EXE=python"
 )
 
-".venv\Scripts\python.exe" build_exe.py
+"%PY_EXE%" build_exe.py
 
 if %ERRORLEVEL% NEQ 0 (
-    echo [!] Ошибка при сборке EXE.
+    echo.
+    echo [!] Ошибка при сборке автономного дистрибутива.
     pause
-    exit /b 1
+    exit /b %ERRORLEVEL%
 )
 
-echo [✓] Готово! Исполняемый файл находится в dist/duckdock.exe
+echo.
+echo ===================================================
+echo [✓] Сборка успешно завершена!
+echo     Папка сборки: dist\DuckDock\
+echo     ZIP-дистрибутив: dist\DuckDock-v0.2.0.zip
+echo ===================================================
+echo.
 pause
