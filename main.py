@@ -28,14 +28,13 @@ os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = (
 
 # 3. Импорты PySide6
 from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import Qt
 
-from core.config import load_config
+from modules.settings.config import load_config
 from ui.main_window import MainWindow
 
 def main():
-    print("[*] Запуск DuckDock / TouchWM v0.1.5...")
-    
+    print("[*] Запуск DuckDock / TouchWM v0.4.0...")
+
     # Создание приложения Qt
     app = QApplication(sys.argv)
     app.setApplicationName("DuckDock")

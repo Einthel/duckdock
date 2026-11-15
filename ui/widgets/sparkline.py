@@ -5,7 +5,7 @@
 и 0% нагрузки на dGPU (полная изоляция на iGPU).
 """
 from collections import deque
-from typing import Optional, Sequence, Union
+from typing import TYPE_CHECKING, Any, Optional, Sequence, Union
 
 from PySide6.QtCore import QPointF, Qt
 from PySide6.QtGui import (
@@ -17,7 +17,8 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
-from core.telemetry_history import RingBuffer
+if TYPE_CHECKING:
+    pass
 
 
 class SparklineWidget(QWidget):
@@ -99,10 +100,13 @@ class SparklineWidget(QWidget):
                 self._buffer.append(0.0)
         self.update()
 
-    def set_ring_buffer(self, ring_buf: RingBuffer) -> None:
+    def set_ring_buffer(self, ring_buf: Any) -> None:
         """Синхронизировать виджет с кольцевым буфером ядра."""
         if ring_buf is not None:
-            self.set_data(ring_buf.to_list())
+            if hasattr(ring_buf, "to_list"):
+                self.set_data(ring_buf.to_list())
+            elif isinstance(ring_buf, (list, tuple, deque)):
+                self.set_data(list(ring_buf))
 
     def clear(self) -> None:
         """Очистить буфер графика."""

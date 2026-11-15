@@ -34,30 +34,31 @@
 
 ```text
 duckdock/
-├── main.py                     # Точка входа, DPI Awareness, запуск QApplication
+├── main.py                     # Точка входа, DPI Awareness V2, запуск QApplication
 ├── config.json                 # Пользовательские настройки (координаты, тайминги)
 ├── pyproject.toml              # Конфигурация инструментов (ruff, pytest)
 ├── requirements.txt            # Зафиксированные зависимости
 ├── core/                       # Архитектурный фундамент (Platform Primitives)
-│   ├── config.py               # Загрузка и валидация настроек
 │   ├── dpi.py                  # Инициализация DPI Awareness V2
 │   ├── event_bus.py            # Централизованная шина сигналов / событий
 │   ├── window_manager.py       # Поиск HWND, удаление рамок, тайлинг 944x600
 │   ├── focus_guardian.py       # WS_EX_NOACTIVATE, возврат фокуса и курсора
 │   ├── mouse_barrier.py        # Блокировка вылета курсора мыши
 │   ├── touch_filter.py         # Детекция и фильтрация тач-сообщений
-│   ├── audio_manager.py        # Windows Core Audio API (PyCaw) фасад
-│   └── aida_reader.py          # Чтение Shared Memory (mmap) AIDA64
-├── ui/                         # Представление (PySide6)
-│   ├── main_window.py          # Главное окно 1024x600 (Frameless)
+│   └── ui_base.py              # Базовые UI-классы (TouchModuleView с Qt.NoFocus)
+├── ui/                         # Каркас оболочки и общие виджеты (Application Shell)
+│   ├── main_window.py          # Главное окно 1024x600 (Frameless, WS_EX_NOACTIVATE)
 │   ├── sidebar.py              # Сайдбар 80x600 (тач-кнопки 64x64)
 │   ├── dimmer_overlay.py       # Сквозной слой затемнения экрана
 │   ├── showcase_view.py        # Витрина состояния модулей
-│   └── modules/
-│       ├── sensors_view.py     # Монитор датчиков и телеметрии
-│       ├── youtube_view.py     # Медиаплеер / YouTube
-│       └── audio_view.py       # Сенсорный аудиомикшер PyCaw (TouchSlider)
-└── tests/                      # Модульные и интеграционные тесты
+│   └── widgets/                # Общие переиспользуемые UI-компоненты (Sparkline, TouchSlider, MarqueeLabel)
+├── modules/                    # Автономные функциональные подсистемы (Feature-First)
+│   ├── audio/                  # Сенсорный микшер, Core Audio PyCaw, COM IPolicyConfig
+│   ├── telemetry/              # LibreHardwareMonitor (Ring 0), AIDA64 mmap, SensorsView
+│   ├── media/                  # YouTube плеер, Chromium WebProfile, AdBlockInterceptor
+│   ├── deck/                   # Макро-колодка DuckDeck, ActionDispatcher, SendInput, таймауты
+│   └── settings/               # Валидация AppConfig, загрузчик, экран настроек
+└── tests/                      # Модульные и интеграционные тесты (135+ тестов)
 ```
 
 ---
@@ -119,4 +120,33 @@ duckdock/
 
 3. **Синхронизация с RACI:**
    Агент в промпте должен строго соответствовать матрице ответственности (RACI), зафиксированной в плане.
+
+---
+
+## 6. Принципы модульности и Feature-First архитектура (Modularity Laws)
+
+Для обеспечения долгосрочной масштабируемости, надежности и предотвращения появления God-объектов в DuckDock действуют 5 законов модульности:
+
+1. **The Dependency Rule (Строгая иерархия зависимостей):**
+   * Зависимости направлены строго сверху вниз: `ui (Shell) -> modules (Features) -> core (Foundation)`.
+   * Слой `core/` изолирован от бизнес-логики и **НИКОГДА** не импортирует код из `modules/` или `ui/`.
+   * Модули из `modules/` не зависят от компонентов шелла из `ui/`.
+
+2. **Sibling Isolation (Изоляция соседних модулей):**
+   * Прямой импорт между модулями (например, `from modules.audio import ...` внутри `modules.deck`) **КАТЕГОРИЧЕСКИ ЗАПРЕЩЕН**.
+   * Межмодульные связи реализуются исключительно через шину событий `core.event_bus.bus` или простые структуры данных (DTO).
+   * Низкоуровневые COM-примитивы аудиоустройств (`IPolicyConfig`) локализованы в `modules/audio/platform/device_switcher.py`, а вызовы из других модулей осуществляются асинхронно через события шины.
+
+3. **EventBus Weak Coupling (Слабая связанность через события):**
+   * Все межкомпонентные реакции (переключение аудиовыхода, диммер, изменение громкости, обновление телеметрии) распространяются через `core.event_bus.bus`.
+   * При уничтожении (`cleanup()`) или смене вкладок подписчики обязаны отписываться от сигналов для предотвращения утечек памяти.
+
+4. **UI TouchModuleView & Stealth Focus Invariant:**
+   * Все экранные представления модулей обязаны наследоваться от базового класса `core.ui_base.TouchModuleView`.
+   * Конструктор базового класса принудительно задает `self.setFocusPolicy(Qt.NoFocus)`, исключая перехват фокуса у основного 27" монитора.
+
+5. **Re-export Shims & Zero-Downtime Migration:**
+   * При физическом переносе компонентов в новую структуру сохраняются переходные фасады (Re-export Shims) по прежним путям (`core/`, `ui/modules/`).
+   * Каждый этап рефакторинга обязан сохранять 100% статус `PASS` всего набора тестов (`pytest tests/`).
+
 

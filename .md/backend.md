@@ -1,6 +1,6 @@
 # DuckDock / TouchWM: Архитектурная спецификация модулей
 
-> **Статус:** v0.3.0 (Актуальная спецификация)
+> **Статус:** v0.4.0 (Спринт 6: Модуляризация Feature-First и Deck Foundation)  
 > **Целевая среда:** Windows 10/11 x64, 27" Primary (dGPU) + 7" 1024×600 JRP7813S Touchscreen (iGPU AMD Radeon Graphics).
 
 ---
@@ -12,251 +12,189 @@ flowchart TD
     subgraph Bootstrap ["Точка входа & Платформа"]
         Main["main.py"] -->|1. Init DPI V2| DPI["core.dpi.init_dpi_awareness()"]
         Main -->|2. iGPU Chromium Flags| Env["os.environ (QTWEBENGINE_CHROMIUM_FLAGS)"]
-        Main -->|3. Load Schema| Cfg["core.config.load_config()"]
+        Main -->|3. Load Config| Cfg["modules.settings.config.load_config()"]
         Main -->|4. Launch Qt| App["QApplication"]
         App --> Win["ui.main_window.MainWindow (1024x600)"]
     end
 
-    subgraph CorePlat ["Слой ядра (Platform Layer)"]
-        Bus["core.event_bus.EventBus (Qt Signals)"]
+    subgraph CoreFoundation ["Слой фундамента (core/ - Foundation Layer)"]
+        Bus["core.event_bus.bus (Central EventBus)"]
         FG["core.focus_guardian.FocusGuardian"]
-        WM["core.window_manager.WindowManager"]
+        WM["core.window_manager.WindowManager & ProcessWatcher"]
         MB["core.mouse_barrier.MouseBarrier"]
-        TF["core.touch_filter.TouchFilter"]
-        AIDA["core.aida_reader.AidaReader"]
-        AM["core.audio_manager.AudioManager"]
-        WP["core.web_profile.WebProfileManager"]
-        ABI["core.web_interceptor.AdBlockInterceptor"]
-        HM["core.hardware_monitor.HardwareMonitor (LHM Ring 0 / psutil)"]
-        TW["core.telemetry_worker.TelemetryWorker (QThread 1000ms)"]
-        TH["core.telemetry_history.TelemetryHistory & RingBuffer"]
-        TM["core.telemetry_model.TelemetrySnapshot"]
-        DeckDisp["core.deck.action_dispatcher.DeckActionDispatcher"]
-        DeckActs["core.deck.actions.* (Hotkey / Audio / Process / HTTP / Screen)"]
-
-        WP --> ABI
-        TW -->|Poll 1000ms| HM
-        TW -.->|Data Contract| TM
-        DeckDisp -->|QThreadPool| DeckActs
+        TF["core.touch_filter.TouchCursorFilter (Swipe Engine)"]
+        UIB["core.ui_base.TouchModuleView (Qt.NoFocus & cleanup)"]
     end
 
-    subgraph Presentation ["Графический интерфейс (UI Layer)"]
+    subgraph FeatureModules ["Слой функциональных модулей (modules/ - Feature Layer)"]
+        subgraph ModAudio ["modules.audio"]
+            AM["service.AudioManager"]
+            ASwitch["platform.device_switcher (COM IPolicyConfig)"]
+            AModels["models.AudioDeviceInfo & AudioSessionInfo"]
+            AView["view.AudioMixerView (TouchModuleView)"]
+            AM --> ASwitch
+            AM --> AModels
+        end
+
+        subgraph ModTelemetry ["modules.telemetry"]
+            HM["hardware_monitor.HardwareMonitor (Ring 0 / psutil)"]
+            AIDA["aida_reader.AidaReader"]
+            TW["worker.TelemetryWorker (QThread 1000ms)"]
+            TH["history.TelemetryHistory & RingBuffer"]
+            TM["models.TelemetrySnapshot"]
+            TView["view.SensorsView (TouchModuleView)"]
+            TW --> HM
+            TW -.-> TM
+            TView -.-> TH
+        end
+
+        subgraph ModMedia ["modules.media"]
+            WP["web_profile.WebProfileManager"]
+            ABI["interceptor.AdBlockInterceptor"]
+            MBar["widgets.mini_media_bar.MiniMediaBar"]
+            MView["view.YouTubeView (TouchModuleView)"]
+            WP --> ABI
+        end
+
+        subgraph ModDeck ["modules.deck"]
+            DeckDisp["action_dispatcher.DeckActionDispatcher"]
+            DeckActs["actions.* (Hotkey / Process / HTTP / Screen)"]
+            DeckModels["models.DeckRootConfig & ActionParams"]
+            DeckView["view.DeckView (TouchModuleView)"]
+            DeckDisp --> DeckActs
+            DeckDisp -.-> DeckModels
+        end
+
+        subgraph ModSettings ["modules.settings"]
+            SConfig["config.AppConfig & load_config"]
+            SView["view.SettingsView (TouchModuleView)"]
+        end
+    end
+
+    subgraph PresentationShell ["Слой шелла (ui/ - Presentation Shell)"]
         Win --> SB["ui.sidebar.SidebarDock (80x600)"]
-        SB --> MMB["ui.sidebar.MiniMediaBar (64x54)"]
+        SB --> MBar
         Win --> Stack["QStackedWidget (944x600)"]
         Win --> Dimmer["ui.dimmer_overlay.DimmerOverlay"]
+        Win --> Show["ui.showcase_view.ShowcaseView"]
 
-        Stack --> Tab0["ui.modules.youtube_view.YouTubeView (Вкладка 0)"]
-        Stack --> Tab1["ui.modules.sensors_view.SensorsView (Вкладка 1)"]
-        Stack --> Tab2["ui.modules.deck_view.DeckView (Вкладка 2)"]
-        Stack --> Tab3["ui.modules.audio_view.AudioMixerView (Вкладка 3)"]
-        Stack --> Tab4["ui.showcase_view.ShowcaseView (Вкладка 4)"]
+        Stack --> MView
+        Stack --> TView
+        Stack --> DeckView
+        Stack --> AView
+        Stack --> Show
 
-        Tab1 --> SPK["ui.widgets.sparkline.SparklineWidget (QPainter)"]
+        TView --> SPK["ui.widgets.sparkline.SparklineWidget"]
+        AView --> TSL["ui.widgets.touch_slider.TouchSlider"]
+        MBar --> ML["ui.widgets.marquee_label.MarqueeLabel"]
     end
 
-    Win -.->|WS_EX_NOACTIVATE / WinEvent Hook| FG
+    %% Межмодульные связи через EventBus и интерфейсы
+    Win -.->|WS_EX_NOACTIVATE / Focus Hook| FG
     Win -.->|Tile / Strip / Hide / Show| WM
     Win -.->|ClipCursor / Screen Boundary| MB
     Win -.->|Touch Message Filter| TF
-    Tab0 -.->|QWebEnginePage / Scripts| WP
-    Tab3 -.->|Windows Core Audio API & Switcher| AM
-    Tab2 -.->|Dispatch Actions & Live Tiles| DeckDisp
-    Tab1 -.->|60s Metric Buffer| TH
-    TW -.->|Signal: snapshot_ready| Tab1
-    TW -.->|Signal: sensors_updated| Bus
-    SB -.->|Signals: tab_changed, lock| Bus
-    Tab4 -.->|Signal: dimmer_toggle_requested| Bus
     TF -.->|Signal: tab_changed (2-finger swipe)| Bus
-    MMB -.->|Signals: media_action_requested| Bus
-    Tab0 -.->|Signals: media_state_changed| Bus
+    SB -.->|Signals: tab_changed, lock| Bus
+    TW -.->|Signal: sensors_updated| Bus
+    TW -.->|Signal: snapshot_ready| TView
+    DeckDisp -.->|Request device toggle| Bus
+    Bus -.->|playback_device_changed| AView
+    Bus -.->|playback_device_changed| DeckView
+    MBar -.->|Signal: media_action_requested| Bus
+    MView -.->|Signal: media_state_changed| Bus
     Bus -.->|Dispatch| Win
 ```
 
 ---
 
-## 2. Контракты ядра (Core Contracts)
+## 2. Архитектурные законы модульности (Modularity Laws)
 
-### `HardwareMonitor` (`core/hardware_monitor.py`)
-
-Аппаратный мониторинг датчиков через динамическую загрузку `LibreHardwareMonitorLib.dll` (CLR / pythonnet) с бесшовным fallback на `psutil`:
-
-- `open() -> bool`: Инициализация LHM `Computer`, активация датчиков CPU, GPU, RAM, Storage, Motherboard, Fan Controllers.
-- `close() -> None`: Безопасное освобождение неуправляемых ресурсов Ring 0 драйвера.
-- `get_telemetry() -> TelemetrySnapshot`: Комплексный опрос датчиков с нормализацией в строго типизированную модель `TelemetrySnapshot`.
-- `is_admin() -> bool`: Проверка повышенных привилегий Windows UAC (`IsUserAnAdmin`).
-- Приоритезация дискретного GPU (NVIDIA/AMD dGPU) над интегрированным iGPU.
-- Точный парсинг термодатчиков AMD Ryzen (`Tctl/Tdie`, `Core Max`) и Hotspot dGPU.
-
-### `TelemetryWorker` (`core/telemetry_worker.py`)
-
-Асинхронный рабочий поток опроса датчиков в изолированном `QThread`:
-
-- Интервал опроса по умолчанию 1000 мс (0% дропов кадров и микрофризов в интерфейсе).
-- `snapshot_ready = Signal(object)`: Передача готового `TelemetrySnapshot` в UI.
-- `measure_network_latency(hosts, timeout) -> float`: Неблокирующий замер сетевого пинга к DNS 1.1.1.1/8.8.8.8 через TCP:53 без привилегий RAW Sockets.
-- Публикация данных в глобальную шину `bus.sensors_updated(snapshot.to_dict())`.
-- Корректная остановка потока `stop()` с `wait()` при выходе из приложения.
-
-### `TelemetrySnapshot` (`core/telemetry_model.py`)
-
-Строго типизированная модель данных телеметрии (Dataclass / Pydantic):
-
-- Метрики CPU: `cpu_name`, `cpu_temp`, `cpu_load`, `cpu_clock`, `cpu_power`.
-- Метрики GPU: `gpu_name`, `gpu_temp`, `gpu_hotspot`, `gpu_load`, `gpu_vram_used`, `gpu_vram_total`, `gpu_power`, `gpu_fan_rpm`.
-- Метрики RAM: `ram_used_gb`, `ram_total_gb`, `ram_load_pct`.
-- Метрики Storage: `storage_name`, `storage_temp`, `storage_activity`.
-- Охлаждение: `cpu_fan_rpm`, `pump_rpm`, `chassis_fans_rpm: List[int]`, `vrm_temp`.
-- Сеть и статус: `net_rx_kbps`, `net_tx_kbps`, `ping_ms`, `uptime_seconds`, `is_lhm_active`, `is_admin`, `timestamp`.
-- Вспомогательные методы: `to_dict()`, `from_dict()`, `vram_pct`.
-
-### `TelemetryHistory` & `RingBuffer` (`core/telemetry_history.py`)
-
-Буфер скользящего окна метрик для построения графиков:
-
-- `RingBuffer(maxlen=60, default_value=None)`: Кольцевой буфер фиксированного объема на базе `collections.deque` ($O(1)$ вставка, без утечек памяти).
-- `TelemetryHistory(maxlen=60)`: Фасад управления историей ключевых метрик (`cpu_temp`, `cpu_load`, `gpu_temp`, `gpu_load`, `ram_load`, `net_rx`, `net_tx`, `ping`).
-- Методы `add_snapshot(snapshot: TelemetrySnapshot)` и получение списков для Sparkline `to_list()`.
-
-### `WebProfileManager` (`core/web_profile.py`)
-
-Синглтон управления изолированным постоянным профилем Chromium `QWebEngineProfile`:
-
-- `get_instance(base_dir=None) -> WebProfileManager`: Получение синглтона с путями в `%LOCALAPPDATA%/DuckDock/web_profile`.
-- `get_profile() -> Optional[QWebEngineProfile]`: Возвращает настроенный постоянный профиль (`ForcePersistentCookies`, кэш 256 МБ, User-Agent Chrome Desktop Windows x64).
-- Автоматическая инжекция CSS-темы `resources/css/ytm_touch_theme.css` и JS-сторожа `resources/js/ytm_touch_adblock.js` через `QWebEngineScript` (`DocumentReady`, `MainWorld`).
-
-### `AdBlockInterceptor` (`core/web_interceptor.py`)
-
-Сетевой фильтр сетевых запросов (`QWebEngineUrlRequestInterceptor`):
-
-- `interceptRequest(info: QWebEngineUrlRequestInfo) -> None`: Блокировка рекламных доменов и аналитических трекеров (`googlesyndication.com`, `doubleclick.net`, `googleadservices.com`, `google-analytics.com`, `adservice.google.com`, `/api/stats/ads`, `play.google.com/log`).
-- `is_blocked_url(url: str) -> bool`: Проверка сигнатур блокировки для произвольного URL.
-- `blocked_count: int`: Счетчик заблокированных сетевых вызовов.
-
-### `AudioManager` (`core/audio_manager.py`)
-
-Потокобезопасный синглтон-фасад к Windows Core Audio API через `pycaw` и `comtypes`.
-
-- `get_master_volume() -> float`: Текущая общая громкость системы (0.0 — 1.0).
-- `set_master_volume(volume: float) -> None`: Установка общего уровня громкости.
-- `toggle_master_mute() -> bool`: Переключение общего Mute, возвращает актуальный статус.
-- `get_audio_sessions() -> List[AudioSessionInfo]`: Сканирование процессов со звуковыми потоками (Pydantic v2 модель).
-- `set_session_volume(pid: int, volume: float) -> None`: Индивидуальная громкость процесса.
-- `toggle_session_mute(pid: int) -> bool`: Отключение/включение звука для конкретного PID.
-
-### `FocusGuardian` (`core/focus_guardian.py`)
-
-Обеспечивает режим Stealth Focus (`WS_EX_NOACTIVATE`) и защиту от потери фокуса приложениями основного экрана.
-
-- `enable_stealth_mode(hwnd: int) -> None`: Наложение `WS_EX_NOACTIVATE` на окно.
-- `start_hook() -> bool`: Запуск глобального хука `SetWinEventHook` (`EVENT_SYSTEM_FOREGROUND`).
-- `stop_hook() -> None`: Деактивация хука событий.
-- `on_touch_detected(primary_pos: Tuple[int, int]) -> None`: Реакция на сенсорное касание и возврат фокуса/курсора.
-
-### `MouseBarrier` (`core/mouse_barrier.py`)
-
-Изоляция мыши на основном экране с предотвращением случайного вылета на сенсорную панель.
-
-- `clip_cursor_to_primary() -> bool`: Ограничение перемещения системного курсора границами dGPU монитора.
-- `release_cursor() -> None`: Освобождение курсора (`ClipCursor(NULL)`).
-- `save_cursor_pos() -> None`: Запоминание координат курсора перед тач-событием.
-- `restore_cursor_pos() -> None`: Возврат курсора на запомненные координаты основного монитора.
-
-### `TouchCursorFilter` & Swipe Engine (`core/touch_filter.py`)
-
-Перехват тач-событий сенсорного экрана, защита от дрифта курсора (Anti-Cursor Warp) и распознавание кинетических жестов:
-
-- Распознавание двухпальцевого вертикального свайпа (`len(points) == 2`, `|avg_dy| >= 70px`, `dt <= 500ms`, `dy0 * dy1 > 0`, `|avg_dy| > 1.3 * |avg_dx|`):
-  - Свайп снизу вверх (`avg_dy <= -70px`): циклическое переключение на следующий экран (`+1`).
-  - Свайп сверху вниз (`avg_dy >= +70px`): циклическое переключение на предыдущий экран (`-1`).
-- Подавление паразитного клика мыши (`_suppress_mouse_release = True`) после успешного распознавания свайпа.
-- Свободный пропуск одиночных тапов (включая сайдбар) элементам UI без задержек.
-- Восстановление курсора на координаты основного 27" экрана через `FocusGuardian`.
-
-### `DimmerOverlay` (`ui/dimmer_overlay.py`)
-
-Сквозной слой аппаратного затемнения (Software Dimmer) экрана 1024×600:
-
-- Плавная анимация изменения уровня яркости через `QVariantAnimation` (200 мс, `QEasingCurve.Type.OutCubic`).
-- `toggle(target_level=0.50)`: бинарное переключение между 0.0 (день) и 0.50 (ночь).
-- Плавный реверс анимации на лету при повторном клике без рывков и скачков значений.
-- Сквозной клик: `Qt.WA_TransparentForMouseEvents`, `Qt.WA_NoSystemBackground`, `Qt.WA_ShowWithoutActivating` и `Qt.NoFocus`.
-- Оптимизация `paintEvent`: возврат без отрисовки при `opacity <= 0.001` (0% нагрузки на GPU).
-
-### `AudioManager` (`core/audio_manager.py`)
-
-Фасад над Windows Core Audio API (WASAPI) через `pycaw` и нативный COM `IPolicyConfig`:
-
-- `get_master_volume() -> float` & `set_master_volume(level: float)`: Чтение и установка общей системной громкости (0.0–1.0).
-- `is_master_muted() -> bool` & `set_master_mute(muted: bool)`: Управление состоянием Mute мастера.
-- `get_sessions() -> List[AudioSessionInfo]`: Перечисление активных аудиосессий процессов с извлечением имен и иконок.
-- `set_session_volume(pid: int, level: float)` & `set_session_mute(pid: int, muted: bool)`: Управление звуком процесса.
-- `get_playback_devices() -> List[AudioDeviceInfo]`: Перечисление активных устройств воспроизведения (`eRender`).
-- `set_default_playback_device(device_id: str) -> bool`: Переключение устройства вывода по умолчанию через COM `IPolicyConfigClient` для ролей `eConsole`, `eMultimedia`, `eCommunications`.
-- `toggle_playback_device(targets: Optional[List[str]]) -> Optional[AudioDeviceInfo]`: Циклическое сенсорное переключение аудиовыхода (Наушники 🎧 <-> Колонки 🔊).
-- `is_mic_muted() -> bool`, `set_mic_mute(muted: bool)`, `toggle_mic_mute() -> bool`: Управление захватом звука (`eCapture`) дефолтного микрофона Windows.
-- `invalidate_cache()`: Сброс кэша COM-устройств при смене эндпоинта.
-
-### `DuckDeck Platform` (`core/deck/`)
-
-Сенсорная платформа выполнения действий и макросов:
-
-- `models.py`: Pydantic V2 модели конфигурации страниц (`DeckPageConfig`), кнопок (`DeckButtonConfig`), типизированных параметров действий (`HotkeyParams`, `ProcessParams`, `HttpParams`, `ScreenshotParams`, `AudioDeviceParams`, `SystemParams`).
-- `DeckActionDispatcher` (`action_dispatcher.py`):
-  - Асинхронное выполнение задач через `QThreadPool.globalInstance()`.
-  - Защита от аппаратного/программного дребезга (cooldown 250 мс на тайл).
-  - Сигналы: `action_started(tile_id)`, `action_finished(tile_id, success, message)`, `page_switch_requested(page_id)`.
-- Драйверы действий (`core/deck/actions/`):
-  - `hotkey_sender.py`: отправка скан-кодов через `SendInput` с сохранением и восстановлением фокуса целевого окна.
-  - `audio_device_switcher.py`: вызов COM `IPolicyConfig` для смены активного эндпоинта.
-  - `process_launcher.py`: изолированный запуск процессов (`CREATE_NO_WINDOW`, `DETACHED_PROCESS`, `os.startfile`).
-  - `http_client.py`: неблокирующие REST-запросы с таймаутами к локальным сервисам (OpenRGB, Home Assistant, OBS).
-  - `screen_capture.py`: чистый захват основного экрана 2560×1440 через `BitBlt` / `QScreen` напрямую в буфер обмена.
+1. **The Dependency Rule (Иерархия зависимостей):**  
+   Зависимости строго направлены: `ui (Shell) -> modules (Features) -> core (Foundation)`.  
+   - Слой `core/` изолирован и **НИКОГДА** не импортирует модули из `modules/` или компоненты шелла из `ui/`.
+   - Модули в `modules/` не зависят от компонентов шелла из `ui/`.
+2. **Sibling Modules Isolation (Изоляция соседних модулей):**  
+   Прямой импорт между соседними функциональными модулями запрещен. Связь реализуется исключительно через события шины `core.event_bus.bus` и DTO.
+3. **Audio Platform Decoupling (Разрыв циклической связи Audio <-> Deck):**  
+   - Драйвер переключения Windows Core Audio вынесен в `modules/audio/platform/device_switcher.py`.
+   - Модель `AudioDeviceInfo` размещена в `modules/audio/models.py`.
+   - Диспетчер DuckDeck вызывает переключение через шину событий или внедренный экземпляр (DI).
+4. **Stealth Focus Invariant (`TouchModuleView`):**  
+   Все экраны модулей наследуются от `core.ui_base.TouchModuleView`, где принудительно задается `self.setFocusPolicy(Qt.NoFocus)` и метод `cleanup()`.
+5. **Re-export Shims & Backward Compatibility:**  
+   Для сохранения обратной совместимости файлов старых версий настроены легковесные фасады в `core/` и `ui/modules/` с алиасингом `sys.modules`.
 
 ---
 
-## 3. Шина событий (`core/event_bus.py`)
+## 3. Спецификация модулей (Feature Modules)
 
-Централизованный диспетчер сигналов Qt:
+### `modules.audio` — Сенсорный аудиомикшер и управление устройствами
 
-- `tab_changed = Signal(int)`: Переключение активной вкладки рабочего пространства (0–4).
-- `dimmer_opacity_changed = Signal(float)`: Изменение прозрачности диммера (0.0 - 0.95).
-- `dimmer_toggle_requested = Signal()`: Запрос включения/выключения затемнения.
-- `input_lock_toggled = Signal(bool)`: Переключение режима ввода текста / Stealth Focus.
-- `sensors_updated = Signal(dict)`: Оповещение об обновлении аппаратной телеметрии (CPU, GPU, RAM, Storage, Fan, Network, Ping).
-- `external_window_tiled = Signal(str, int)`: Уведомление о тайлинге стороннего окна `(app_name, hwnd)`.
-- `master_volume_changed = Signal(float, bool)`: Оповещение об изменении общего звука `(volume, is_muted)`.
-- `session_volume_changed = Signal(int, float, bool)`: Изменение сессии процесса `(pid, volume, is_muted)`.
-- `playback_device_changed = Signal(str, str)`: Оповещение о смене устройства вывода `(device_name, device_id)`.
-- `mic_mute_changed = Signal(bool)`: Оповещение об изменении состояния микрофона `(is_muted)`.
-- `media_state_changed = Signal(dict)`: Обновление метаданных трека и воспроизведения YouTube `{"title": str, "artist": str, "is_playing": bool}`.
-- `media_action_requested = Signal(str)`: Управление медиаплеером (`"toggle_play"`, `"next"`, `"prev"`).
-- `touch_detected = Signal(int, int)`: Координаты касания на втором экране `(x, y)`.
-- `primary_focus_lost = Signal(int)`: HWND окна основного экрана, потерявшего фокус.
+- `service.AudioManager`: Потокобезопасный синглтон-фасад к Windows Core Audio API (WASAPI) через `pycaw`.
+  - `get_master_volume() -> float` & `set_master_volume(level: float)`: Общая громкость.
+  - `is_master_muted() -> bool` & `set_master_mute(muted: bool)`: Состояние мастер-Mute.
+  - `get_sessions() -> List[AudioSessionInfo]`: Перечисление сессий приложений со сбором иконок.
+  - `set_session_volume(pid, level)` & `set_session_mute(pid, muted)`: Управление звуком процесса.
+  - `get_playback_devices() -> List[AudioDeviceInfo]`: Активные устройства вывода (`eRender`).
+  - `set_default_playback_device(device_id)`: Переключение дефолтного устройства вывода.
+  - `toggle_playback_device(targets)`: Циклическое сенсорное переключение (Наушники 🎧 <-> Колонки 🔊).
+  - `is_mic_muted()`, `set_mic_mute()`, `toggle_mic_mute()`: Управление микрофоном (`eCapture`).
+- `platform.device_switcher`: Прямой COM-клиент `IPolicyConfigClient` для ролей `eConsole`, `eMultimedia`, `eCommunications`.
+- `models.py`: Pydantic V2 модели `AudioSessionInfo` и `AudioDeviceInfo`.
+- `view.py`: `AudioMixerView(TouchModuleView)` с кнопкой быстрого переключения эндпоинта `btn_switch_device`, карточкой мастера и динамическими сессиями с `TouchSlider`.
+
+### `modules.telemetry` — Аппаратный мониторинг и NOC-дашборд
+
+- `hardware_monitor.HardwareMonitor`: Ring 0 опрос через `LibreHardwareMonitorLib.dll` (pythonnet) с fallback на `psutil`. Поддержка AMD Ryzen (`Tctl/Tdie`), Hotspot dGPU, NVMe.
+- `aida_reader.AidaReader`: Синхронизация с памятью AIDA64 mmap (XML).
+- `worker.TelemetryWorker`: Фоновый поток `QThread` (интервал 1000 мс) с неблокирующим TCP-пингом `measure_network_latency()`.
+- `history.TelemetryHistory` & `history.RingBuffer`: Кольцевой буфер 60 точек метрик без утечек памяти.
+- `models.TelemetrySnapshot`: Типизированная схема метрик CPU, GPU, RAM, Storage, Fan, Net, Ping.
+- `view.SensorsView(TouchModuleView)`: Полноэкранный NOC-дашборд 944×600 (Hero-карточки CPU/GPU, NOC-сетка RAM/Net/SSD/Chassis, графики Sparkline).
+
+### `modules.media` — Сенсорный медиаплеер YouTube и браузерный профиль
+
+- `web_profile.WebProfileManager`: Изолированный постоянный профиль Chromium `%LOCALAPPDATA%/DuckDock/web_profile` с инжекцией скриптов блокировки рекламы и стилей.
+- `interceptor.AdBlockInterceptor`: Сетевой фильтр (`QWebEngineUrlRequestInterceptor`), блокирующий трекеры и рекламу.
+- `widgets.mini_media_bar.MiniMediaBar`: Сенсорный виджет управления медиа в сайдбаре (64×54px) с бегущей строкой `MarqueeLabel` и кнопками ⏮ ⏯ ⏭.
+- `view.YouTubeView(TouchModuleView)`: Полноэкранный плеер с двунаправленной синхронизацией состояния через `EventBus`.
+
+### `modules.deck` — Сенсорная макро-панель DuckDeck
+
+- `models.py`: Pydantic V2 модели конфигурации DuckDeck (`DeckRootConfig`, `DeckPageConfig`, `DeckButtonConfig`, `DeckActionConfig`) и типизированные параметры действий.
+- `action_dispatcher.DeckActionDispatcher`: Асинхронный диспетчер задач в пуле `QThreadPool` с антидребезгом (250 мс) и сторожевым таймером (5000 мс).
+- `actions/`:
+  - `hotkey_sender.py`: Аппаратные скан-коды `SendInput` (`KEYEVENTF_SCANCODE`) с восстановлением фокуса целевого окна.
+  - `process_launcher.py`: Detached-запуск процессов и URL-схем (`CREATE_NO_WINDOW`, `DETACHED_PROCESS`).
+  - `http_client.py`: Неблокирующие REST-запросы к локальным сервисам (Home Assistant, OpenRGB, OBS).
+  - `screen_capture.py`: Захват экрана 1 (2560×1440) через `QScreen` / `BitBlt` в буфер обмена.
+- `widgets/`:
+  - `DeckButtonWidget`: Сенсорный тайл с тактильной анимацией, анимацией ошибки (Shake) и реактивными Live Tiles.
+  - `DotPagingWidget`: Индикатор страниц.
+- `view.DeckView(TouchModuleView)`: Сенсорная сетка 944×600 (3×5 или 4×6), переключатель профилей и быстрая перезагрузка конфига.
+
+### `modules.settings` — Управление конфигурацией приложения
+
+- `config.py`: Валидация и загрузка настроек приложения (`load_config()`), модели `DisplayConfig`, `StealthConfig`, `AppConfig`.
+- `view.SettingsView(TouchModuleView)`: Каркас экрана настроек разрешения экрана, диммера и горячих клавиш.
 
 ---
 
-## 4. Спецификация сенсорных компонентов UI (`ui/`)
+## 4. Слой фундамента ядра (`core/`)
 
-- **Главное окно (`ui/main_window.py`)**: Размер 1024×600, `Qt.FramelessWindowHint`, `Qt.WA_ShowWithoutActivating`, горизонтальный `QHBoxLayout` (сайдбар 80px + стек 944px).
-- **Сайдбар (`ui/sidebar.py`)**: Ширина 80px, сенсорные кнопки 64×60px с отступами, политика `Qt.NoFocus`. Вкладка 2 — DuckDeck (`🎛`).
-- **Mini Media Bar (`ui/sidebar.py`)**: Сквозной компактный плеер (64×54px), бегущая строка `MarqueeLabel`, кнопки ⏮ ⏯ ⏭ (`Qt.NoFocus`), клик по бару открывает вкладку YouTube.
-- **DuckDeck Макро-панель (`ui/modules/deck_view.py`)**:
-  - Полноэкранная сенсорная матрица 944×600: Header Bar 48px (переключатель страниц, кнопка перезагрузки JSON), сетка кнопок (3×5 или 4×6).
-  - Тайлы `DeckButtonWidget`: кинетический отклик нажатия, анимация тряски при ошибке, сторожевой таймер от зависания.
-  - Live Tiles: автоматическая реактивная синхронизация состояния аудиоустройств и микрофона через `EventBus`.
-- **Сенсорный аудиомикшер (`ui/modules/audio_view.py`)**:
-  - Сенсорная кнопка переключения аудиоустройств `btn_switch_device` в шапке микшера.
-  - Сенсорный слайдер `TouchSlider` (`QSlider` с мгновенным расчетом позиции `QStyle.sliderValueFromPosition`, `Qt.NoFocus`).
-  - Карточки аудиосессий с иконками `QFileIconProvider` и кнопками мгновенного Mute.
-- **Аппаратный NOC-дашборд 944×600 (`ui/modules/sensors_view.py`)**:
-  - Header Bar (36px): Статус `● LibreHardwareMonitor (Direct Ring0)` / `● Fallback psutil`, UAC бейдж, системный аптайм.
-  - Верхний ярус (Hero Cards 2× ~250px): Карточки CPU Master и GPU Master с крупными термоиндикаторами (36px), загрузкой, тактовой частотой, энергопотреблением, оборотами кулеров/помпы и живыми графиками Sparkline.
-  - Нижний ярус (NOC Grid 4× ~220px): Карточки RAM DDR5 (GB/ProgressBar/Sparkline), Network & Ping (MB/s / Ping ms / Sparkline), NVMe Storage (SSD Temp/Activity), Chassis & Motherboard (вентиляторы корпуса / VRM).
-  - Инвариант `Stealth Focus`: `Qt.NoFocus` на всех виджетах дашборда.
-- **Аппаратный Sparkline-виджет (`ui/widgets/sparkline.py`)**:
-  - Высокопроизводительный рендеринг кривых Безье `QPainterPath` с полупрозрачным градиентом `QLinearGradient`.
-  - Трехуровневая адаптивная цветовая шкала: Cyan (<60°C), Amber (60–78°C), Crimson (>=80°C).
-  - Маяк последней точки (Beacon dot) и сетка уровней, полная изоляция отрисовки на iGPU.
-- **Кинетическая прокрутка**: `QScroller.grabGesture(..., QScroller.LeftMouseButtonGesture)` во всех скролл-списках.
+- `dpi.py`: Инициализация Per-Monitor DPI Awareness V2 (`SetProcessDpiAwarenessContext(-4)`).
+- `event_bus.py`: Централизованная шина сигналов Qt `bus`.
+- `focus_guardian.py`: Защита от перехвата фокуса и восстановление курсора мыши (`WS_EX_NOACTIVATE`, `SetWinEventHook`).
+- `mouse_barrier.py`: Аппаратный барьер курсора мыши (`ClipCursor`) для предотвращения случайного вылета на второй экран.
+- `touch_filter.py`: Перехват сенсорных касаний и движок двухпальцевого вертикального свайпа (Swipe Engine).
+- `window_manager.py`: WinAPI фасад управления внешними окнами, удаление рамок и тайлинг на 944×600.
+- `ui_base.py`: Базовый класс экранов `TouchModuleView(QWidget)`.
+
+---
+
+## 5. Общие сенсорные виджеты (`ui/widgets/`)
+
+- `sparkline.py` (`SparklineWidget`): Отрисовка графиков телеметрии на `QPainter` с кривыми Безье и адаптивной палитрой (Cyan/Amber/Crimson).
+- `touch_slider.py` (`TouchSlider`): Сенсорный слайдер громкости с `Qt.NoFocus` и мгновенным расчетом позиции касания `sliderValueFromPosition`.
+- `marquee_label.py` (`MarqueeLabel`): Бегущая строка для длинных названий треков с плавной анимацией по таймеру.

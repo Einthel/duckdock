@@ -1,6 +1,6 @@
 [project]
 name = "duckdock"
-version = "0.3.0"
+version = "0.4.0"
 description = "Custom Tiling Window Manager and Touch Dashboard for 7-inch 800x600 subscreen"
 authors = [{ name = "Nexus" }]
 requires-python = ">=3.11"
@@ -34,3 +34,24 @@ markers = [
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+exclude = [
+    ".agents",
+    ".git",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    ".md",
+    "resources",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"main.py" = ["E402"]
+"core/*.py" = ["F401", "F403"]
+"core/deck/*.py" = ["F401", "F403"]
+"core/deck/actions/*.py" = ["F401", "F403"]
+"ui/modules/*.py" = ["F401", "F403"]
+"tests/**" = ["F401", "W293", "E402"]

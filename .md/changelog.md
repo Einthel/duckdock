@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-11-15
+
+### Added
+- **Спринт 6: Переход на Feature-First модульную архитектуру и Foundation Decoupling**:
+  - `core/ui_base.py`:
+    - Базовый абстрактный класс `TouchModuleView(QWidget)` с принудительной политикой `setFocusPolicy(Qt.NoFocus)` и методом жизненного цикла `cleanup()`.
+    - Все экранные модули (`SensorsView`, `YouTubeView`, `AudioMixerView`, `DeckView`, `SettingsView`) переведены на наследование от `TouchModuleView`.
+  - `modules/` — автономная Feature-First структура модулей:
+    - `modules/audio/`: сервис аудиомикшера `service.py` (`AudioManager`), модели `models.py` (`AudioSessionInfo`, `AudioDeviceInfo`), Win32/COM драйвер переключения конечных точек `platform/device_switcher.py`, экран `view.py` (`AudioMixerView`).
+    - `modules/telemetry/`: Ring 0 мониторинг `hardware_monitor.py` (`HardwareMonitor`), сборщик XML `aida_reader.py`, фоновый поток `worker.py` (`TelemetryWorker`), буфер метрик `history.py` (`RingBuffer`, `TelemetryHistory`), DTO `models.py` (`TelemetrySnapshot`), NOC-экран `view.py` (`SensorsView`).
+    - `modules/media/`: профиль браузера `web_profile.py` (`WebProfileManager`), блокировщик рекламы `interceptor.py` (`AdBlockInterceptor`), сквозной мини-плеер `widgets/mini_media_bar.py` (`MiniMediaBar`), плеер `view.py` (`YouTubeView`).
+    - `modules/deck/`: диспетчер действий `action_dispatcher.py` (`DeckActionDispatcher`), Pydantic-модели `models.py`, драйверы `actions/` (`hotkey_sender`, `process_launcher`, `http_client`, `screen_capture`), виджеты `widgets/` (`DeckButtonWidget`, `DotPagingWidget`), экран `view.py` (`DeckView`).
+    - `modules/settings/`: валидация и загрузка настроек `config.py` (`AppConfig`, `DisplayConfig`, `StealthConfig`, `load_config`), каркас экрана настроек `view.py` (`SettingsView`).
+  - `ui/widgets/`:
+    - Выделение переиспользуемых независимых UI-компонентов: `touch_slider.py` (`TouchSlider`), `marquee_label.py` (`MarqueeLabel`), `sparkline.py` (`SparklineWidget`).
+
+### Changed
+  - **Shell Integration & Direct Imports**:
+    - `main.py`: переключен на прямой импорт `load_config` из `modules.settings.config`.
+    - `ui/main_window.py`: переключен на прямые импорты представлений экранов из `modules.*.view` (`SensorsView`, `YouTubeView`, `AudioMixerView`, `DeckView`) и конфигурации `AppConfig` из `modules.settings.config`.
+    - `ui/sidebar.py`: переключен на прямой импорт `MiniMediaBar` из `modules.media.widgets.mini_media_bar`.
+  - **Decoupling Audio & Deck**:
+    - Полностью устранена циклическая зависимость между `AudioManager` и `DeckActionDispatcher`.
+    - Модель `AudioDeviceInfo` перемещена в `modules/audio/models.py`.
+    - COM-драйвер `IPolicyConfigClient` изолирован в `modules/audio/platform/device_switcher.py`.
+  - **Re-export Shims & Backward Compatibility**:
+    - Организованы прозрачные фасады обратной совместимости в `core/` и `ui/modules/` с динамическим алиасингом `sys.modules`, сохранившие 100% работоспособность всех внешних потребителей и тестов без регрессий.
+  - `pyproject.toml`:
+    - Версия обновлена до `0.4.0`.
+    - Сконфигурирован линтер ruff: исключения служебных папок, правила `E`, `F`, `W`, per-file-ignores для `main.py`, shims и тестов.
+
 ## [0.3.0] - 2026-11-15
 
 ### Added
