@@ -63,13 +63,8 @@ def test_deck_view_no_focus_invariant(qapp):
     view = DeckView(config_path="config/deck_config.json")
     try:
         assert view.focusPolicy() == Qt.NoFocus
-        assert view.header_bar.focusPolicy() == Qt.NoFocus
-        assert view.header_bar.btn_reload.focusPolicy() == Qt.NoFocus
+        assert view.interactive_panel.focusPolicy() == Qt.NoFocus
         assert view.grid.focusPolicy() == Qt.NoFocus
-
-        # Проверка всех кнопок-пилюль в шапке
-        for pill_btn in view.header_bar._pill_buttons.values():
-            assert pill_btn.focusPolicy() == Qt.NoFocus
 
         # Проверка всех тайлов сетки и их дочерних меток
         buttons = view.grid.get_buttons()
@@ -84,46 +79,48 @@ def test_deck_view_no_focus_invariant(qapp):
 
 
 # -------------------------------------------------------------
-# 2. Проверка точной геометрии под экран 944x600
+# 2. Проверка точной геометрии под экран 944x600 (DuckDeck v0.4.0)
 # -------------------------------------------------------------
 def test_deck_view_geometry_and_tile_dimensions(qapp):
     """
     Проверка строгой геометрии:
       - DeckView: 944x600 px.
-      - HeaderBar: 944x48 px.
-      - DeckGrid: 944x552 px (отступы 12 px, промежутки 12 px).
-      - Сетка 3x5: тайлы 174x168 px, скругление 14 px.
-      - Сетка 4x6: тайлы 143x123 px, скругление 10 px.
+      - DeckGrid: 944x372 px (отступы 12 px, промежутки 12 px).
+      - DeckInteractivePanel: 920x216 px.
+      - Формула строгой высоты: 12 + 168 + 12 + 168 + 12 + 216 + 12 = 600 px.
+      - Сетка 2x5: тайлы 174x168 px, скругление 14 px.
     """
     view = DeckView(config_path="config/deck_config.json")
     try:
         assert view.width() == 944
         assert view.height() == 600
 
-        assert view.header_bar.width() == 944
-        assert view.header_bar.height() == 48
-
+        # HeaderBar демонтирован, проверяется DeckGrid 944x372 px
         assert view.grid.width() == 944
-        assert view.grid.height() == 552
+        assert view.grid.height() == 372
+
+        # Зарезервированная интерактивная панель 920x216 px
+        assert view.interactive_panel.width() == 920
+        assert view.interactive_panel.height() == 216
+
+        # Проверка формулы высоты: 12 + 168 + 12 + 168 + 12 + 216 + 12 = 600 px
+        grid_h = view.grid.height()
+        panel_h = view.interactive_panel.height()
+        bottom_margin = view.layout().contentsMargins().bottom()
+        assert grid_h + panel_h + bottom_margin == 600
+
         margins = view.grid.grid_layout.contentsMargins()
         assert (margins.left(), margins.top(), margins.right(), margins.bottom()) == (12, 12, 12, 12)
         assert view.grid.grid_layout.spacing() == 12
 
-        # 3x5 страница по умолчанию
+        # 2x5 страница по умолчанию (тайлы 174x168 px, скругление 14 px)
         view.set_active_page("default")
-        buttons_3x5 = view.grid.get_buttons()
-        for btn_id, btn in buttons_3x5.items():
+        buttons_2x5 = view.grid.get_buttons()
+        assert len(buttons_2x5) > 0
+        for btn_id, btn in buttons_2x5.items():
             assert btn.width() == 174
             assert btn.height() == 168
             assert btn.corner_radius == 14
-
-        # 4x6 страница
-        view.set_active_page("grid4x6")
-        buttons_4x6 = view.grid.get_buttons()
-        for btn_id, btn in buttons_4x6.items():
-            assert btn.width() == 143
-            assert btn.height() == 123
-            assert btn.corner_radius == 10
     finally:
         view.cleanup()
 
@@ -311,17 +308,17 @@ def test_deck_view_live_dynamic_tiles_reactivity(qapp):
 
 
 # -------------------------------------------------------------
-# 6. Навигация между страницами и HeaderBar
+# 6. Навигация между страницами
 # -------------------------------------------------------------
 def test_deck_view_page_navigation(qapp):
-    """Проверка переключения страниц через HeaderBar и навигационные кнопки."""
+    """Проверка переключения страниц через метод set_active_page и навигационные кнопки."""
     view = DeckView(config_path="config/deck_config.json")
     try:
         assert view.active_page_id == "default"
         assert "btn_toggle_audio_device" in view.grid.get_buttons()
 
-        # Переключение на страницу 4x6 через сигнал шапки
-        view.header_bar.page_selected.emit("grid4x6")
+        # Переключение на страницу 4x6 через метод set_active_page
+        view.set_active_page("grid4x6")
         assert view.active_page_id == "grid4x6"
         assert "btn_stream_back" in view.grid.get_buttons()
 
@@ -369,12 +366,12 @@ def test_deck_view_action_dispatch_and_feedback(qapp):
         # Диспетчер рапортует успешный финиш
         dummy_disp.action_finished.emit("btn_screenshot_primary", True, "Скриншот скопирован")
         assert btn.state == "success"
-        assert "Скриншот скопирован" in view.header_bar.lbl_status.text()
+        assert "Скриншот скопирован" in view.status_message
 
         # Диспетчер рапортует ошибку
         dummy_disp.action_finished.emit("btn_screenshot_primary", False, "Сбой захвата экрана")
         assert btn.state == "error"
-        assert "Сбой захвата экрана" in view.header_bar.lbl_status.text()
+        assert "Сбой захвата экрана" in view.status_message
     finally:
         view.cleanup()
 

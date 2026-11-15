@@ -3,7 +3,9 @@
 Оптимизирована под геометрию рабочего пространства 944x600 (7" Touchscreen).
 Архитектурные инварианты:
   - Наследование от TouchModuleView (Qt.NoFocus для сохранения фокуса на основном мониторе).
-  - Сенсорные тайлы поддерживают точные размеры 174x168 px (3x5) и 143x123 px (4x6).
+  - Сетка быстрых действий 2x5: сенсорные тайлы 174x168 px, высота сетки 372 px.
+  - Нижняя интерактивная панель DeckInteractivePanel: 920x216 px.
+  - Формула строгой высоты: 12 + 168 + 12 + 168 + 12 + 216 + 12 = 600 px.
   - Отсутствие залипающего :hover на тач-экранах; управление через свойства [state="..."]:
     idle, pressed, executing, success, error.
   - Тактильный отклик: вдавливание на 2 px и шейк содержимого через _content_offset без поломки QGridLayout.
@@ -14,7 +16,7 @@ import logging
 from typing import Any, Optional
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFrame, QVBoxLayout, QWidget
 
 from core.event_bus import bus
 from core.ui_base import TouchModuleView
@@ -37,43 +39,11 @@ QWidget#DeckView {
     background-color: #0b0f19;
 }
 
-/* Верхняя панель HeaderBar */
-QFrame#DeckHeaderBar {
+/* Зарезервированная интерактивная панель DeckInteractivePanel */
+QFrame#DeckInteractivePanel {
     background-color: #111622;
-    border-bottom: 1px solid #1e2638;
-}
-
-/* Кнопки-пилюли вкладок страниц */
-QPushButton.deck-pill-btn {
-    background-color: #161b26;
-    color: #94a3b8;
-    border: 1px solid #232b3e;
-    border-radius: 16px;
-    padding: 4px 16px;
-    font-size: 12px;
-    font-weight: 600;
-}
-
-QPushButton.deck-pill-btn[active="true"] {
-    background-color: #0284c7;
-    color: #ffffff;
-    border: 1px solid #38bdf8;
-    font-weight: bold;
-}
-
-/* Кнопка быстрой перезагрузки JSON */
-QPushButton.deck-reload-btn {
-    background-color: #161b26;
-    color: #94a3b8;
-    border: 1px solid #232b3e;
-    border-radius: 10px;
-    font-size: 16px;
-}
-
-QPushButton.deck-reload-btn:pressed {
-    background-color: #1f293d;
-    border-color: #38bdf8;
-    color: #38bdf8;
+    border: 1px solid #1e2638;
+    border-radius: 14px;
 }
 
 /* Сенсорный тайл DeckButtonWidget (состояния [state="..."]) */
@@ -121,12 +91,16 @@ QLabel.deck-btn-status {
 
 class DeckView(TouchModuleView):
     """
-    Главный интерфейсный модуль сенсорной макро-панели DuckDeck.
-    Габариты: 944x600 px (HeaderBar 48 px + DeckGrid 552 px).
+    Главный интерфейсный модуль сенсорной макро-панели DuckDeck v0.4.0.
+    Габариты: 944x600 px (DeckGrid 944x372 px + DeckInteractivePanel 920x216 px + 12 px margin).
+    Формула высоты:
+      12 px (top) + 168 px (r1) + 12 px (gap) + 168 px (r2) + 12 px (gap)
+      + 216 px (панель) + 12 px (bottom) = 600 px.
     Реализует:
       - Связку с DeckActionDispatcher (асинхронное исполнение с антидребезгом).
       - Централизованную реактивность Live Dynamic Tiles (EventBus).
-      - Поддержку многостраничности и горячей перезагрузки конфигурации.
+      - Сетку быстрых действий 2x5 (10 кнопок 174x168 px).
+      - Резерв нижней области 920x216 px под DeckInteractivePanel.
       - Гарантированную отписку от шины событий без утечек памяти.
     """
 
@@ -154,6 +128,7 @@ class DeckView(TouchModuleView):
         self.root_config: Optional[DeckRootConfig] = None
         self.active_page_id: str = "default"
         self._eventbus_connected: bool = False
+        self._status_message: str = ""
 
         self._setup_ui()
         self._connect_signals()
@@ -175,24 +150,48 @@ class DeckView(TouchModuleView):
     def audio_manager(self, value: Any) -> None:
         self._audio_manager = value
 
+    @property
+    def status_message(self) -> str:
+        """Текущее статусное сообщение."""
+        return self._status_message
+
+    def set_status(self, message: str) -> None:
+        """Установка статуса (в v0.4.0 транслируется в тикер интерактивной панели)."""
+        self._status_message = message
+        logger.debug(f"Deck status: {message}")
+        if hasattr(self, "interactive_panel") and hasattr(self.interactive_panel, "set_status"):
+            try:
+                self.interactive_panel.set_status(message)
+            except Exception:
+                pass
+
     def _setup_ui(self) -> None:
-        """Построение вертикального макета DeckView."""
+        """
+        Построение вертикального макета DeckView.
+        Геометрия строго 600 px:
+          DeckGrid: 372 px (12 px top + 168 px + 12 px gap + 168 px + 12 px gap)
+          DeckInteractivePanel: 216 px
+          Bottom margin: 12 px
+          Итого: 372 + 216 + 12 = 600 px.
+        """
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(0, 0, 0, 12)
         layout.setSpacing(0)
 
-        self.header_bar = HeaderBar(self)
-        layout.addWidget(self.header_bar)
-
+        # 1. Сетка макро-кнопок 2x5 (габариты 944x372 px)
         self.grid = DeckGrid(self)
         layout.addWidget(self.grid)
+
+        # 2. Зарезервированная нижняя область под DeckInteractivePanel (920x216 px)
+        self.interactive_panel = QFrame(self)
+        self.interactive_panel.setObjectName("DeckInteractivePanel")
+        self.interactive_panel.setFixedSize(920, 216)
+        self.interactive_panel.setFocusPolicy(Qt.NoFocus)
+        layout.addWidget(self.interactive_panel, 0, Qt.AlignHCenter)
 
     def _connect_signals(self) -> None:
         """Внутренние сигналы между компонентами UI и диспетчером действий."""
         self.grid.button_triggered.connect(self._on_button_triggered)
-        self.header_bar.page_selected.connect(self.set_active_page)
-        self.header_bar.reload_requested.connect(self.reload_config)
-
         self.dispatcher.action_started.connect(self._on_action_started)
         self.dispatcher.action_finished.connect(self._on_action_finished)
 
@@ -228,17 +227,16 @@ class DeckView(TouchModuleView):
             self.root_config = DeckConfigLoader.get_default_config()
 
         self.active_page_id = self.root_config.active_profile or self.root_config.pages[0].id
-        self.header_bar.set_pages(self.root_config.pages, self.active_page_id)
         self.set_active_page(self.active_page_id)
 
     def reload_config(self) -> None:
-        """Горячая перезагрузка конфигурации с уведомлением в шапке."""
+        """Горячая перезагрузка конфигурации с обновлением статуса."""
         try:
             self.load_config()
-            self.header_bar.set_status("Конфигурация перезагружена")
+            self.set_status("Конфигурация перезагружена")
         except Exception as e:
             logger.error(f"Ошибка перезагрузки конфигурации DuckDeck: {e}")
-            self.header_bar.set_status(f"Ошибка: {e}")
+            self.set_status(f"Ошибка: {e}")
 
     def set_active_page(self, page_id: str) -> None:
         """Переключение отображаемой страницы сетки."""
@@ -251,7 +249,6 @@ class DeckView(TouchModuleView):
             return
 
         self.active_page_id = page_id
-        self.header_bar.set_active_page(page_id)
         self.grid.load_page(target_page)
 
         # Начальная синхронизация Live Dynamic Tiles с реальным состоянием
@@ -264,7 +261,7 @@ class DeckView(TouchModuleView):
             typed = btn_config.action.get_typed_params()
             if isinstance(typed, NavigationParams):
                 self.set_active_page(typed.target_page_id)
-                self.header_bar.set_status(f"Страница: {typed.target_page_id}")
+                self.set_status(f"Страница: {typed.target_page_id}")
                 btn = self.grid.get_button(btn_config.id)
                 if btn:
                     btn.set_state("success")
@@ -291,7 +288,7 @@ class DeckView(TouchModuleView):
             btn.set_state("success" if success else "error")
 
         if message:
-            self.header_bar.set_status(message)
+            self.set_status(message)
 
     # ---------------------------------------------------------
     # Централизованная реактивность Live Dynamic Tiles
@@ -343,7 +340,8 @@ class DeckView(TouchModuleView):
     def cleanup(self) -> None:
         """Гарантированное освобождение ресурсов при закрытии или смене вкладки."""
         self._unsubscribe_eventbus()
-        self.header_bar.cleanup()
+        if hasattr(self, "interactive_panel") and hasattr(self.interactive_panel, "cleanup"):
+            self.interactive_panel.cleanup()
         self.grid.cleanup()
         super().cleanup()
 
