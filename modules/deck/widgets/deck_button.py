@@ -24,7 +24,7 @@ class DeckButtonWidget(QFrame):
     def __init__(
         self,
         button_config: DeckButtonConfig,
-        rows: int = 3,
+        rows: int = 2,
         cols: int = 5,
         parent: Optional[QWidget] = None,
     ):

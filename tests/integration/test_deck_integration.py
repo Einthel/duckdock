@@ -227,3 +227,20 @@ def test_config_json_tracked_apps_happ_removed():
     for app in cfg.tracked_apps:
         assert app.name != "happ"
         assert app.process_name != "happ.exe"
+
+
+@pytest.mark.integration
+def test_duckdock_spec_configuration():
+    """
+    Проверка спецификации сборки DuckDock.spec:
+    - В datas включены ресурсы DuckDeck: 'resources/deck' и 'config/deck_config.json'.
+    - В hiddenimports включен модуль 'PySide6.QtMultimedia'.
+    """
+    spec_path = Path("DuckDock.spec")
+    assert spec_path.exists(), "DuckDock.spec должен существовать в корне проекта"
+
+    content = spec_path.read_text(encoding="utf-8")
+    assert "resources/deck" in content, "DuckDock.spec должен содержать resources/deck в datas"
+    assert "config/deck_config.json" in content, "DuckDock.spec должен содержать config/deck_config.json в datas"
+    assert "PySide6.QtMultimedia" in content, "DuckDock.spec должен содержать PySide6.QtMultimedia в hiddenimports"
+

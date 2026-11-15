@@ -38,6 +38,10 @@ class EventBus(QObject):
     media_state_changed = Signal(dict)       # {"title": str, "artist": str, "is_playing": bool}
     media_action_requested = Signal(str)     # "toggle_play", "next", "prev"
 
+    # Макро-колодка DuckDeck (Спринт 6)
+    deck_notification = Signal(str)  # трансляция сообщений в тикер панели
+    deck_page_changed = Signal(str)  # синхронизация смены активного профиля / страницы
+
     # События тача и фокуса
     touch_detected = Signal(int, int)  # x, y на 2-м экране
     primary_focus_lost = Signal(int)   # hwnd потерявшего фокус окна на основном экране

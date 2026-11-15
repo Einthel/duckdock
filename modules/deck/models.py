@@ -21,6 +21,13 @@ ActionType = Literal[
     "navigation",     # Переход на страницу/папку
 ]
 
+ActionCategory = Literal[
+    "system",         # Системные операции (звук, микрофон, скриншот, диммер, папки)
+    "shortcut",       # Клавиатурные сочетания и хоткеи
+    "program",        # Запуск внешних программ и скриптов
+    "api",            # REST API запросы к сторонним сервисам
+]
+
 
 class HotkeyParams(BaseModel):
     """Параметры симуляции горячих клавиш."""
@@ -111,8 +118,16 @@ class DeckActionConfig(BaseModel):
 class DeckButtonConfig(BaseModel):
     """Конфигурация отдельного сенсорного тайла макро-панели."""
     id: str = Field(description="Уникальный идентификатор кнопки")
+    slot_index: int = Field(default=0, ge=0, le=9, description="Позиция кнопки в сетке 2x5 (0..9)")
+    name: Optional[str] = Field(default=None, description="Имя кнопки для логирования и поиска")
     title: str = Field(description="Заголовок тайла")
-    icon: str = Field(description="Символ Unicode, SVG имя или путь к изображению")
+    category: ActionCategory = Field(
+        default="system",
+        description="Категория действия: system, shortcut, program, api",
+    )
+    icon: str = Field(default="⚡", description="Символ Unicode, SVG имя или fallback-глиф")
+    icon_path: Optional[str] = Field(default=None, description="Относительный или абсолютный путь к файлу иконки")
+    icon_size: int = Field(default=48, ge=16, le=128, description="Целевой размер отрисовки иконки в пикселях")
     color_accent: str = Field(default="#38bdf8", description="Неоновый цвет акцента границы/иконки")
     background_color: str = Field(default="#161b26", description="Цвет фона кнопки")
     action: DeckActionConfig = Field(description="Основное действие по нажатию")
@@ -121,13 +136,39 @@ class DeckButtonConfig(BaseModel):
         default=None,
         description="Имя источника статуса в EventBus ('mic_mute', 'audio_device', 'dimmer')",
     )
+    sound_override: Optional[str] = Field(
+        default=None,
+        description="Опциональный путь к WAV-файлу звука клика для данной кнопки",
+    )
+
+
+class SoundSettings(BaseModel):
+    """Настройки звукового сопровождения интерфейса DuckDeck."""
+    enabled: bool = Field(default=True, description="Флаг активации звуковых эффектов")
+    volume: float = Field(default=0.8, ge=0.0, le=1.0, description="Громкость воспроизведения звуков от 0.0 до 1.0")
+    default_tap_sound: str = Field(
+        default="resources/deck/sounds/button_click.wav",
+        description="Звук клика плитки по умолчанию",
+    )
+    page_switch_sound: str = Field(
+        default="resources/deck/sounds/button_sw_page.wav",
+        description="Звук смены страницы профиля",
+    )
+    error_sound: str = Field(
+        default="resources/deck/sounds/button_offline.wav",
+        description="Звук ошибки или заблокированного действия",
+    )
+    success_sound: Optional[str] = Field(
+        default="resources/deck/sounds/button_online.wav",
+        description="Звук успешного выполнения действия",
+    )
 
 
 class DeckPageConfig(BaseModel):
     """Страница кнопок (профиль или подпапка)."""
     id: str = Field(description="Идентификатор страницы")
     name: str = Field(description="Понятное название страницы")
-    grid_rows: int = Field(default=3, ge=1, le=8, description="Число строк сетки")
+    grid_rows: int = Field(default=2, ge=1, le=8, description="Число строк сетки")
     grid_cols: int = Field(default=5, ge=1, le=8, description="Число колонок сетки")
     buttons: List[DeckButtonConfig] = Field(default_factory=list, description="Список кнопок на странице")
 
@@ -135,6 +176,14 @@ class DeckPageConfig(BaseModel):
 class DeckRootConfig(BaseModel):
     """Корневая конфигурация макро-панели DuckDeck."""
     active_profile: str = Field(default="default", description="ID активной страницы")
+    simulation_mode: bool = Field(
+        default=False,
+        description="Режим симуляции (Stubs Mode) без исполнения боевых действий",
+    )
+    sound_settings: SoundSettings = Field(
+        default_factory=SoundSettings,
+        description="Настройки звукового сопровождения интерфейса",
+    )
     pages: List[DeckPageConfig] = Field(default_factory=list, description="Список страниц/профилей")
 
 
@@ -146,17 +195,24 @@ class DeckConfigLoader:
         """Возвращает эталонную конфигурацию по умолчанию."""
         return DeckRootConfig(
             active_profile="default",
+            simulation_mode=False,
+            sound_settings=SoundSettings(),
             pages=[
                 DeckPageConfig(
                     id="default",
                     name="Основной",
-                    grid_rows=3,
+                    grid_rows=2,
                     grid_cols=5,
                     buttons=[
                         DeckButtonConfig(
                             id="btn_toggle_audio_device",
+                            slot_index=0,
+                            name="Аудиовыход",
                             title="Аудиовыход",
+                            category="system",
                             icon="🎧",
+                            icon_path="resources/deck/icons/system/sound.png",
+                            icon_size=48,
                             color_accent="#06b6d4",
                             status_source="audio_device",
                             action=DeckActionConfig(
@@ -166,8 +222,13 @@ class DeckConfigLoader:
                         ),
                         DeckButtonConfig(
                             id="btn_mute_mic",
+                            slot_index=1,
+                            name="Микрофон",
                             title="Микрофон",
+                            category="system",
                             icon="🎙",
+                            icon_path="resources/deck/icons/system/mic.png",
+                            icon_size=48,
                             color_accent="#ef4444",
                             status_source="mic_mute",
                             action=DeckActionConfig(
@@ -177,8 +238,13 @@ class DeckConfigLoader:
                         ),
                         DeckButtonConfig(
                             id="btn_screenshot_primary",
+                            slot_index=2,
+                            name="Скриншот",
                             title="Скриншот",
+                            category="system",
                             icon="📸",
+                            icon_path="resources/deck/icons/system/screenshot.png",
+                            icon_size=48,
                             color_accent="#38bdf8",
                             action=DeckActionConfig(
                                 action_type="screenshot",
@@ -187,8 +253,13 @@ class DeckConfigLoader:
                         ),
                         DeckButtonConfig(
                             id="btn_discord_deafen",
+                            slot_index=3,
+                            name="Discord Deafen",
                             title="Discord Deafen",
+                            category="shortcut",
                             icon="🎧",
+                            icon_path="resources/deck/icons/apps/discord.png",
+                            icon_size=48,
                             color_accent="#818cf8",
                             action=DeckActionConfig(
                                 action_type="hotkey",
@@ -197,8 +268,13 @@ class DeckConfigLoader:
                         ),
                         DeckButtonConfig(
                             id="btn_obs_record",
+                            slot_index=4,
+                            name="OBS Запись",
                             title="OBS Запись",
+                            category="shortcut",
                             icon="⏺",
+                            icon_path="resources/deck/icons/apps/obs.png",
+                            icon_size=48,
                             color_accent="#dc2626",
                             action=DeckActionConfig(
                                 action_type="hotkey",
@@ -207,8 +283,13 @@ class DeckConfigLoader:
                         ),
                         DeckButtonConfig(
                             id="btn_openrgb_red",
+                            slot_index=5,
+                            name="RGB Red Alert",
                             title="RGB Red Alert",
+                            category="api",
                             icon="💡",
+                            icon_path="resources/deck/icons/apps/openrgb.png",
+                            icon_size=48,
                             color_accent="#f43f5e",
                             action=DeckActionConfig(
                                 action_type="http_request",
@@ -220,8 +301,13 @@ class DeckConfigLoader:
                         ),
                         DeckButtonConfig(
                             id="btn_launch_terminal",
+                            slot_index=6,
+                            name="Терминал",
                             title="Терминал",
+                            category="program",
                             icon="💻",
+                            icon_path="resources/deck/icons/apps/terminal.png",
+                            icon_size=48,
                             color_accent="#10b981",
                             action=DeckActionConfig(
                                 action_type="launch",
@@ -230,8 +316,13 @@ class DeckConfigLoader:
                         ),
                         DeckButtonConfig(
                             id="btn_toggle_dimmer",
+                            slot_index=7,
+                            name="Ночной режим",
                             title="Ночной режим",
+                            category="system",
                             icon="🌙",
+                            icon_path="resources/deck/icons/system/dimmer.png",
+                            icon_size=48,
                             color_accent="#a855f7",
                             status_source="dimmer",
                             action=DeckActionConfig(
@@ -241,12 +332,32 @@ class DeckConfigLoader:
                         ),
                         DeckButtonConfig(
                             id="btn_lock_pc",
+                            slot_index=8,
+                            name="Заблокировать",
                             title="Заблокировать",
+                            category="system",
                             icon="🔒",
+                            icon_path="resources/deck/icons/system/lock.png",
+                            icon_size=48,
                             color_accent="#f59e0b",
                             action=DeckActionConfig(
                                 action_type="system",
                                 params={"command": "lock_workstation"},
+                            ),
+                        ),
+                        DeckButtonConfig(
+                            id="btn_launch_calc",
+                            slot_index=9,
+                            name="Калькулятор",
+                            title="Калькулятор",
+                            category="program",
+                            icon="🔢",
+                            icon_path="resources/deck/icons/apps/calc.png",
+                            icon_size=48,
+                            color_accent="#06b6d4",
+                            action=DeckActionConfig(
+                                action_type="launch",
+                                params={"path": "calc.exe", "args": []},
                             ),
                         ),
                     ],
@@ -292,6 +403,7 @@ class DeckConfigLoader:
 
 __all__ = [
     "ActionType",
+    "ActionCategory",
     "HotkeyParams",
     "AudioDeviceParams",
     "LaunchParams",
@@ -302,6 +414,7 @@ __all__ = [
     "AudioDeviceInfo",
     "DeckActionConfig",
     "DeckButtonConfig",
+    "SoundSettings",
     "DeckPageConfig",
     "DeckRootConfig",
     "DeckConfigLoader",

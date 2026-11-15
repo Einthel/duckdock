@@ -218,9 +218,10 @@ duckdock/
 │   └── user_icons/                 # (Опционально) Пользовательские иконки вне дистрибутива
 ```
 
-> **Важно по ресурсам:**  
-> 1. Каталоги `resources/deck/icons/` поддерживают fallback на системные Unicode-эмодзи при отсутствии локальных файлов.  
-> 2. Каталог `resources/deck` и файл `config/deck_config.json` обязаны быть зарегистрированы в секции `datas` файла `DuckDock.spec`.  
+> **Важно по ресурсам:**
+>
+> 1. Каталоги `resources/deck/icons/` поддерживают fallback на системные Unicode-эмодзи при отсутствии локальных файлов.
+> 2. Каталог `resources/deck` и файл `config/deck_config.json` обязаны быть зарегистрированы в секции `datas` файла `DuckDock.spec`.
 > 3. Модуль `PySide6.QtMultimedia` обязан быть добавлен в `hiddenimports` спецификации `DuckDock.spec` для исключения крашей скомпилированного дистрибутива.
 
 ### 5.2. Модель хранения и конфигурация кнопок
@@ -275,7 +276,6 @@ duckdock/
 
 ---
 
-
 ### Этап 1: Рефакторинг геометрии `DeckView` под матрицу 2×5, ресурсы и Pydantic-схему
 
 - **Шаг 1.1 (Геометрия 944×600 px и демонтаж HeaderBar) [ВЫПОЛНЕНО]:**
@@ -285,48 +285,74 @@ duckdock/
     - Сетка `DeckGrid`: 2 ряда × 5 колонок (ровно 10 кнопок на страницу). Фиксированные размеры каждой кнопки: `174 × 168 px`, межплиточные промежутки: `12 px`, чистая высота сетки: `372 px` ($12 + 168 + 12 + 168 + 12$).
     - Зарезервировать нижнюю область под `DeckInteractivePanel` габаритами **`920 × 216 px`** (высота строго закрывает рабочую область $12 + 372 + 216 = 600\text{ px}$).
   - Проверена формула высоты: $12 + 168 + 12 + 168 + 12 + 216 + 12 = 600\text{ px}$.
-  > **Запуск шага 1.1:**
-  > ```text
-  > @fullstack-builder реализуй шаг 1.1 из .md/deck/deck_base_func.md: переведи modules/deck/view.py и widgets/deck_grid.py на сетку 2x5 (кнопки 174x168 px, высота 372 px), демонтируй HeaderBar и зарезервируй нижнюю область 920x216 px под DeckInteractivePanel. Проверь формулу высоты 12+168+12+168+12+216+12 = 600 px.
-  > ```
+    > **Запуск шага 1.1:**
+    >
+    > ```text
+    > @fullstack-builder реализуй шаг 1.1 из .md/deck/deck_base_func.md: переведи modules/deck/view.py и widgets/deck_grid.py на сетку 2x5 (кнопки 174x168 px, высота 372 px), демонтируй HeaderBar и зарезервируй нижнюю область 920x216 px под DeckInteractivePanel. Проверь формулу высоты 12+168+12+168+12+216+12 = 600 px.
+    > ```
 
-- **Шаг 1.2 (Pydantic v2 модели и конфиг кнопок):**
+- **Шаг 1.2 (Pydantic v2 модели и конфиг кнопок) [ВЫПОЛНЕНО]:**
   - Обновить `modules/deck/models.py` и `config/deck_config.json`:
     - 10 кнопок на страницу по умолчанию, валидация `slot_index: int` (0..9).
     - Поддержка параметров `icon_path`, `icon_size` (дефолт 48 px), `title`, `name`.
     - Поддержка категорий действий `category`: `system`, `shortcut`, `program`, `api`.
     - Секция звуковых настроек `SoundSettings` (`enabled: bool`, `volume: float`, `default_tap_sound`, `page_switch_sound`, `error_sound`).
-  > **Запуск шага 1.2:**
-  > ```text
-  > @fullstack-builder реализуй шаг 1.2 из .md/deck/deck_base_func.md: в modules/deck/models.py обнови DeckButtonConfig (slot_index 0..9, icon_path, icon_size, category) и добавь модель SoundSettings. Актуализируй config/deck_config.json под 10 кнопок на страницу.
-  > ```
+      > **Запуск шага 1.2:**
+      >
+      > ```text
+      > @fullstack-builder реализуй шаг 1.2 из .md/deck/deck_base_func.md: в modules/deck/models.py обнови DeckButtonConfig (slot_index 0..9, icon_path, icon_size, category) и добавь модель SoundSettings. Актуализируй config/deck_config.json под 10 кнопок на страницу.
+      > ```
 
 - **Шаг 1.3 (Расширение шины сигналов `core.event_bus`):**
   - В `core/event_bus.py` зарегистрировать сигналы взаимодействия DuckDeck:
     - `deck_notification = Signal(str)` (трансляция сообщений в тикер панели).
     - `deck_page_changed = Signal(str)` (синхронизация смены активного профиля).
-  > **Запуск шага 1.3:**
-  > ```text
-  > @fullstack-builder реализуй шаг 1.3 из .md/deck/deck_base_func.md: в core/event_bus.py добавь сигналы deck_notification = Signal(str) и deck_page_changed = Signal(str).
-  > ```
+      > **Запуск шага 1.3:**
+      >
+      > ```text
+      > @fullstack-builder реализуй шаг 1.3 из .md/deck/deck_base_func.md: в core/event_bus.py добавь сигналы deck_notification = Signal(str) и deck_page_changed = Signal(str).
+      > ```
 
 - **Шаг 1.4 (Спецификация дистрибутива `DuckDock.spec`):**
   - Добавить в `datas`: `('resources/deck', 'resources/deck')` и `('config/deck_config.json', 'config')`.
   - Добавить в `hiddenimports`: `'PySide6.QtMultimedia'`.
-  > **Запуск шага 1.4:**
-  > ```text
-  > @fullstack-builder реализуй шаг 1.4 из .md/deck/deck_base_func.md: в DuckDock.spec добавь resources/deck и config/deck_config.json в datas, а 'PySide6.QtMultimedia' — в hiddenimports.
-  > ```
+    > **Запуск шага 1.4:**
+    >
+    > ```text
+    > @fullstack-builder реализуй шаг 1.4 из .md/deck/deck_base_func.md: в DuckDock.spec добавь resources/deck и config/deck_config.json в datas, а 'PySide6.QtMultimedia' — в hiddenimports.
+    > ```
 
 - **Шаг 1.5 (Адаптация существующих тестов):**
   - В `tests/unit/test_deck_view.py`: обновить ассерты геометрии (удалить проверку 48 px HeaderBar, добавить проверку 2×5 сетки 372 px и плейсхолдера панели 216 px).
   - Обеспечить 100% `PASS` существующего набора тестов без регрессий.
-  > **Запуск шага 1.5:**
-  > ```text
-  > @fullstack-builder реализуй шаг 1.5 из .md/deck/deck_base_func.md: обнови tests/unit/test_deck_view.py под сетку 2x5 и высоту 600 px (удали прямые проверки HeaderBar 48 px). Добейся 100% PASS всех тестов: pytest tests/.
-  > ```
+    > **Запуск шага 1.5:**
+    >
+    > ```text
+    > @fullstack-builder реализуй шаг 1.5 из .md/deck/deck_base_func.md: обнови tests/unit/test_deck_view.py под сетку 2x5 и высоту 600 px (удали прямые проверки HeaderBar 48 px). Добейся 100% PASS всех тестов: pytest tests/.
+    > ```
 
-#### Запуск шагов [1.1 - 1.5]:
+- **Шаг 1.6 (Автоматическая верификация Этапа 1):**
+  - Выполнить целевой прогон тестов `pytest tests/unit/test_deck_view.py tests/unit/test_deck_actions.py`.
+  - Запустить полный сьют `pytest tests/` для гарантии отсутствия регрессий (100% PASS).
+  - Проверить математику геометрии: высота сетки 372 px + панель 216 px + 36 px отступы = 600 px.
+    > **Запуск шага 1.6:**
+    >
+    > ```text
+    > @fullstack-builder выполни шаг 1.6 из .md/deck/deck_base_func.md: проведи автоматическую верификацию Этапа 1 — запусти pytest tests/unit/test_deck_view.py и pytest tests/, убедись в 100% PASS и отсутствии геометрических аномалий.
+    > ```
+
+- **Шаг 1.7 (Pre-Flight код-ревью Этапа 1):**
+  - Многоосевой аудит изменений Этапа 1 силами агента `@code-review` (STRICT READ-ONLY):
+    - Инвариант `Qt.NoFocus` на всех виджетах сетки и контейнеров.
+    - Валидность Pydantic v2 схем (slot_index, categories, SoundSettings).
+    - Корректность сборки дистрибутива в `DuckDock.spec` (`PySide6.QtMultimedia`, `resources/deck`).
+      > **Запуск шага 1.7:**
+      >
+      > ```text
+      > @code-review проведи аудит реализации Этапа 1 (шаг 1.7 из .md/deck/deck_base_func.md): проверь сохранение инварианта Qt.NoFocus, точность формулы высоты 600 px, валидность Pydantic v2 схем, регистрацию ресурсов в DuckDock.spec и 100% PASS тестов.
+      > ```
+
+#### Комплексный запуск Этапа 1 [шаги 1.1 - 1.7]:
 
 ```text
 @fullstack-builder реализуй Этап 1 из d:\Projects_X\duckdock\.md\deck\deck_base_func.md:
@@ -338,10 +364,10 @@ duckdock/
 3. В modules/deck/models.py расширь DeckButtonConfig (slot_index 0..9, icon_path, icon_size, category) и модель SoundSettings.
 4. В DuckDock.spec добавь resources/deck, config/deck_config.json и hiddenimport 'PySide6.QtMultimedia'.
 5. Обнови tests/unit/test_deck_view.py под новую геометрию 600 px.
-6. Критерий завершения: DeckView отображает 10 кнопок, зарезервирована нижняя панель 920x216 px, pytest tests/ завершается 100% PASS.
+6. Выполни автоматическую верификацию (шаг 1.6) через pytest tests/ (100% PASS).
 ```
 
-#### Pre-Flight проверка:
+#### Pre-Flight проверка Этапа 1:
 
 ```text
 @code-review проведи аудит реализации Этапа 1:
@@ -358,10 +384,11 @@ duckdock/
 - **Шаг 2.1 (Каркас панели):**
   - Создать модуль `modules/deck/widgets/interactive_panel.py` с классом `DeckInteractivePanel(TouchModuleView)` (габариты 920×216 px, фон `#111622`, радиус 14 px, `Qt.NoFocus`).
   - Горизонтальная компоновка из 3 секций: Левая (280 px), Центральная (360 px), Правая (280 px).
-  > **Запуск шага 2.1:**
-  > ```text
-  > @fullstack-builder реализуй шаг 2.1 из .md/deck/deck_base_func.md: создай modules/deck/widgets/interactive_panel.py с классом DeckInteractivePanel(TouchModuleView) размером 920x216 px (Qt.NoFocus, фон #111622, R=14px) и 3 горизонтальными секциями (280, 360, 280 px).
-  > ```
+    > **Запуск шага 2.1:**
+    >
+    > ```text
+    > @fullstack-builder реализуй шаг 2.1 из .md/deck/deck_base_func.md: создай modules/deck/widgets/interactive_panel.py с классом DeckInteractivePanel(TouchModuleView) размером 920x216 px (Qt.NoFocus, фон #111622, R=14px) и 3 горизонтальными секциями (280, 360, 280 px).
+    > ```
 
 - **Шаг 2.2 (Левая секция — Мультимедиа):**
   - Обложка 48×48 px с радиусом 8 px.
@@ -369,38 +396,63 @@ duckdock/
   - Текст исполнителя (11 px, `#94a3b8`, `ElideRight`).
   - Сенсорные кнопки `⏮`, `⏯`, `⏭` (44×44 px, `Qt.NoFocus`, стили `#161b26`, эмитят `bus.media_action_requested`).
   - Подписка на `bus.media_state_changed` с обновлением названия, автора и статуса play/pause.
-  > **Запуск шага 2.2:**
-  > ```text
-  > @fullstack-builder реализуй шаг 2.2 из .md/deck/deck_base_func.md: в левой секции DeckInteractivePanel добавь обложку 48x48, пиксельный MarqueeLabel для трека, подпись автора, кнопки ⏮ ⏯ ⏭ (эмиссия bus.media_action_requested) и подписку на bus.media_state_changed.
-  > ```
+    > **Запуск шага 2.2:**
+    >
+    > ```text
+    > @fullstack-builder реализуй шаг 2.2 из .md/deck/deck_base_func.md: в левой секции DeckInteractivePanel добавь обложку 48x48, пиксельный MarqueeLabel для трека, подпись автора, кнопки ⏮ ⏯ ⏭ (эмиссия bus.media_action_requested) и подписку на bus.media_state_changed.
+    > ```
 
 - **Шаг 2.3 (Центральная секция — Часы & Dot-пагинация):**
   - Часы `HH:mm` (34 px Bold `#38bdf8`, моноширинное выравнивание цифр) + дата (11 px `#64748b`). Синхронизация по секундам.
   - Виджет пагинации `DotPagingWidget` (`● ○ ○`) с сенсорными точками 14 px (активная `#38bdf8`, неактивная `#334155`). Тап по точке переключает страницу Deck и эмитит `bus.deck_page_changed`.
-  > **Запуск шага 2.3:**
-  > ```text
-  > @fullstack-builder реализуй шаг 2.3 из .md/deck/deck_base_func.md: в центральной секции DeckInteractivePanel реализуй часы HH:mm (34px Bold #38bdf8, таймер 1000мс) с датой и виджет DotPagingWidget (● ○ ○) с эмиссией bus.deck_page_changed при тапе по точкам.
-  > ```
+    > **Запуск шага 2.3:**
+    >
+    > ```text
+    > @fullstack-builder реализуй шаг 2.3 из .md/deck/deck_base_func.md: в центральной секции DeckInteractivePanel реализуй часы HH:mm (34px Bold #38bdf8, таймер 1000мс) с датой и виджет DotPagingWidget (● ○ ○) с эмиссией bus.deck_page_changed при тапе по точкам.
+    > ```
 
 - **Шаг 2.4 (Правая секция — Телеметрия & Тикер & Настройки):**
   - Мини-индикаторы температур CPU и GPU, подключенные к `bus.sensors_updated` (цветовая дифференциация при $T > 75^\circ\text{C}$).
   - Однострочный `NotificationTicker` для всплывающих уведомлений из `bus.deck_notification` с плавным угасанием через 3 секунды.
   - Сенсорная кнопка настроек ⚙ (44×44 px, `Qt.NoFocus`, при клике шлет статус в тикер).
-  > **Запуск шага 2.4:**
-  > ```text
-  > @fullstack-builder реализуй шаг 2.4 из .md/deck/deck_base_func.md: в правой секции DeckInteractivePanel добавь бейджи CPU/GPU (подписка на bus.sensors_updated), NotificationTicker (подписка на bus.deck_notification с затуханием 3с) и кнопку ⚙ (Qt.NoFocus).
-  > ```
+    > **Запуск шага 2.4:**
+    >
+    > ```text
+    > @fullstack-builder реализуй шаг 2.4 из .md/deck/deck_base_func.md: в правой секции DeckInteractivePanel добавь бейджи CPU/GPU (подписка на bus.sensors_updated), NotificationTicker (подписка на bus.deck_notification с затуханием 3с) и кнопку ⚙ (Qt.NoFocus).
+    > ```
 
 - **Шаг 2.5 (Интеграция в `DeckView` и модульные тесты):**
   - Встроить `DeckInteractivePanel` в нижний контейнер `modules/deck/view.py`.
   - Реализовать метод `cleanup()` с корректной остановкой таймеров и безопасной отпиской от `EventBus`.
   - Создать `tests/unit/test_deck_panel.py` для тестирования сигналов, часов и тикера.
-  > **Запуск шага 2.5:**
-  > ```text
-  > @fullstack-builder реализуй шаг 2.5 из .md/deck/deck_base_func.md: встрой DeckInteractivePanel в нижний ряд modules/deck/view.py, добавь метод cleanup() для таймеров/шины и напиши тесты в tests/unit/test_deck_panel.py. Проверь pytest tests/.
-  > ```
- 
-#### Запуск шагов [2.1 - 2.5]:
+    > **Запуск шага 2.5:**
+    >
+    > ```text
+    > @fullstack-builder реализуй шаг 2.5 из .md/deck/deck_base_func.md: встрой DeckInteractivePanel в нижний ряд modules/deck/view.py, добавь метод cleanup() для таймеров/шины и напиши тесты в tests/unit/test_deck_panel.py. Проверь pytest tests/.
+    > ```
+
+- **Шаг 2.6 (Интеграционная верификация интерактивной панели):**
+  - Запуск `pytest tests/unit/test_deck_panel.py` и проверка реактивности сигналов EventBus (медиа, датчики, тикер).
+  - Проверка синхронизации часов и точечной пагинации при кликах.
+  - Проверка метода `cleanup()` на гарантированную остановку таймеров без утечек ресурсов Qt.
+    > **Запуск шага 2.6:**
+    >
+    > ```text
+    > @fullstack-builder выполни шаг 2.6 из .md/deck/deck_base_func.md: проведи верификацию интерактивной панели — запусти pytest tests/unit/test_deck_panel.py, проверь реактивность EventBus, синхронизацию часов и гарантированную остановку таймеров в cleanup().
+    > ```
+
+- **Шаг 2.7 (Pre-Flight код-ревью Этапа 2):**
+  - Аудит реализации панели силами `@code-review` (STRICT READ-ONLY):
+    - Отсутствие утечек памяти и остановка всех таймеров (`MarqueeLabel`, `Clock`, `NotificationTicker`).
+    - Корректная отписка от `core.event_bus.bus`.
+    - Соблюдение инварианта `Qt.NoFocus` на кнопках плеера и шестеренке.
+      > **Запуск шага 2.7:**
+      >
+      > ```text
+      > @code-review проведи аудит реализации Этапа 2 (шаг 2.7 из .md/deck/deck_base_func.md): проверь утечки таймеров (MarqueeLabel, Clock, Ticker) и корректность cleanup(), безопасность подписок на EventBus и отсутствие кражи фокуса при взаимодействии с панелью.
+      > ```
+
+#### Комплексный запуск Этапа 2 [шаги 2.1 - 2.7]:
 
 ```text
 @fullstack-builder реализуй Этап 2 из d:\Projects_X\duckdock\.md\deck\deck_base_func.md:
@@ -409,10 +461,10 @@ duckdock/
 3. Интегрируй панель в нижний ряд modules/deck/view.py.
 4. Реализуй метод cleanup() для гарантированной остановки таймеров и отписки от EventBus.
 5. Напиши юнит-тесты в tests/unit/test_deck_panel.py.
-6. Критерий завершения: Панель отрисовывается в нижнем ряду 920x216 px, часы обновляются, медиа-кнопки шлют сигналы, точки переключают страницы, pytest tests/ 100% PASS.
+6. Выполни верификацию (шаг 2.6) через pytest tests/unit/test_deck_panel.py и pytest tests/ (100% PASS).
 ```
 
-#### Pre-Flight проверка:
+#### Pre-Flight проверка Этапа 2:
 
 ```text
 @code-review проведи аудит реализации Этапа 2:
@@ -431,40 +483,63 @@ duckdock/
     - Время жеста $dt \le 600\text{ ms}$.
     - Дистанция $|dx| \ge 60\text{ px}$.
     - Угловой фильтр доминирования оси: $|dx| > 1.5 \cdot |dy|$.
-  > **Запуск шага 3.1:**
-  > ```text
-  > @fullstack-builder реализуй шаг 3.1 из .md/deck/deck_base_func.md: в центральной секции DeckInteractivePanel реализуй распознавание 1-пальцевого горизонтального свайпа с порогами dt <= 600ms, |dx| >= 60px и |dx| > 1.5*|dy|.
-  > ```
+      > **Запуск шага 3.1:**
+      >
+      > ```text
+      > @fullstack-builder реализуй шаг 3.1 из .md/deck/deck_base_func.md: в центральной секции DeckInteractivePanel реализуй распознавание 1-пальцевого горизонтального свайпа с порогами dt <= 600ms, |dx| >= 60px и |dx| > 1.5*|dy|.
+      > ```
 
 - **Шаг 3.2 (Изоляция от глобального `TouchCursorFilter` и кнопок):**
   - Обеспечить бесконфликтность с глобальным 2-пальцевым свайпом переключения вкладок в `core/touch_filter.py`.
   - При начале свайпа на плитке `DeckButtonWidget` в `DeckGrid` сбрасывать состояние кнопки (`btn.set_state("idle")`, `btn._is_pressed = False`) при $|dx| \ge 20\text{ px}$.
   - При успешном распознавании свайпа выставлять `_swipe_consumed = True` для подавления синтетического клика мыши (`mouseReleaseEvent`).
-  > **Запуск шага 3.2:**
-  > ```text
-  > @fullstack-builder реализуй шаг 3.2 из .md/deck/deck_base_func.md: обеспечь бесконфликтность с core.touch_filter.TouchCursorFilter (2 пальца = вкладки), добавь сброс состояния DeckButtonWidget при |dx| >= 20px и подавляй mouseReleaseEvent при распознанном свайпе.
-  > ```
+    > **Запуск шага 3.2:**
+    >
+    > ```text
+    > @fullstack-builder реализуй шаг 3.2 из .md/deck/deck_base_func.md: обеспечь бесконфликтность с core.touch_filter.TouchCursorFilter (2 пальца = вкладки), добавь сброс состояния DeckButtonWidget при |dx| >= 20px и подавляй mouseReleaseEvent при распознанном свайпе.
+    > ```
 
 - **Шаг 3.3 (Связка с пагинацией):**
   - Свайп влево (`dx < -60 px`) $\rightarrow$ переход на следующую страницу (`page_idx + 1`).
   - Свайп вправо (`dx > +60 px`) $\rightarrow$ переход на предыдущую страницу (`page_idx - 1`).
   - Синхронная анимация точек `● ○ ○`.
-  > **Запуск шага 3.3:**
-  > ```text
-  > @fullstack-builder реализуй шаг 3.3 из .md/deck/deck_base_func.md: свяжи жест свайпа влево/вправо со сменой страницы DeckView (эмиссия bus.deck_page_changed) и синхронной анимацией точек в DotPagingWidget.
-  > ```
+    > **Запуск шага 3.3:**
+    >
+    > ```text
+    > @fullstack-builder реализуй шаг 3.3 из .md/deck/deck_base_func.md: свяжи жест свайпа влево/вправо со сменой страницы DeckView (эмиссия bus.deck_page_changed) и синхронной анимацией точек в DotPagingWidget.
+    > ```
 
-#### Запуск шагов [3.1 - 3.3]:
+- **Шаг 3.4 (Верификация кинематики жестов и изоляции):**
+  - Прогон тестов распознавания 1-пальцевого свайпа и проверка отсутствия интерференции с 2-пальцевым фильтром `TouchCursorFilter`.
+  - Проверка сброса состояния кнопки сетки и подавления синтетического клика мыши (`mouseReleaseEvent`) после свайпа.
+    > **Запуск шага 3.4:**
+    >
+    > ```text
+    > @fullstack-builder выполни шаг 3.4 из .md/deck/deck_base_func.md: проведи верификацию кинематики свайпа — запусти тесты жестов (pytest tests/unit/test_gestures.py и тесты свайпа панели), проверь изоляцию от 2-пальцевого вертикального свайпа и подавление ложных кликов.
+    > ```
+
+- **Шаг 3.5 (Pre-Flight код-ревью Этапа 3):**
+  - Аудит сенсорной логики силами `@code-review` (STRICT READ-ONLY):
+    - Угловой фильтр доминирования оси ($|dx| > 1.5 \cdot |dy|$).
+    - Корректность сброса состояния кнопки при сдвиге пальца ($|dx| \ge 20\text{ px}$).
+    - Отсутствие ложных срабатываний и блокировок обычных тапов.
+      > **Запуск шага 3.5:**
+      >
+      > ```text
+      > @code-review проведи аудит реализации Этапа 3 (шаг 3.5 из .md/deck/deck_base_func.md): проверь чистоту обработки тач-событий, угловой фильтр осей, сброс состояния кнопок сетки при горизонтальном сдвиге и отсутствие блокировки обычных тапов.
+      > ```
+
+#### Комплексный запуск Этапа 3 [шаги 3.1 - 3.5]:
 
 ```text
 @fullstack-builder реализуй Этап 3 из d:\Projects_X\duckdock\.md\deck\deck_base_func.md:
 1. Реализуй обработчик жестов свайпа в DeckInteractivePanel (пороги dt <= 600ms, |dx| >= 60px, |dx| > 1.5*|dy|).
 2. Обеспечь сброс нажатия кнопки при горизонтальном сдвиге пальца по сетке DeckGrid (|dx| >= 20px).
 3. Обеспечь бесконфликтное сосуществование с глобальным 2-пальцевым фильтром core.touch_filter.TouchCursorFilter.
-4. Критерий завершения: Свайп пальцем по центральной панели переключает страницы кнопок влево и вправо со сменой активной точки; 2-пальцевый вертикальный свайп по-прежнему переключает вкладки DuckDock.
+4. Выполни верификацию кинематики (шаг 3.4) через pytest tests/unit/test_gestures.py и тесты панели (100% PASS).
 ```
 
-#### Pre-Flight проверка:
+#### Pre-Flight проверка Этапа 3:
 
 ```text
 @code-review проведи аудит реализации Этапа 3:
@@ -482,10 +557,11 @@ duckdock/
     - Воспроизводить тактильный цикл (вдавливание + подсветка успеха).
     - Транслировать статус в `bus.deck_notification.emit(f"[Stub Action] {button.title} (ID: {button.id})")`.
   - 100% боевых классов действий в `modules/deck/actions/` сохраняются неизменными.
-  > **Запуск шага 4.1:**
-  > ```text
-  > @fullstack-builder реализуй шаг 4.1 из .md/deck/deck_base_func.md: внедри флаг simulation_mode в modules/deck/action_dispatcher.py. При True воспроизводи тактильный цикл кнопки и эмитти bus.deck_notification без запуска фоновых задач. Сохрани боевые экшены.
-  > ```
+    > **Запуск шага 4.1:**
+    >
+    > ```text
+    > @fullstack-builder реализуй шаг 4.1 из .md/deck/deck_base_func.md: внедри флаг simulation_mode в modules/deck/action_dispatcher.py. При True воспроизводи тактильный цикл кнопки и эмитти bus.deck_notification без запуска фоновых задач. Сохрани боевые экшены.
+    > ```
 
 - **Шаг 4.2 (Звуковой движок `DeckSoundEngine`):**
   - Реализовать менеджер звуков на базе `PySide6.QtMultimedia.QSoundEffect` с предзагрузкой семплов в RAM:
@@ -493,20 +569,41 @@ duckdock/
     - `button_sw_page.wav` (переключение страницы),
     - `button_offline.wav` (ошибка / блокировка).
   - Настройки громкости и включения из секции `sound_settings`.
-  > **Запуск шага 4.2:**
-  > ```text
-  > @fullstack-builder реализуй шаг 4.2 из .md/deck/deck_base_func.md: реализуй DeckSoundEngine на базе QSoundEffect с предзагрузкой button_click.wav, button_sw_page.wav, button_offline.wav и управлением громкостью из sound_settings.
-  > ```
+    > **Запуск шага 4.2:**
+    >
+    > ```text
+    > @fullstack-builder реализуй шаг 4.2 из .md/deck/deck_base_func.md: реализуй DeckSoundEngine на базе QSoundEffect с предзагрузкой button_click.wav, button_sw_page.wav, button_offline.wav и управлением громкостью из sound_settings.
+    > ```
 
-- **Шаг 4.3 (Модульные тесты и релизная верификация DoD):**
+- **Шаг 4.3 (Модульные тесты и локальная верификация):**
   - Добавить модульные тесты в `tests/unit/test_deck_panel.py` и `tests/unit/test_deck_actions.py`.
-  - Запустить полный сьют `pytest tests/` (100% тестов со статусом `PASS`).
-  > **Запуск шага 4.3:**
-  > ```text
-  > @fullstack-builder реализуй шаг 4.3 из .md/deck/deck_base_func.md: напиши тесты в tests/unit/test_deck_panel.py и tests/unit/test_deck_actions.py, проверь DoD чеклист и добейся 100% PASS всего набора тестов: pytest tests/.
-  > ```
+  - Запустить целевые тесты модуля `pytest tests/unit/test_deck*.py`.
+    > **Запуск шага 4.3:**
+    >
+    > ```text
+    > @fullstack-builder реализуй шаг 4.3 из .md/deck/deck_base_func.md: напиши тесты в tests/unit/test_deck_panel.py и tests/unit/test_deck_actions.py, проверь реактивность симуляции и аудио-отклик.
+    > ```
 
-#### Запуск шагов [4.1 - 4.3]:
+- **Шаг 4.4 (Финальная DoD верификация спринта):**
+  - Запуск полного сьюта `pytest tests/` (все unit и integration тесты должны иметь статус 100% `PASS`).
+  - Проверка сборки дистрибутива через `pyinstaller DuckDock.spec --dry-run` или валидацию манифеста ресурсов.
+    > **Запуск шага 4.4:**
+    >
+    > ```text
+    > @fullstack-builder выполни шаг 4.4 из .md/deck/deck_base_func.md: проведи полную DoD верификацию Спринта 6 — запусти полный сьют pytest tests/ (100% PASS), проверь сохранение всех боевых экшенов и корректность spec-файла сборки.
+    > ```
+
+- **Шаг 4.5 (Финальный Pre-Flight аудит релиза v0.4.0):**
+  - Итоговый многоосевой аудит изменений DuckDeck v0.4.0 перед слиянием в `main` силами `@code-review` (STRICT READ-ONLY):
+    - Сверка со всеми пунктами Релизного чеклиста (GEMINI.md раздел 4).
+    - Проверка чистоты diff, версионирования и отсутствия регрессий.
+      > **Запуск шага 4.5:**
+      >
+      > ```text
+      > @code-review проведи финальный Pre-Flight аудит релиза DuckDeck v0.4.0 (шаг 4.5 из .md/deck/deck_base_func.md): сверь реализацию со всеми пунктами чеклиста DoD (раздел 7), проверь чистоту diff, отсутствие утечек фокуса и памяти, и готовность к релизу.
+      > ```
+
+#### Комплексный запуск Этапа 4 [шаги 4.1 - 4.5]:
 
 ```text
 @fullstack-builder реализуй Этап 4 из d:\Projects_X\duckdock\.md\deck\deck_base_func.md:
@@ -514,13 +611,13 @@ duckdock/
 2. Реализуй DeckSoundEngine на базе QSoundEffect с предзагрузкой button_click.wav и button_sw_page.wav.
 3. Сохрани боевую работоспособность обработчиков в modules/deck/actions/.
 4. Добавь тесты в tests/unit/test_deck_panel.py.
-5. Добейся 100% PASS всего набора тестов (pytest tests/).
+5. Выполни финальную верификацию (шаг 4.4) и добейся 100% PASS всего набора тестов (pytest tests/).
 ```
 
 #### Pre-Flight проверка:
 
 ```text
-@code-review проведи аудит реализации Этапа 4:
+@code-review проведи финальный аудит реализации Этапа 4:
 - Проверь 100% прохождение тест-сьюта pytest tests/.
 - Проверь чистоту diff и отсутствие поломки сигнатур существующих экшенов.
 ```
@@ -535,5 +632,5 @@ duckdock/
 - [ ] **Слабая связанность:** Интерактивная панель взаимодействует со средой исключительно через сигналы `core.event_bus.bus` (`deck_notification`, `deck_page_changed`, `media_state_changed`, `sensors_updated`).
 - [ ] **Сохранение экшенов:** Все боевые обработчики сохранены в `modules/deck/actions/` и готовы к боевому включению снятием флага `simulation_mode`.
 - [ ] **Ресурсная база и PyInstaller:** Файлы звуков (`button_click.wav`, `button_sw_page.wav`), каталоги иконок и конфиг интегрированы в `datas` спецификации `DuckDock.spec`, а `PySide6.QtMultimedia` добавлен в `hiddenimports`.
-- [ ] **Спецификация кнопок и Pydantic v2:** Модель `DeckButtonConfig` поддерживает слоты 0..9, категории `system`, `shortcut`, `program`, `api`, размеры и пути к иконкам, а также секцию звуковых настроек `SoundSettings`.
+- [x] **Спецификация кнопок и Pydantic v2:** Модель `DeckButtonConfig` поддерживает слоты 0..9, категории `system`, `shortcut`, `program`, `api`, размеры и пути к иконкам, а также секцию звуковых настроек `SoundSettings`.
 - [ ] **Регрессионная стабильность:** 100% тестов проходят успешно (`pytest tests/`).
