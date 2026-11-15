@@ -2,29 +2,32 @@
 Главное окно оболочки DuckDock (800x600 / 1024x600, Frameless, WS_EX_NOACTIVATE).
 Размещается на вспомогательном сенсорном экране.
 """
-import ctypes
 from ctypes import wintypes
 from typing import Optional
 
-from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QHBoxLayout, QStackedWidget, QLabel, QVBoxLayout, QFrame, QApplication
-)
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QGuiApplication, QScreen
+from PySide6.QtWidgets import (
+    QApplication,
+    QHBoxLayout,
+    QMainWindow,
+    QStackedWidget,
+    QWidget,
+)
 
-from core.config import AppConfig
 from core.event_bus import bus
 from core.focus_guardian import FocusGuardian
 from core.mouse_barrier import MouseBarrier
 from core.touch_filter import TouchCursorFilter
-from core.window_manager import WindowManager, ProcessWatcher
-from ui.sidebar import SidebarDock
+from core.window_manager import ProcessWatcher, WindowManager
+from modules.audio.view import AudioMixerView
+from modules.deck.view import DeckView
+from modules.media.view import YouTubeView
+from modules.settings.config import AppConfig
+from modules.telemetry.view import SensorsView
 from ui.dimmer_overlay import DimmerOverlay
 from ui.showcase_view import ShowcaseView
-from ui.modules.sensors_view import SensorsView
-from ui.modules.youtube_view import YouTubeView
-from ui.modules.audio_view import AudioMixerView
-from ui.modules.deck_view import DeckView
+from ui.sidebar import SidebarDock
 
 MAIN_QSS = """
 QMainWindow {
