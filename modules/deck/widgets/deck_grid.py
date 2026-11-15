@@ -16,7 +16,9 @@ logger = logging.getLogger("duckdock.deck.grid")
 class DeckGrid(QWidget):
     """
     Контейнер сетки сенсорных кнопок DuckDeck.
-    Габариты строго 944x552 px (с отступами 12 px и промежутками 12 px).
+    Габариты строго 944x372 px (с отступами 12 px и промежутками 12 px).
+    Матрица: 2 строки x 5 колонок = 10 кнопок на страницу.
+    Кнопки фиксированного размера 174x168 px.
     """
     button_triggered = Signal(object)  # DeckButtonConfig
 
@@ -24,7 +26,7 @@ class DeckGrid(QWidget):
         super().__init__(parent)
         self.setObjectName("DeckGrid")
         self.setFocusPolicy(Qt.NoFocus)
-        self.setFixedSize(944, 552)
+        self.setFixedSize(944, 372)
 
         self._buttons: Dict[str, DeckButtonWidget] = {}
 
@@ -35,11 +37,12 @@ class DeckGrid(QWidget):
     def load_page(self, page_config: DeckPageConfig) -> None:
         """
         Загрузка страницы кнопок с очисткой предыдущих виджетов без утечек памяти.
+        В DuckDeck v0.4.0 используется сетка 2x5 (10 кнопок на страницу).
         """
         # Очистка существующих элементов
         self.clear()
 
-        rows = page_config.grid_rows or 3
+        rows = min(page_config.grid_rows or 2, 2)
         cols = page_config.grid_cols or 5
 
         # Размещение кнопок по формуле: row = idx // cols, col = idx % cols
@@ -71,7 +74,7 @@ class DeckGrid(QWidget):
                 c = idx % cols
                 spacer = QSpacerItem(
                     174 if cols == 5 else 143,
-                    168 if rows == 3 else 123,
+                    168 if rows <= 2 else 123,
                     QSizePolicy.Fixed,
                     QSizePolicy.Fixed,
                 )
