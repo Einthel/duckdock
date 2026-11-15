@@ -1,0 +1,224 @@
+{
+  "active_profile": "default",
+  "pages": [
+    {
+      "id": "default",
+      "name": "Основной",
+      "grid_rows": 3,
+      "grid_cols": 5,
+      "buttons": [
+        {
+          "id": "btn_toggle_audio_device",
+          "title": "Аудиовыход",
+          "icon": "🎧",
+          "color_accent": "#06b6d4",
+          "background_color": "#161b26",
+          "status_source": "audio_device",
+          "action": {
+            "action_type": "audio_device",
+            "params": {
+              "mode": "toggle",
+              "devices": [
+                "Наушники",
+                "Динамики"
+              ]
+            }
+          },
+          "toggle_action": null
+        },
+        {
+          "id": "btn_mute_mic",
+          "title": "Микрофон",
+          "icon": "🎙",
+          "color_accent": "#ef4444",
+          "background_color": "#161b26",
+          "status_source": "mic_mute",
+          "action": {
+            "action_type": "system",
+            "params": {
+              "command": "toggle_mic_mute"
+            }
+          },
+          "toggle_action": null
+        },
+        {
+          "id": "btn_screenshot_primary",
+          "title": "Скриншот",
+          "icon": "📸",
+          "color_accent": "#38bdf8",
+          "background_color": "#161b26",
+          "status_source": null,
+          "action": {
+            "action_type": "screenshot",
+            "params": {
+              "target": "primary_screen",
+              "clipboard": true,
+              "save_path": null
+            }
+          },
+          "toggle_action": null
+        },
+        {
+          "id": "btn_discord_deafen",
+          "title": "Discord Deafen",
+          "icon": "🎧",
+          "color_accent": "#818cf8",
+          "background_color": "#161b26",
+          "status_source": null,
+          "action": {
+            "action_type": "hotkey",
+            "params": {
+              "keys": [
+                "ctrl",
+                "shift",
+                "d"
+              ]
+            }
+          },
+          "toggle_action": null
+        },
+        {
+          "id": "btn_obs_record",
+          "title": "OBS Запись",
+          "icon": "⏺",
+          "color_accent": "#dc2626",
+          "background_color": "#161b26",
+          "status_source": null,
+          "action": {
+            "action_type": "hotkey",
+            "params": {
+              "keys": [
+                "ctrl",
+                "f9"
+              ]
+            }
+          },
+          "toggle_action": null
+        },
+        {
+          "id": "btn_openrgb_red",
+          "title": "RGB Red Alert",
+          "icon": "💡",
+          "color_accent": "#f43f5e",
+          "background_color": "#161b26",
+          "status_source": null,
+          "action": {
+            "action_type": "http_request",
+            "params": {
+              "url": "http://127.0.0.1:6742/api/profiles/RedAlert/load",
+              "method": "POST",
+              "headers": {},
+              "json_body": null,
+              "timeout_sec": 1.5
+            }
+          },
+          "toggle_action": null
+        },
+        {
+          "id": "btn_launch_terminal",
+          "title": "Терминал",
+          "icon": "💻",
+          "color_accent": "#10b981",
+          "background_color": "#161b26",
+          "status_source": null,
+          "action": {
+            "action_type": "launch",
+            "params": {
+              "path": "wt.exe",
+              "args": [],
+              "working_dir": null,
+              "detached": true
+            }
+          },
+          "toggle_action": null
+        },
+        {
+          "id": "btn_toggle_dimmer",
+          "title": "Ночной режим",
+          "icon": "🌙",
+          "color_accent": "#a855f7",
+          "background_color": "#161b26",
+          "status_source": "dimmer",
+          "action": {
+            "action_type": "system",
+            "params": {
+              "command": "toggle_dimmer"
+            }
+          },
+          "toggle_action": null
+        },
+        {
+          "id": "btn_lock_pc",
+          "title": "Заблокировать",
+          "icon": "🔒",
+          "color_accent": "#f59e0b",
+          "background_color": "#161b26",
+          "status_source": null,
+          "action": {
+            "action_type": "system",
+            "params": {
+              "command": "lock_workstation"
+            }
+          },
+          "toggle_action": null
+        }
+      ]
+    },
+    {
+      "id": "grid4x6",
+      "name": "Стриминг 4×6",
+      "grid_rows": 4,
+      "grid_cols": 6,
+      "buttons": [
+        {
+          "id": "btn_stream_back",
+          "title": "Назад",
+          "icon": "◀",
+          "color_accent": "#38bdf8",
+          "background_color": "#161b26",
+          "status_source": null,
+          "action": {
+            "action_type": "navigation",
+            "params": {
+              "target_page_id": "default"
+            }
+          },
+          "toggle_action": null
+        },
+        {
+          "id": "btn_stream_mute_mic",
+          "title": "Микрофон",
+          "icon": "🎙",
+          "color_accent": "#ef4444",
+          "background_color": "#161b26",
+          "status_source": "mic_mute",
+          "action": {
+            "action_type": "system",
+            "params": {
+              "command": "toggle_mic_mute"
+            }
+          },
+          "toggle_action": null
+        },
+        {
+          "id": "btn_stream_obs_record",
+          "title": "OBS Запись",
+          "icon": "⏺",
+          "color_accent": "#dc2626",
+          "background_color": "#161b26",
+          "status_source": null,
+          "action": {
+            "action_type": "hotkey",
+            "params": {
+              "keys": [
+                "ctrl",
+                "f9"
+              ]
+            }
+          },
+          "toggle_action": null
+        }
+      ]
+    }
+  ]
+}

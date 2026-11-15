@@ -10,11 +10,19 @@ from pydantic import BaseModel, Field
 
 try:
     import comtypes
-    from pycaw.pycaw import AudioUtilities
+    from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+    from pycaw.constants import EDataFlow, ERole
     PYCAW_AVAILABLE = True
 except (ImportError, OSError, Exception):
     PYCAW_AVAILABLE = False
     AudioUtilities = None
+    IAudioEndpointVolume = None
+    EDataFlow = None
+    ERole = None
+
+from core.event_bus import bus
+from core.deck.models import AudioDeviceInfo
+from core.deck.actions import audio_device_switcher
 
 logger = logging.getLogger("duckdock.audio")
 
@@ -61,7 +69,16 @@ class AudioManager:
 
     def __init__(self):
         self._exe_cache: Dict[int, Optional[str]] = {}
+        self._cached_speakers = None
+        self._cached_endpoint_volume = None
+        self._cached_mic_volume = None
         self._ensure_com_init()
+
+    def invalidate_cache(self) -> None:
+        """Сброс кэшированных COM-интерфейсов устройств воспроизведения и ввода."""
+        self._cached_speakers = None
+        self._cached_endpoint_volume = None
+        self._cached_mic_volume = None
 
     def _ensure_com_init(self):
         """Гарантирует инициализацию COM для текущего потока."""
@@ -73,21 +90,27 @@ class AudioManager:
 
     def _get_speakers_device(self):
         """Получить активное устройство вывода (Default Speakers/Headphones)."""
+        if self._cached_speakers is not None:
+            return self._cached_speakers
         if not PYCAW_AVAILABLE or AudioUtilities is None:
             return None
         self._ensure_com_init()
         try:
-            return AudioUtilities.GetSpeakers()
+            self._cached_speakers = AudioUtilities.GetSpeakers()
+            return self._cached_speakers
         except Exception as e:
             logger.debug(f"Не удалось получить аудиоустройство: {e}")
             return None
 
     def _get_endpoint_volume(self):
         """Получить интерфейс EndpointVolume для мастер-громкости."""
+        if self._cached_endpoint_volume is not None:
+            return self._cached_endpoint_volume
         dev = self._get_speakers_device()
         if dev is not None:
             try:
-                return dev.EndpointVolume
+                self._cached_endpoint_volume = dev.EndpointVolume
+                return self._cached_endpoint_volume
             except Exception as e:
                 logger.debug(f"Не удалось получить EndpointVolume: {e}")
         return None
@@ -148,6 +171,105 @@ class AudioManager:
         current = self.is_master_muted()
         new_state = not current
         self.set_master_mute(new_state)
+        return new_state
+
+    # ---------------------------------------------------------
+    # Переключение устройств воспроизведения (Наушники/Динамики)
+    # ---------------------------------------------------------
+    def get_playback_devices(self) -> List[AudioDeviceInfo]:
+        """Получить список всех активных устройств вывода."""
+        return audio_device_switcher.get_playback_devices()
+
+    def get_default_playback_device_id(self) -> Optional[str]:
+        """Получить ID текущего устройства вывода по умолчанию."""
+        return audio_device_switcher.get_default_playback_device_id()
+
+    def set_default_playback_device(self, device_id: str) -> bool:
+        """
+        Установить устройство по умолчанию по ID, инвалидировать кэш
+        и уведомить шину событий EventBus.
+        """
+        success = audio_device_switcher.switch_default_device(device_id)
+        if success:
+            self.invalidate_cache()
+            dev_name = self.get_master_device_name()
+            try:
+                bus.playback_device_changed.emit(dev_name, device_id)
+                bus.master_volume_changed.emit(self.get_master_volume(), self.is_master_muted())
+            except Exception as e:
+                logger.debug(f"Ошибка эмиссии сигналов после смены устройства: {e}")
+        return success
+
+    def toggle_playback_device(self, targets: Optional[List[str]] = None) -> Optional[AudioDeviceInfo]:
+        """
+        Циклически переключить устройство воспроизведения между целями targets.
+        """
+        dev = audio_device_switcher.toggle_audio_device(targets)
+        if dev:
+            self.invalidate_cache()
+            try:
+                bus.playback_device_changed.emit(dev.name, dev.id)
+                bus.master_volume_changed.emit(self.get_master_volume(), self.is_master_muted())
+            except Exception as e:
+                logger.debug(f"Ошибка эмиссии сигналов после циклической смены устройства: {e}")
+        return dev
+
+    # ---------------------------------------------------------
+    # Управление микрофоном (Input Endpoint eCapture)
+    # ---------------------------------------------------------
+    def _get_mic_endpoint_volume(self):
+        """Получить интерфейс EndpointVolume для дефолтного микрофона."""
+        if self._cached_mic_volume is not None:
+            return self._cached_mic_volume
+        if not PYCAW_AVAILABLE or AudioUtilities is None:
+            return None
+        self._ensure_com_init()
+        try:
+            flow = getattr(EDataFlow, "eCapture", 1)
+            flow_val = getattr(flow, "value", flow)
+            role = getattr(ERole, "eConsole", 0)
+            role_val = getattr(role, "value", role)
+
+            enumerator = AudioUtilities.GetDeviceEnumerator()
+            if enumerator is None:
+                return None
+            mic_dev = enumerator.GetDefaultAudioEndpoint(flow_val, role_val)
+            if mic_dev is not None and IAudioEndpointVolume is not None:
+                iface = mic_dev.Activate(IAudioEndpointVolume._iid_, comtypes.CLSCTX_ALL, None)
+                self._cached_mic_volume = iface.QueryInterface(IAudioEndpointVolume)
+                return self._cached_mic_volume
+        except Exception as e:
+            logger.debug(f"Не удалось получить mic EndpointVolume: {e}")
+        return None
+
+    def is_mic_muted(self) -> bool:
+        """Проверить, отключен ли микрофон."""
+        ep = self._get_mic_endpoint_volume()
+        if ep is not None:
+            try:
+                return bool(ep.GetMute())
+            except Exception as e:
+                logger.error(f"Ошибка чтения mic mute: {e}")
+        return False
+
+    def set_mic_mute(self, muted: bool) -> None:
+        """Установить состояние отключения микрофона."""
+        ep = self._get_mic_endpoint_volume()
+        if ep is not None:
+            try:
+                ep.SetMute(1 if muted else 0, None)
+                try:
+                    bus.mic_mute_changed.emit(muted)
+                except Exception:
+                    pass
+            except Exception as e:
+                logger.error(f"Ошибка установки mic mute: {e}")
+
+    def toggle_mic_mute(self) -> bool:
+        """Переключить mute микрофона и вернуть новое состояние."""
+        current = self.is_mic_muted()
+        new_state = not current
+        self.set_mic_mute(new_state)
         return new_state
 
     def _resolve_process_exe(self, pid: int) -> Optional[str]:

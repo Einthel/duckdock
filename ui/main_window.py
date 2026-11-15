@@ -24,6 +24,7 @@ from ui.showcase_view import ShowcaseView
 from ui.modules.sensors_view import SensorsView
 from ui.modules.youtube_view import YouTubeView
 from ui.modules.audio_view import AudioMixerView
+from ui.modules.deck_view import DeckView
 
 MAIN_QSS = """
 QMainWindow {
@@ -151,9 +152,9 @@ class MainWindow(QMainWindow):
         self.page_sensors = SensorsView(self)
         self.workspace.addWidget(self.page_sensors)
 
-        # 2: happ / External App Placeholder
-        self.page_happ = self._create_external_app_view("happ.exe (Proxy UI)", 2)
-        self.workspace.addWidget(self.page_happ)
+        # 2: DuckDeck (Macro Panel & Controls)
+        self.page_deck = DeckView(parent=self)
+        self.workspace.addWidget(self.page_deck)
 
         # 3: Audio Mixer (Windows Core Audio PyCaw)
         self.page_audio = AudioMixerView(self)
@@ -169,31 +170,6 @@ class MainWindow(QMainWindow):
         self.dimmer = DimmerOverlay(self)
         self.dimmer.setGeometry(0, 0, self.config.display.width, self.config.display.height)
         self.dimmer.raise_()
-
-    def _create_external_app_view(self, title: str, tab_idx: int) -> QWidget:
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
-        layout.setContentsMargins(20, 20, 20, 20)
-
-        card = QFrame()
-        card.setProperty("class", "placeholder-card")
-        c_layout = QVBoxLayout(card)
-        c_layout.setSpacing(12)
-
-        lbl_t = QLabel(f"Тайлинг внешнего приложения: {title}")
-        lbl_t.setStyleSheet("color: #38bdf8; font-size: 16px; font-weight: bold;")
-        c_layout.addWidget(lbl_t)
-
-        lbl_desc = QLabel(
-            "Вкладка активна. Менеджер окон автоматически находит процесс по имени,\n"
-            "снимает рамки заголовка (WS_CAPTION) и бесшовно вписывает окно в рабочую область.\n\n"
-            "Если приложение не запущено, окно ожидает запуска в фоне."
-        )
-        lbl_desc.setStyleSheet("color: #94a3b8; font-size: 13px; line-height: 1.4;")
-        c_layout.addWidget(lbl_desc)
-
-        layout.addWidget(card)
-        return widget
 
     def _connect_signals(self):
         bus.tab_changed.connect(self._on_tab_changed)
@@ -390,7 +366,11 @@ class MainWindow(QMainWindow):
                     pass
         if hasattr(self, "page_sensors") and hasattr(self.page_sensors, "cleanup"):
             self.page_sensors.cleanup()
-        if hasattr(self, "page_audio") and hasattr(self.page_audio, "poll_timer") and self.page_audio.poll_timer.isActive():
+        if hasattr(self, "page_deck") and hasattr(self.page_deck, "cleanup"):
+            self.page_deck.cleanup()
+        if hasattr(self, "page_audio") and hasattr(self.page_audio, "cleanup"):
+            self.page_audio.cleanup()
+        elif hasattr(self, "page_audio") and hasattr(self.page_audio, "poll_timer") and self.page_audio.poll_timer.isActive():
             self.page_audio.poll_timer.stop()
         if hasattr(self, "process_watcher"):
             self.process_watcher.stop()

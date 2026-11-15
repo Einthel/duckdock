@@ -111,6 +111,11 @@ class _FocusHookThread(QThread):
 
 class FocusGuardian(QObject):
     """Защитник системного фокуса и положения курсора мыши."""
+    _instance: Optional["FocusGuardian"] = None
+
+    @classmethod
+    def get_instance(cls) -> Optional["FocusGuardian"]:
+        return cls._instance
 
     def __init__(
         self,
@@ -120,6 +125,7 @@ class FocusGuardian(QObject):
         parent: Optional[QObject] = None,
     ):
         super().__init__(parent)
+        FocusGuardian._instance = self
         self.subscreen_rect = subscreen_rect  # x, y, w, h
         self.restore_delay_ms = restore_delay_ms
         self.cursor_restore_delay_ms = cursor_restore_delay_ms

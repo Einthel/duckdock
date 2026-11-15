@@ -31,6 +31,8 @@ class EventBus(QObject):
     # Аудиомикшер
     master_volume_changed = Signal(float, bool)  # level (0.0-1.0), is_muted
     session_volume_changed = Signal(int, float, bool)  # pid, level (0.0-1.0), is_muted
+    playback_device_changed = Signal(str, str)  # device_name, device_id
+    mic_mute_changed = Signal(bool)  # is_muted
 
     # Медиаплеер YouTube Music (Спринт 4)
     media_state_changed = Signal(dict)       # {"title": str, "artist": str, "is_playing": bool}

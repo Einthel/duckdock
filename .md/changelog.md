@@ -5,6 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-11-15
+
+### Added
+- **Спринт 5: Сенсорная макро-панель DuckDeck и управление аудиоустройствами**:
+  - `core/deck/`:
+    - Модели данных `models.py`: Pydantic V2 схемы конфигурации DuckDeck (`DeckRootConfig`, `DeckPageConfig`, `DeckButtonConfig`, `DeckActionConfig`), типы параметров (`HotkeyParams`, `ProcessParams`, `HttpParams`, `ScreenshotParams`, `AudioDeviceParams`, `SystemParams`), типизированное представление `AudioDeviceInfo`.
+    - Диспетчер действий `action_dispatcher.py` (`DeckActionDispatcher`):
+      - Асинхронное выполнение задач в глобальном пуле потоков `QThreadPool`.
+      - Защита от дребезга нажатий (cooldown 250 мс на тайл).
+      - Сигналы обратной связи `action_started`, `action_finished` (успех/ошибка с описанием) и `page_switch_requested`.
+    - Действия `core/deck/actions/`:
+      - `hotkey_sender.py`: отправка аппаратных скан-кодов через `SendInput` (`KEYEVENTF_SCANCODE`) с поддержкой Win/Ctrl/Alt/Shift, очисткой модификаторов и предварительным восстановлением фокуса целевого окна без активации DuckDock.
+      - `audio_device_switcher.py`: прямое управление аудиоустройствами по умолчанию Windows через нативный COM-интерфейс `IPolicyConfigClient` (`eConsole`, `eMultimedia`, `eCommunications`) и циклический переключатель `toggle_audio_device`.
+      - `process_launcher.py`: detached-запуск процессов и протоколов (`os.startfile` / `subprocess.Popen` с `CREATE_NO_WINDOW | DETACHED_PROCESS`).
+      - `http_client.py`: неблокирующие REST/HTTP-запросы (`urllib.request`) с таймаутами для локальных API (OpenRGB, Home Assistant, OBS).
+      - `screen_capture.py`: чистый захват основного экрана 2560×1440 через `QScreen` / `BitBlt` напрямую в буфер обмена `QGuiApplication.clipboard()`.
+  - `ui/modules/deck_view.py`:
+    - Полноэкранный сенсорный интерфейс макро-панели 944×600 (`DeckView`):
+      - Верхняя панель (Header Bar 48 px): динамический селектор страниц, кнопка перезагрузки JSON-конфига и статус.
+      - Настраиваемая сетка кнопок (3×5 — 174×168 px или 4×6 — 145×124 px).
+      - Сенсорные тайлы (`DeckButtonWidget`): крупные иконки (48×48 px), заголовки и субтитры, кинетическая тактильная обратная связь при нажатии (`_is_pressed`, `_is_executing`), анимация ошибки (тряска Shake) и защита от зависания через сторожевой таймер (Watchdog 5000 мс).
+      - Реактивные динамические тайлы (`Live Tiles`): автоматическое обновление иконки и статуса переключателя аудиоустройств (`🎧`/`🔊`) и микрофона (`🎙`/`🔇`) через события `EventBus`.
+  - `ui/sidebar.py`:
+    - Кнопка вкладки 2 переименована в `btn_deck` с иконкой `🎛` и подсказкой `DuckDeck (Макро-панель и управление)`.
+  - `ui/modules/audio_view.py`:
+    - Сенсорная кнопка быстрого переключения вывода звука `btn_switch_device` в шапке микшера.
+    - Мгновенная синхронизация мастер-громкости и списка сессий при смене устройства по умолчанию.
+  - `config/deck_config.json`:
+    - Готовая дефолтная конфигурация профилей: «Default» (звук, микрофон, диммер, скриншот, калькулятор, блокнот), «Dev / Tools» (VSCode, Windows Terminal, Chrome, Git GUI), «Gaming» (хоткеи Discord, оверлей, полноэкранный захват).
+  - Тестирование:
+    - Модульные тесты `tests/unit/test_deck_actions.py`, `tests/unit/test_deck_view.py`, `tests/unit/test_audio_device_switcher.py`.
+    - Интеграционный тест `tests/integration/test_deck_integration.py` (сквозная проверка маршрутизации сигналов, микшера и DuckDeck).
+
+### Changed
+  - `ui/main_window.py`:
+    - Заменена статическая заглушка `page_happ` на интерактивную макро-панель `DeckView`.
+    - Добавлен жизненный цикл `cleanup()` при закрытии окна.
+  - `config.json`:
+    - Удален устаревший процесс `happ` из списка `tracked_apps`.
+  - `core/audio_manager.py`:
+    - Интегрированы методы управления дефолтными эндпоинтами (`get_playback_devices`, `set_default_playback_device`, `toggle_playback_device`).
+    - Добавлено управление состоянием микрофона (`is_mic_muted`, `set_mic_mute`, `toggle_mic_mute`).
+    - Добавлено кэширование и метод `invalidate_cache()`.
+  - `core/event_bus.py`:
+    - Добавлены сигналы `playback_device_changed(device_name, device_id)` и `mic_mute_changed(is_muted)`.
+
 ## [0.2.0] - 2026-11-14
 
 ### Added

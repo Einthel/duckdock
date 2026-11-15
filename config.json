@@ -27,12 +27,6 @@
   },
   "tracked_apps": [
     {
-      "name": "happ",
-      "process_name": "happ.exe",
-      "tab_index": 2,
-      "auto_tile": true
-    },
-    {
       "name": "aida64",
       "process_name": "aida64.exe",
       "tab_index": 1,
