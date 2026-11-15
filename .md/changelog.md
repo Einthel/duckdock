@@ -5,9 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.0] - 2026-11-15
+## [0.4.0] - 2026-11-16
 
 ### Added
+- **DuckDeck v0.4.0 (Этап 1: Архитектурный фундамент, раскладка 2x5 и спецификация ресурсов)**:
+  - `core/event_bus.py`:
+    - Зарегистрированы сигналы `deck_notification = Signal(str)` (трансляция сообщений в тикер панели) и `deck_page_changed = Signal(str)` (синхронизация смены активного профиля).
+  - `modules/deck/models.py`:
+    - Расширение Pydantic v2 модели `DeckButtonConfig`: `slot_index` (0..9), `category` (`system`, `shortcut`, `program`, `api`), `icon_size` (16..128 px), `icon_path`, `sound_override`.
+    - Модель `SoundSettings` (`enabled`, `volume` 0.0..1.0, `default_tap_sound`, `page_switch_sound`, `error_sound`, `success_sound`).
+    - Поддержка `simulation_mode` и `sound_settings` в `DeckRootConfig`.
+  - `config/deck_config.json`:
+    - Актуализация страниц `default` и `grid4x6` под строгую сетку 2x5 (ровно 10 кнопок на страницу со слотами 0..9).
+  - `DuckDock.spec`:
+    - Регистрация `resources/deck` и `config/deck_config.json` в `datas`, `PySide6.QtMultimedia` в `hiddenimports`.
+  - `.gitignore`:
+    - Белый список `!DuckDock.spec` для контроля спецификации сборки в Git.
+  - Тестирование:
+    - Модульные тесты геометрии `test_deck_view.py` и интеграционный тест `test_duckdock_spec_configuration`. Общий сьют: 140 тестов (100% PASS).
 - **Спринт 6: Переход на Feature-First модульную архитектуру и Foundation Decoupling**:
   - `core/ui_base.py`:
     - Базовый абстрактный класс `TouchModuleView(QWidget)` с принудительной политикой `setFocusPolicy(Qt.NoFocus)` и методом жизненного цикла `cleanup()`.

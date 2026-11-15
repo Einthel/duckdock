@@ -9,6 +9,7 @@ import time
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pydantic import ValidationError
 from PySide6.QtCore import QThreadPool
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QApplication
@@ -27,6 +28,7 @@ from core.deck.actions.http_client import execute_http_request
 from core.deck.actions.process_launcher import CREATE_NO_WINDOW, DETACHED_PROCESS, launch_process
 from core.deck.actions.screen_capture import capture_screen, copy_pixmap_to_clipboard, get_primary_screen
 from core.deck.models import (
+    ActionCategory,
     AudioDeviceParams,
     DeckActionConfig,
     DeckButtonConfig,
@@ -38,6 +40,7 @@ from core.deck.models import (
     LaunchParams,
     NavigationParams,
     ScreenshotParams,
+    SoundSettings,
     SystemParams,
 )
 from core.focus_guardian import FocusGuardian
@@ -406,3 +409,124 @@ def test_action_dispatcher_gc_protection_and_cleanup(qapp):
     assert received_finished[0][1] is True
     # После завершения ссылка удалена из словаря активных задач
     assert "btn_test_gc" not in dispatcher._active_tasks
+
+
+# -------------------------------------------------------------
+# 5. Тесты расширенных моделей DuckDeck v0.4.0 (Step 1.2)
+# -------------------------------------------------------------
+def test_deck_button_config_extended_fields_and_validation():
+    """Тест валидации slot_index (0..9), category, icon_size (16..128) и icon_path."""
+    act = DeckActionConfig(action_type="system", params={"command": "toggle_dimmer"})
+
+    # Валидная конфигурация с новыми полями
+    btn = DeckButtonConfig(
+        id="btn_valid",
+        slot_index=5,
+        name="Ночной режим",
+        title="Ночной режим",
+        category="system",
+        icon="🌙",
+        icon_path="resources/deck/icons/system/dimmer.png",
+        icon_size=48,
+        action=act,
+    )
+    assert btn.slot_index == 5
+    assert btn.category == "system"
+    assert btn.name == "Ночной режим"
+    assert btn.icon_size == 48
+    assert btn.icon_path == "resources/deck/icons/system/dimmer.png"
+
+    # Проверка дефолтных значений
+    btn_defaults = DeckButtonConfig(id="btn_def", title="Дефолт", action=act)
+    assert btn_defaults.slot_index == 0
+    assert btn_defaults.category == "system"
+    assert btn_defaults.icon_size == 48
+    assert btn_defaults.icon == "⚡"
+
+    # Невалидный slot_index (< 0 или > 9)
+    with pytest.raises(ValidationError):
+        DeckButtonConfig(id="btn_err_neg", slot_index=-1, title="Ошибка", action=act)
+
+    with pytest.raises(ValidationError):
+        DeckButtonConfig(id="btn_err_high", slot_index=10, title="Ошибка", action=act)
+
+    # Невалидная категория
+    with pytest.raises(ValidationError):
+        DeckButtonConfig(id="btn_err_cat", category="invalid_cat", title="Ошибка", action=act)
+
+    # Невалидный icon_size (< 16 или > 128)
+    with pytest.raises(ValidationError):
+        DeckButtonConfig(id="btn_err_size_low", icon_size=10, title="Ошибка", action=act)
+
+    with pytest.raises(ValidationError):
+        DeckButtonConfig(id="btn_err_size_high", icon_size=200, title="Ошибка", action=act)
+
+
+def test_sound_settings_model_and_root_config():
+    """Тест модели SoundSettings и интеграции в DeckRootConfig."""
+    snd = SoundSettings()
+    assert snd.enabled is True
+    assert snd.volume == 0.8
+    assert "button_click.wav" in snd.default_tap_sound
+    assert "button_sw_page.wav" in snd.page_switch_sound
+    assert "button_offline.wav" in snd.error_sound
+
+    # Валидация громкости (0.0..1.0)
+    with pytest.raises(ValidationError):
+        SoundSettings(volume=-0.1)
+
+    with pytest.raises(ValidationError):
+        SoundSettings(volume=1.5)
+
+    # DeckRootConfig по умолчанию включает SoundSettings и simulation_mode
+    root = DeckRootConfig()
+    assert isinstance(root.sound_settings, SoundSettings)
+    assert root.simulation_mode is False
+
+
+def test_deck_config_json_ten_buttons_per_page():
+    """Проверка актуализированного config/deck_config.json: ровно 10 кнопок на страницу."""
+    cfg = DeckConfigLoader.load_from_file("config/deck_config.json")
+    assert isinstance(cfg, DeckRootConfig)
+    assert isinstance(cfg.sound_settings, SoundSettings)
+    assert cfg.sound_settings.enabled is True
+    assert len(cfg.pages) >= 2
+
+    for page in cfg.pages:
+        assert page.grid_rows == 2
+        assert page.grid_cols == 5
+        assert len(page.buttons) == 10, f"Страница {page.id} должна содержать ровно 10 кнопок"
+        # Проверяем уникальность и корректность slot_index 0..9
+        slots = [b.slot_index for b in page.buttons]
+        assert sorted(slots) == list(range(10)), f"Страница {page.id} должна содержать слоты 0..9"
+        for btn in page.buttons:
+            assert btn.category in ("system", "shortcut", "program", "api")
+            assert btn.icon_size == 48
+
+
+def test_deck_event_bus_signals():
+    """Проверка регистрации и работы сигналов DuckDeck в core.event_bus."""
+    from core.event_bus import bus
+
+    notifications = []
+    page_changes = []
+
+    def on_notification(msg: str):
+        notifications.append(msg)
+
+    def on_page_changed(page_id: str):
+        page_changes.append(page_id)
+
+    bus.deck_notification.connect(on_notification)
+    bus.deck_page_changed.connect(on_page_changed)
+
+    try:
+        bus.deck_notification.emit("Скриншот сохранен")
+        bus.deck_page_changed.emit("media_controls")
+
+        assert notifications == ["Скриншот сохранен"]
+        assert page_changes == ["media_controls"]
+    finally:
+        bus.deck_notification.disconnect(on_notification)
+        bus.deck_page_changed.disconnect(on_page_changed)
+

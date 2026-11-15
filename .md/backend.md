@@ -184,7 +184,7 @@ flowchart TD
 ## 4. Слой фундамента ядра (`core/`)
 
 - `dpi.py`: Инициализация Per-Monitor DPI Awareness V2 (`SetProcessDpiAwarenessContext(-4)`).
-- `event_bus.py`: Централизованная шина сигналов Qt `bus`.
+- `event_bus.py`: Централизованная шина сигналов Qt `bus` (навигация, громкость, телеметрия, медиа, DuckDeck: `deck_notification`, `deck_page_changed`).
 - `focus_guardian.py`: Защита от перехвата фокуса и восстановление курсора мыши (`WS_EX_NOACTIVATE`, `SetWinEventHook`).
 - `mouse_barrier.py`: Аппаратный барьер курсора мыши (`ClipCursor`) для предотвращения случайного вылета на второй экран.
 - `touch_filter.py`: Перехват сенсорных касаний и движок двухпальцевого вертикального свайпа (Swipe Engine).

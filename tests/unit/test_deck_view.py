@@ -2,7 +2,7 @@
 Модульные тесты интерфейса сенсорной макро-панели DuckDeck.
 Проверяют:
   - Соблюдение инварианта Qt.NoFocus на 100% интерактивных элементов.
-  - Точную геометрию под экран 944x600 (тайлы 174x168 px для 3x5 и 143x123 px для 4x6).
+  - Точную геометрию под экран 944x600 (сетка 2x5: тайлы 174x168 px, высота сетки 372 px, панель 216 px).
   - Тактильный отклик и состояния [state="..."] (вдавливание +2 px, шейк _content_offset).
   - Централизованную реактивность Live Dynamic Tiles через EventBus (аудио, микрофон, диммер).
   - Навигацию между страницами и безопасную перезагрузку конфига.
@@ -27,7 +27,7 @@ from core.deck.models import (
     DeckRootConfig,
 )
 from core.event_bus import bus
-from ui.modules.deck_view import DeckButtonWidget, DeckGrid, DeckView, HeaderBar
+from ui.modules.deck_view import DeckButtonWidget, DeckGrid, DeckView
 
 
 @pytest.fixture(scope="session")
@@ -86,20 +86,20 @@ def test_deck_view_geometry_and_tile_dimensions(qapp):
     Проверка строгой геометрии:
       - DeckView: 944x600 px.
       - DeckGrid: 944x372 px (отступы 12 px, промежутки 12 px).
-      - DeckInteractivePanel: 920x216 px.
+      - DeckInteractivePanel: 920x216 px (плейсхолдер нижней панели).
       - Формула строгой высоты: 12 + 168 + 12 + 168 + 12 + 216 + 12 = 600 px.
-      - Сетка 2x5: тайлы 174x168 px, скругление 14 px.
+      - Сетка 2x5: ровно 10 тайлов 174x168 px, скругление 14 px.
     """
     view = DeckView(config_path="config/deck_config.json")
     try:
         assert view.width() == 944
         assert view.height() == 600
 
-        # HeaderBar демонтирован, проверяется DeckGrid 944x372 px
+        # DeckGrid 944x372 px (HeaderBar полностью демонтирован)
         assert view.grid.width() == 944
         assert view.grid.height() == 372
 
-        # Зарезервированная интерактивная панель 920x216 px
+        # Плейсхолдер интерактивной панели 920x216 px
         assert view.interactive_panel.width() == 920
         assert view.interactive_panel.height() == 216
 
@@ -113,10 +113,10 @@ def test_deck_view_geometry_and_tile_dimensions(qapp):
         assert (margins.left(), margins.top(), margins.right(), margins.bottom()) == (12, 12, 12, 12)
         assert view.grid.grid_layout.spacing() == 12
 
-        # 2x5 страница по умолчанию (тайлы 174x168 px, скругление 14 px)
+        # 2x5 страница по умолчанию (ровно 10 тайлов 174x168 px, скругление 14 px)
         view.set_active_page("default")
         buttons_2x5 = view.grid.get_buttons()
-        assert len(buttons_2x5) > 0
+        assert len(buttons_2x5) == 10
         for btn_id, btn in buttons_2x5.items():
             assert btn.width() == 174
             assert btn.height() == 168
@@ -137,7 +137,7 @@ def test_deck_button_tactile_states_and_shake(qapp, sample_button_config):
       - 'success': _content_offset = (0, 0), возврат в idle по таймеру
       - 'error': шейк содержимого _content_offset без изменения внешней геометрии кнопки.
     """
-    btn = DeckButtonWidget(button_config=sample_button_config, rows=3, cols=5)
+    btn = DeckButtonWidget(button_config=sample_button_config, rows=2, cols=5)
     try:
         assert btn.state == "idle"
         assert btn.content_offset == (0, 0)
@@ -184,7 +184,7 @@ def test_deck_button_tactile_states_and_shake(qapp, sample_button_config):
 # -------------------------------------------------------------
 def test_deck_button_mouse_events_and_trigger(qapp, sample_button_config):
     """Проверка генерации сигнала triggered при нажатии и отпускании внутри тайла."""
-    btn = DeckButtonWidget(button_config=sample_button_config, rows=3, cols=5)
+    btn = DeckButtonWidget(button_config=sample_button_config, rows=2, cols=5)
     signal_received = []
     btn.triggered.connect(lambda cfg: signal_received.append(cfg))
 
@@ -243,7 +243,7 @@ def test_deck_button_executing_watchdog_timeout(qapp):
             icon="⚡",
             action=DeckActionConfig(action_type="hotkey", params={"keys": ["f1"]}),
         ),
-        rows=3,
+        rows=2,
         cols=5,
     )
     try:
@@ -316,17 +316,20 @@ def test_deck_view_page_navigation(qapp):
     try:
         assert view.active_page_id == "default"
         assert "btn_toggle_audio_device" in view.grid.get_buttons()
+        assert len(view.grid.get_buttons()) == 10
 
-        # Переключение на страницу 4x6 через метод set_active_page
+        # Переключение на вторую страницу через метод set_active_page
         view.set_active_page("grid4x6")
         assert view.active_page_id == "grid4x6"
         assert "btn_stream_back" in view.grid.get_buttons()
+        assert len(view.grid.get_buttons()) == 10
 
         # Возврат на основную страницу через навигационную кнопку "btn_stream_back"
         back_btn = view.grid.get_button("btn_stream_back")
         assert back_btn is not None
         view._on_button_triggered(back_btn.button_config)
         assert view.active_page_id == "default"
+        assert len(view.grid.get_buttons()) == 10
     finally:
         view.cleanup()
 
@@ -387,7 +390,7 @@ def test_deck_view_reload_config_and_fallback(qapp):
             "pages": [{
                 "id": "custom",
                 "name": "Пользовательский",
-                "grid_rows": 3,
+                "grid_rows": 2,
                 "grid_cols": 5,
                 "buttons": [{
                     "id": "btn_c1",

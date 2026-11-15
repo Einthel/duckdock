@@ -3,6 +3,7 @@
 """
 from modules.deck.action_dispatcher import ActionRunnable, DeckActionDispatcher, WorkerSignals
 from modules.deck.models import (
+    ActionCategory,
     ActionType,
     AudioDeviceInfo,
     AudioDeviceParams,
@@ -16,6 +17,7 @@ from modules.deck.models import (
     LaunchParams,
     NavigationParams,
     ScreenshotParams,
+    SoundSettings,
     SystemParams,
 )
 from modules.deck.view import DECK_QSS, DeckButtonWidget, DeckGrid, DeckView, HeaderBar
@@ -32,9 +34,11 @@ __all__ = [
     "DeckRootConfig",
     "DeckPageConfig",
     "DeckButtonConfig",
+    "SoundSettings",
     "DeckActionConfig",
     "DeckConfigLoader",
     "ActionType",
+    "ActionCategory",
     "AudioDeviceInfo",
     "HotkeyParams",
     "AudioDeviceParams",
