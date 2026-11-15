@@ -1,6 +1,6 @@
 # DuckDock / TouchWM: Архитектурная спецификация модулей
 
-> **Статус:** v0.1.5 (Актуальная спецификация)
+> **Статус:** v0.3.0 (Актуальная спецификация)
 > **Целевая среда:** Windows 10/11 x64, 27" Primary (dGPU) + 7" 1024×600 JRP7813S Touchscreen (iGPU AMD Radeon Graphics).
 
 ---
@@ -31,9 +31,13 @@ flowchart TD
         TW["core.telemetry_worker.TelemetryWorker (QThread 1000ms)"]
         TH["core.telemetry_history.TelemetryHistory & RingBuffer"]
         TM["core.telemetry_model.TelemetrySnapshot"]
+        DeckDisp["core.deck.action_dispatcher.DeckActionDispatcher"]
+        DeckActs["core.deck.actions.* (Hotkey / Audio / Process / HTTP / Screen)"]
+
         WP --> ABI
         TW -->|Poll 1000ms| HM
         TW -.->|Data Contract| TM
+        DeckDisp -->|QThreadPool| DeckActs
     end
 
     subgraph Presentation ["Графический интерфейс (UI Layer)"]
@@ -44,7 +48,7 @@ flowchart TD
 
         Stack --> Tab0["ui.modules.youtube_view.YouTubeView (Вкладка 0)"]
         Stack --> Tab1["ui.modules.sensors_view.SensorsView (Вкладка 1)"]
-        Stack --> Tab2["Happ.exe Tiling View (Вкладка 2)"]
+        Stack --> Tab2["ui.modules.deck_view.DeckView (Вкладка 2)"]
         Stack --> Tab3["ui.modules.audio_view.AudioMixerView (Вкладка 3)"]
         Stack --> Tab4["ui.showcase_view.ShowcaseView (Вкладка 4)"]
 
@@ -56,7 +60,8 @@ flowchart TD
     Win -.->|ClipCursor / Screen Boundary| MB
     Win -.->|Touch Message Filter| TF
     Tab0 -.->|QWebEnginePage / Scripts| WP
-    Tab3 -.->|Windows Core Audio API| AM
+    Tab3 -.->|Windows Core Audio API & Switcher| AM
+    Tab2 -.->|Dispatch Actions & Live Tiles| DeckDisp
     Tab1 -.->|60s Metric Buffer| TH
     TW -.->|Signal: snapshot_ready| Tab1
     TW -.->|Signal: sensors_updated| Bus
@@ -179,19 +184,35 @@ flowchart TD
 - Сквозной клик: `Qt.WA_TransparentForMouseEvents`, `Qt.WA_NoSystemBackground`, `Qt.WA_ShowWithoutActivating` и `Qt.NoFocus`.
 - Оптимизация `paintEvent`: возврат без отрисовки при `opacity <= 0.001` (0% нагрузки на GPU).
 
-### `WindowManager` (`core/window_manager.py`)
+### `AudioManager` (`core/audio_manager.py`)
 
-Низкоуровневые манипуляции окнами сторонних процессов через WinAPI.
+Фасад над Windows Core Audio API (WASAPI) через `pycaw` и нативный COM `IPolicyConfig`:
 
-- `find_window_by_process(exe_name: str) -> Optional[int]`: Поиск корневого HWND процесса.
-- `strip_window_decorations(hwnd: int) -> bool`: Удаление системного заголовка (`WS_CAPTION`) и толстых рамок (`WS_THICKFRAME`).
-- `tile_window(hwnd: int, rect: Tuple[int, int, int, int]) -> bool`: Принудительное позиционирование в область 944×600.
-- `set_window_visible(hwnd: int, visible: bool) -> None`: Скрытие/отображение встроенного окна при переключении вкладок.
+- `get_master_volume() -> float` & `set_master_volume(level: float)`: Чтение и установка общей системной громкости (0.0–1.0).
+- `is_master_muted() -> bool` & `set_master_mute(muted: bool)`: Управление состоянием Mute мастера.
+- `get_sessions() -> List[AudioSessionInfo]`: Перечисление активных аудиосессий процессов с извлечением имен и иконок.
+- `set_session_volume(pid: int, level: float)` & `set_session_mute(pid: int, muted: bool)`: Управление звуком процесса.
+- `get_playback_devices() -> List[AudioDeviceInfo]`: Перечисление активных устройств воспроизведения (`eRender`).
+- `set_default_playback_device(device_id: str) -> bool`: Переключение устройства вывода по умолчанию через COM `IPolicyConfigClient` для ролей `eConsole`, `eMultimedia`, `eCommunications`.
+- `toggle_playback_device(targets: Optional[List[str]]) -> Optional[AudioDeviceInfo]`: Циклическое сенсорное переключение аудиовыхода (Наушники 🎧 <-> Колонки 🔊).
+- `is_mic_muted() -> bool`, `set_mic_mute(muted: bool)`, `toggle_mic_mute() -> bool`: Управление захватом звука (`eCapture`) дефолтного микрофона Windows.
+- `invalidate_cache()`: Сброс кэша COM-устройств при смене эндпоинта.
 
-### `AidaReader` (`core/aida_reader.py`)
+### `DuckDeck Platform` (`core/deck/`)
 
-- `read_sensors() -> Dict[str, Any]`: Парсинг XML-структуры из Shared Memory AIDA64 (`AIDA64_SensorValues`).
-- `is_available() -> bool`: Проверка доступности shared memory региона.
+Сенсорная платформа выполнения действий и макросов:
+
+- `models.py`: Pydantic V2 модели конфигурации страниц (`DeckPageConfig`), кнопок (`DeckButtonConfig`), типизированных параметров действий (`HotkeyParams`, `ProcessParams`, `HttpParams`, `ScreenshotParams`, `AudioDeviceParams`, `SystemParams`).
+- `DeckActionDispatcher` (`action_dispatcher.py`):
+  - Асинхронное выполнение задач через `QThreadPool.globalInstance()`.
+  - Защита от аппаратного/программного дребезга (cooldown 250 мс на тайл).
+  - Сигналы: `action_started(tile_id)`, `action_finished(tile_id, success, message)`, `page_switch_requested(page_id)`.
+- Драйверы действий (`core/deck/actions/`):
+  - `hotkey_sender.py`: отправка скан-кодов через `SendInput` с сохранением и восстановлением фокуса целевого окна.
+  - `audio_device_switcher.py`: вызов COM `IPolicyConfig` для смены активного эндпоинта.
+  - `process_launcher.py`: изолированный запуск процессов (`CREATE_NO_WINDOW`, `DETACHED_PROCESS`, `os.startfile`).
+  - `http_client.py`: неблокирующие REST-запросы с таймаутами к локальным сервисам (OpenRGB, Home Assistant, OBS).
+  - `screen_capture.py`: чистый захват основного экрана 2560×1440 через `BitBlt` / `QScreen` напрямую в буфер обмена.
 
 ---
 
@@ -207,6 +228,8 @@ flowchart TD
 - `external_window_tiled = Signal(str, int)`: Уведомление о тайлинге стороннего окна `(app_name, hwnd)`.
 - `master_volume_changed = Signal(float, bool)`: Оповещение об изменении общего звука `(volume, is_muted)`.
 - `session_volume_changed = Signal(int, float, bool)`: Изменение сессии процесса `(pid, volume, is_muted)`.
+- `playback_device_changed = Signal(str, str)`: Оповещение о смене устройства вывода `(device_name, device_id)`.
+- `mic_mute_changed = Signal(bool)`: Оповещение об изменении состояния микрофона `(is_muted)`.
 - `media_state_changed = Signal(dict)`: Обновление метаданных трека и воспроизведения YouTube `{"title": str, "artist": str, "is_playing": bool}`.
 - `media_action_requested = Signal(str)`: Управление медиаплеером (`"toggle_play"`, `"next"`, `"prev"`).
 - `touch_detected = Signal(int, int)`: Координаты касания на втором экране `(x, y)`.
@@ -217,9 +240,14 @@ flowchart TD
 ## 4. Спецификация сенсорных компонентов UI (`ui/`)
 
 - **Главное окно (`ui/main_window.py`)**: Размер 1024×600, `Qt.FramelessWindowHint`, `Qt.WA_ShowWithoutActivating`, горизонтальный `QHBoxLayout` (сайдбар 80px + стек 944px).
-- **Сайдбар (`ui/sidebar.py`)**: Ширина 80px, сенсорные кнопки 64×60px с отступами, политика `Qt.NoFocus`.
+- **Сайдбар (`ui/sidebar.py`)**: Ширина 80px, сенсорные кнопки 64×60px с отступами, политика `Qt.NoFocus`. Вкладка 2 — DuckDeck (`🎛`).
 - **Mini Media Bar (`ui/sidebar.py`)**: Сквозной компактный плеер (64×54px), бегущая строка `MarqueeLabel`, кнопки ⏮ ⏯ ⏭ (`Qt.NoFocus`), клик по бару открывает вкладку YouTube.
+- **DuckDeck Макро-панель (`ui/modules/deck_view.py`)**:
+  - Полноэкранная сенсорная матрица 944×600: Header Bar 48px (переключатель страниц, кнопка перезагрузки JSON), сетка кнопок (3×5 или 4×6).
+  - Тайлы `DeckButtonWidget`: кинетический отклик нажатия, анимация тряски при ошибке, сторожевой таймер от зависания.
+  - Live Tiles: автоматическая реактивная синхронизация состояния аудиоустройств и микрофона через `EventBus`.
 - **Сенсорный аудиомикшер (`ui/modules/audio_view.py`)**:
+  - Сенсорная кнопка переключения аудиоустройств `btn_switch_device` в шапке микшера.
   - Сенсорный слайдер `TouchSlider` (`QSlider` с мгновенным расчетом позиции `QStyle.sliderValueFromPosition`, `Qt.NoFocus`).
   - Карточки аудиосессий с иконками `QFileIconProvider` и кнопками мгновенного Mute.
 - **Аппаратный NOC-дашборд 944×600 (`ui/modules/sensors_view.py`)**:

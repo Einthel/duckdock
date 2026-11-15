@@ -23,15 +23,10 @@ QPushButton.sidebar-btn {
     font-weight: bold;
 }
 
-QPushButton.sidebar-btn:hover {
-    background-color: #242b3a;
-    color: #e2e8f0;
-    border-color: #3b82f6;
-}
-
 QPushButton.sidebar-btn:pressed {
     background-color: #1e3a8a;
     color: #ffffff;
+    border-color: #3b82f6;
 }
 
 QPushButton.sidebar-btn[active="true"] {
@@ -62,14 +57,10 @@ QPushButton.mini-media-btn {
     font-size: 11px;
 }
 
-QPushButton.mini-media-btn:hover {
+QPushButton.mini-media-btn:pressed {
     background-color: #2563eb;
     color: #ffffff;
     border-color: #60a5fa;
-}
-
-QPushButton.mini-media-btn:pressed {
-    background-color: #1d4ed8;
 }
 
 QPushButton.action-btn {
@@ -80,7 +71,7 @@ QPushButton.action-btn {
     font-size: 16px;
 }
 
-QPushButton.action-btn:hover {
+QPushButton.action-btn:pressed {
     background-color: #334155;
     color: #f8fafc;
 }
@@ -251,9 +242,9 @@ class SidebarDock(QFrame):
         self.btn_sensors = self._create_nav_button("⚡", "AIDA64 Sensors", 1)
         layout.addWidget(self.btn_sensors)
 
-        # 3. External Apps / happ
-        self.btn_happ = self._create_nav_button("🌐", "happ Proxy & Tunnels", 2)
-        layout.addWidget(self.btn_happ)
+        # 3. DuckDeck Macro Panel
+        self.btn_deck = self._create_nav_button("🎛", "DuckDeck (Макро-панель и управление)", 2)
+        layout.addWidget(self.btn_deck)
 
         # 4. Audio Mixer
         self.btn_audio = self._create_nav_button("🔊", "Audio Mixer", 3)

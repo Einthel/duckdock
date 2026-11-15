@@ -353,20 +353,20 @@ class DeckConfigLoader:
 
 ### Этап 5.1: Ядро системы действий и диспетчер (Core Engine)
 
-- [ ] **5.1.1.** Создать модуль контрактов `core/deck/models.py`:
+- [x] **5.1.1.** Создать модуль контрактов `core/deck/models.py`:
   - Pydantic v2 схемы `DeckRootConfig`, `DeckPageConfig`, `DeckButtonConfig`, `DeckActionConfig`.
   - Модели типизированных параметров (`HotkeyParams`, `AudioDeviceParams`, `LaunchParams`, `HttpRequestParams`, `ScreenshotParams`, `SystemParams`, `NavigationParams`).
   - Модель информации об аудиоустройстве `AudioDeviceInfo` (`id: str`, `name: str`, `is_default: bool = False`, `state: int = 1`).
   - Метод `DeckActionConfig.get_typed_params()` для полиморфной валидации словаря параметров в конкретную Pydantic-модель.
   - Загрузчик конфигурации `DeckConfigLoader`: чтение JSON, валидация по `DeckRootConfig` с graceful fallback на встроенный дефолтный профиль при ошибках парсинга.
-- [ ] **5.1.2.** Реализовать транслятор горячих клавиш `core/deck/actions/hotkey_sender.py`:
+- [x] **5.1.2.** Реализовать транслятор горячих клавиш `core/deck/actions/hotkey_sender.py`:
   - Словарь сопоставления строковых названий клавиш (`"ctrl"`, `"alt"`, `"shift"`, `"win"`, `"f13"`, `"volup"`, `"esc"` и др.) в виртуальные коды `VK_*` (`win32con`).
   - Преобразование виртуальных кодов в аппаратные скан-коды через WinAPI `MapVirtualKeyW(vk, MAPVK_VK_TO_VSC)`.
   - Поддержка флага `KEYEVENTF_EXTENDEDKEY` для стрелок, клавиш навигации (Del, Home, End, PgUp, PgDn) и правых модификаторов.
   - Порядок симуляции ввода: нажатие в прямом порядке (`Down -> Down`), отпускание строго в обратном (LIFO: `Up -> Up`).
   - Проверка активного окна и восстановление фокуса целевого процесса через `FocusGuardian.last_primary_hwnd` с задержкой 15–20 мс перед отправкой ввода.
   - Гарантированная очистка модификаторов (`Ctrl`, `Shift`, `Alt`, `Win`) через `finally`.
-- [ ] **5.1.3.** Реализовать модуль переключения аудиоустройств `core/deck/actions/audio_device_switcher.py`:
+- [x] **5.1.3.** Реализовать модуль переключения аудиоустройств `core/deck/actions/audio_device_switcher.py`:
   - Объявление COM-интерфейса `IPolicyConfig` (`CLSID {870af99c-171d-4f9e-af0d-e63df40c2bc9}`, `IID {f8679f50-850a-41cf-9c72-430f290290c8}`) в `comtypes` с точной таблицей виртуальных методов vtable:
     `GetMixFormat`, `GetDeviceFormat`, `ResetDeviceFormat`, `SetDeviceFormat`, `GetProcessingPeriod`, `SetProcessingPeriod`, `GetShareMode`, `SetShareMode`, `GetPropertyValue`, `SetPropertyValue`, `SetDefaultEndpoint`, `SetEndpointVisibility`.
   - Извлечение FriendlyName аудиоустройств через `device.OpenPropertyStore(STGM_READ)` и свойство `PKEY_Device_FriendlyName` (`{a45c254e-df1c-4efd-8020-67d146a850e0}, 14`).
@@ -374,28 +374,28 @@ class DeckConfigLoader:
   - Определение текущего устройства по умолчанию через `AudioUtilities.GetSpeakers()`.
   - Метод `switch_default_device(device_id: str) -> bool` с установкой ролей `eConsole (0)`, `eMultimedia (1)`, `eCommunications (2)` в изолированном COM-контексте (`CoInitialize`/`CoUninitialize`).
   - Метод `toggle_audio_device(targets: List[str]) -> AudioDeviceInfo` для циклического переключения между списком ключевых слов ("Наушники", "Динамики", "Sennheiser" и др.).
-- [ ] **5.1.4.** Расширить фасад `core/audio_manager.py`:
+- [x] **5.1.4.** Расширить фасад `core/audio_manager.py`:
   - Интегрировать функции получения и переключения дефолтных устройств воспроизведения со сбросом кэша `self._speakers` и повторным запросом `AudioUtilities.GetSpeakers()` для актуализации мастер-громкости.
   - Добавить методы управления микрофоном через endpoint захвата `AudioUtilities.GetDeviceEnumerator().GetDefaultAudioEndpoint(eCapture, eConsole)`: `is_mic_muted() -> bool`, `set_mic_mute(mute: bool)`, `toggle_mic_mute() -> bool`.
   - Расширить `core/event_bus.py` новыми сигналами:
     - `playback_device_changed = Signal(str, str)` (device_name, device_id).
     - `mic_mute_changed = Signal(bool)` (is_muted).
-- [ ] **5.1.5.** Реализовать безопасный модуль скриншотов `core/deck/actions/screen_capture.py`:
+- [x] **5.1.5.** Реализовать безопасный модуль скриншотов `core/deck/actions/screen_capture.py`:
   - Захват первичного монитора (2560×1440) по геометрии экрана с координатами `(0, 0)` через Win32 `BitBlt` DC экрана или `QScreen.grabWindow(0)` без искажения DPI и без захвата 7" экрана.
   - Гарантия потокобезопасности: запись в системный буфер `QClipboard` выполняется строго в главном потоке GUI (через сигнал или `QMetaObject.invokeMethod`).
-- [ ] **5.1.6.** Реализовать модуль запуска процессов `core/deck/actions/process_launcher.py`:
+- [x] **5.1.6.** Реализовать модуль запуска процессов `core/deck/actions/process_launcher.py`:
   - Запуск через `subprocess.Popen` с флагами detachment (`CREATE_NO_WINDOW | DETACHED_PROCESS`).
   - Отвязка дескрипторов ввода/вывода (`stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL`) во избежание блокировок.
   - Поддержка развертывания переменных окружения (`os.path.expandvars`) и открытия URL-протоколов (например `discord://`, `https://`).
-- [ ] **5.1.7.** Реализовать асинхронный HTTP-клиент `core/deck/actions/http_client.py`:
+- [x] **5.1.7.** Реализовать асинхронный HTTP-клиент `core/deck/actions/http_client.py`:
   - Запросы к REST API сторонних программ (OpenRGB, Home Assistant, OBS REST) через стандартную библиотеку `urllib.request` с таймаутом сокета 1.5 с (без раздувания зависимостей).
   - Подавление сетевых исключений (`URLError`, `TimeoutError`) с возвратом структурированного статуса ошибки без фриза UI.
-- [ ] **5.1.8.** Реализовать диспетчер `core/deck/action_dispatcher.py`:
+- [x] **5.1.8.** Реализовать диспетчер `core/deck/action_dispatcher.py`:
   - Выполнение I/O задач в пуле потоков `QThreadPool.globalInstance()`.
   - Архитектура передачи результатов: класс `QRunnable` со вспомогательным объектом сигналов `WorkerSignals(QObject)` для возврата данных в Main GUI Thread.
   - Потокобезопасный антидребезг (cooldown 250 мс на кнопку по `button_id`).
   - Эмиссия результатов через `EventBus`.
-- [ ] **5.1.9.** Покрыть модули ядра тестами в `tests/unit/test_deck_actions.py` и `tests/unit/test_audio_device_switcher.py`:
+- [x] **5.1.9.** Покрыть модули ядра тестами в `tests/unit/test_deck_actions.py` и `tests/unit/test_audio_device_switcher.py`:
   - 100% изоляция системных вызовов через `unittest.mock` (`SendInput`, `IPolicyConfig`, `AudioUtilities`, сокеты `urllib.request`, `QClipboard`).
 
 #### Запуск шагов [5.1.1 - 5.1.9]:
@@ -418,7 +418,7 @@ class DeckConfigLoader:
 
 ### Этап 5.2: Сенсорный UI виджет и эргономичная сетка (Presentation Layer)
 
-- [ ] **5.2.1.** Создать базовый компонент сенсорного тайла `DeckButtonWidget` в `ui/modules/deck_view.py`:
+- [x] **5.2.1.** Создать базовый компонент сенсорного тайла `DeckButtonWidget` в `ui/modules/deck_view.py`:
   - Базовый класс `QFrame`, инварианты `Qt.NoFocus` и `Qt.WA_AcceptTouchEvents`.
   - Точные габариты под геометрию экрана 944×600:
     - Сетка 3×5: фиксированный размер **174×168 px**, скругление 14 px.
@@ -434,19 +434,19 @@ class DeckConfigLoader:
     - `success`: кратковременная изумрудная вспышка границы (`#10b981`, 600 мс).
     - `error`: рубиновая индикация (`#ef4444`, 800 мс) со сдвигом внутреннего смещения `_content_offset` (шейк содержимого без изменения геометрии в layout).
   - Сигнал нажатия: `triggered = Signal(DeckButtonConfig)`.
-- [ ] **5.2.2.** Создать контейнер сетки `DeckGrid(QWidget)`:
+- [x] **5.2.2.** Создать контейнер сетки `DeckGrid(QWidget)`:
   - Компоновщик `QGridLayout` с `setContentsMargins(12, 12, 12, 12)` и `setSpacing(12)`.
   - Метод `load_page(page_config: DeckPageConfig)`:
     - Очистка предыдущих виджетов без утечек памяти (`deleteLater()`).
     - Размещение кнопок по формуле `row = idx // cols`, `col = idx % cols`.
     - Поддержка распорок `QSpacerItem` для незаполненных ячеек сетки.
-- [ ] **5.2.3.** Реализовать компонент верхней панели `HeaderBar(QFrame)` (высота 48 px):
+- [x] **5.2.3.** Реализовать компонент верхней панели `HeaderBar(QFrame)` (высота 48 px):
   - Горизонтальная компоновка `QHBoxLayout` с отступами `(12, 4, 12, 4)`.
   - Левая часть: полоса сенсорных кнопок-пилюль страниц/профилей (`QPushButton` с `Qt.NoFocus`, скругление 16 px, индикатор активной вкладки).
   - Центр: текстовый индикатор фонового статуса (`QLabel`, 11 px, плавно угасающий статус «OBS: Запись включена», «Аудио: Наушники»).
   - Правая часть: кнопка быстрой перезагрузки JSON (`🔄`, 36×36 px, `Qt.NoFocus`).
   - Сигналы: `page_selected = Signal(str)` (page_id), `reload_requested = Signal()`.
-- [ ] **5.2.4.** Реализовать главный контейнер `DeckView(QWidget)`:
+- [x] **5.2.4.** Реализовать главный контейнер `DeckView(QWidget)`:
   - Вертикальная компоновка `QVBoxLayout`: `HeaderBar` (48 px) + `DeckGrid` (552 px).
   - Интеграция с `ActionDispatcher`:
     - Перехват сигнала `button.triggered` → вызов `dispatcher.dispatch(action_config)`.
@@ -455,7 +455,7 @@ class DeckConfigLoader:
     - Подписка на сигналы `bus.playback_device_changed`, `bus.mic_mute_changed`, `bus.dimmer_changed`.
     - Маршрутизация обновления в кнопки текущей страницы по совпадению `button_config.status_source`.
   - Метод `reload_config()`: безопасная перезагрузка `config/deck_config.json` с откатом на дефолт при ошибке.
-- [ ] **5.2.5.** Создать эталонный конфигурационный файл `config/deck_config.json`:
+- [x] **5.2.5.** Создать эталонный конфигурационный файл `config/deck_config.json`:
   - Профиль `default` (сетка 3×5) с преднастроенными действиями:
     1. Переключатель аудиовыхода (Live Tile, `🎧/🔊`).
     2. Переключатель микрофона (Live Tile, `🎙/🔇`).
@@ -466,7 +466,7 @@ class DeckConfigLoader:
     7. Терминал (`wt.exe`).
     8. Ночной режим (`DimmerOverlay`).
     9. Блокировка ПК (`LockWorkstation`).
-- [ ] **5.2.6.** Написать компонентные UI-тесты в `tests/unit/test_deck_view.py`:
+- [x] **5.2.6.** Написать компонентные UI-тесты в `tests/unit/test_deck_view.py`:
   - Проверка инварианта: 100% дочерних кнопок и вкладок имеют `focusPolicy() == Qt.NoFocus`.
   - Проверка точной геометрии: размеры тайлов строго 174×168 px (3×5) и 143×123 px (4×6).
   - Тест динамических тайлов: эмиссия сигнала `bus.playback_device_changed` меняет текст и иконку целевой кнопки.
@@ -491,16 +491,16 @@ class DeckConfigLoader:
 
 ### Этап 5.3: Интеграция в DuckDock, вывод `happ.exe` и связка подсистем
 
-- [ ] **5.3.1.** Интеграция `DeckView` в `ui/main_window.py`:
+- [x] **5.3.1.** Интеграция `DeckView` в `ui/main_window.py`:
   - Заменить создание заглушки `self.page_happ` на экземпляр `self.page_deck = DeckView(parent=self)`.
   - Зарегистрировать `self.page_deck` во 2-й индекс стека: `self.workspace.addWidget(self.page_deck)`.
   - В методе `MainWindow._cleanup()` добавить гарантированное освобождение ресурсов:
     `if hasattr(self, "page_deck") and hasattr(self.page_deck, "cleanup"): self.page_deck.cleanup()`.
   - Удалить устаревший вспомогательный метод `_create_external_app_view()`.
-- [ ] **5.3.2.** Обновление сайдбара в `ui/sidebar.py`:
+- [x] **5.3.2.** Обновление сайдбара в `ui/sidebar.py`:
   - Переименовать атрибут кнопки `self.btn_happ` в `self.btn_deck`.
   - Установить иконку `"🎛"` и всплывающую подсказку `"DuckDeck (Макро-панель и управление)"` для вкладки с индексом 2.
-- [ ] **5.3.3.** Сенсорный переключатель аудиовыхода в `ui/modules/audio_view.py`:
+- [x] **5.3.3.** Сенсорный переключатель аудиовыхода в `ui/modules/audio_view.py`:
   - В `header_layout` шапки микшера (слева от кнопки `btn_refresh`) добавить сенсорную кнопку `self.btn_switch_device`:
     - Высота 40 px, минимальная ширина 140 px, стиль `Qt.NoFocus`, класс `refresh-btn`.
     - Динамический текст: текущий активный аудиовыход с префиксом иконки (`🎧 Наушники` / `🔊 Динамики`).
@@ -512,15 +512,15 @@ class DeckConfigLoader:
     - Выполнить полную пересборку сессий через `self._refresh_sessions(force_rebuild=True)`.
   - Подключить сигнал `bus.playback_device_changed.connect(self._on_playback_device_changed)`.
   - В `_cleanup` / `closeEvent` микшера добавить безопасное отключение слота от шины событий.
-- [ ] **5.3.4.** Очистка конфигурации в `config.json`:
+- [x] **5.3.4.** Очистка конфигурации в `config.json`:
   - Удалить запись стороннего процесса `happ` из массива `tracked_apps`, исключая паразитные попытки тайлинга на вкладке 2.
-- [ ] **5.3.5.** Маршрутизация системных действий (`core/deck/actions/system.py` и `EventBus`):
+- [x] **5.3.5.** Маршрутизация системных действий (`core/deck/actions/system.py` и `EventBus`):
   - Реализовать диспетчеризацию команд `action_type: "system"`:
     - `command: "toggle_dimmer"` -> `bus.dimmer_toggle_requested.emit()`.
     - `command: "toggle_mic_mute"` -> вызов `AudioManager().toggle_mic_mute()`.
     - `command: "lock_workstation"` -> `ctypes.windll.user32.LockWorkStation()`.
   - Связать `action_type: "audio_device"` с прямым вызовом `AudioManager().toggle_playback_device(targets)`.
-- [ ] **5.3.6.** Сквозное регрессионное и интеграционное тестирование:
+- [x] **5.3.6.** Сквозное регрессионное и интеграционное тестирование:
   - Создать интеграционный тест `tests/integration/test_deck_integration.py`:
     - Проверка инициализации `MainWindow` с `DeckView` на вкладке 2.
     - Проверка переключения вкладок через `bus.tab_changed.emit(2)`.

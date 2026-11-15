@@ -30,11 +30,6 @@ QFrame.audio-session-card {
     padding: 8px 14px;
 }
 
-QFrame.audio-session-card:hover {
-    border-color: #3b82f6;
-    background-color: #1a202e;
-}
-
 QLabel.section-header {
     color: #94a3b8;
     font-size: 13px;
@@ -74,7 +69,7 @@ QPushButton.mute-btn {
     max-height: 44px;
 }
 
-QPushButton.mute-btn:hover {
+QPushButton.mute-btn:pressed {
     background-color: #2b3547;
     border-color: #3b82f6;
     color: #ffffff;
@@ -98,7 +93,7 @@ QPushButton.master-mute-btn {
     padding: 0 10px;
 }
 
-QPushButton.master-mute-btn:hover {
+QPushButton.master-mute-btn:pressed {
     background-color: #2b3547;
     border-color: #38bdf8;
 }
@@ -118,7 +113,7 @@ QPushButton.refresh-btn {
     padding: 4px 10px;
 }
 
-QPushButton.refresh-btn:hover {
+QPushButton.refresh-btn:pressed {
     background-color: #334155;
     color: #f8fafc;
 }
@@ -324,6 +319,10 @@ class AudioMixerView(QWidget):
         self._refresh_master()
         self._refresh_sessions(force_rebuild=True)
 
+        # Подписка на изменение системного устройства воспроизведения
+        self._eventbus_connected = False
+        self._subscribe_eventbus()
+
         # Фоновый таймер периодического опроса аудиосессий (раз в 1.5 сек)
         self.poll_timer = QTimer(self)
         self.poll_timer.setInterval(1500)
@@ -350,6 +349,15 @@ class AudioMixerView(QWidget):
         header_layout.addLayout(title_box)
 
         header_layout.addStretch()
+
+        current_dev = self.audio_manager.get_master_device_name()
+        self.btn_switch_device = QPushButton(self._format_device_button_text(current_dev))
+        self.btn_switch_device.setProperty("class", "refresh-btn")
+        self.btn_switch_device.setFixedHeight(40)
+        self.btn_switch_device.setMinimumWidth(140)
+        self.btn_switch_device.setFocusPolicy(Qt.NoFocus)
+        self.btn_switch_device.clicked.connect(self._on_switch_device_clicked)
+        header_layout.addWidget(self.btn_switch_device)
 
         self.btn_refresh = QPushButton("🔄 Обновить")
         self.btn_refresh.setProperty("class", "refresh-btn")
@@ -510,3 +518,50 @@ class AudioMixerView(QWidget):
         card.btn_mute.style().unpolish(card.btn_mute)
         card.btn_mute.style().polish(card.btn_mute)
         bus.session_volume_changed.emit(pid or 0, card.slider.value() / 100.0, new_mute)
+
+    def _format_device_button_text(self, device_name: str) -> str:
+        """Формирование подписи кнопки с адаптивной иконкой наушников/динамиков."""
+        is_headphones = any(k in (device_name or "").lower() for k in ["наушники", "headphone", "headset"])
+        icon = "🎧" if is_headphones else "🔊"
+        clean_name = device_name or "Аудиовыход"
+        return f"{icon} {clean_name}"
+
+    def _on_switch_device_clicked(self) -> None:
+        """Переключение устройства воспроизведения между целевыми устройствами."""
+        self.audio_manager.toggle_playback_device(["Наушники", "Динамики"])
+
+    def _on_playback_device_changed(self, device_name: str, device_id: str) -> None:
+        """Слот реакции на смену устройства вывода по шине событий."""
+        self.lbl_device.setText(device_name)
+        if hasattr(self, "btn_switch_device"):
+            self.btn_switch_device.setText(self._format_device_button_text(device_name))
+        self._refresh_master()
+        self._refresh_sessions(force_rebuild=True)
+
+    def _subscribe_eventbus(self) -> None:
+        """Безопасная подписка на сигналы EventBus."""
+        if getattr(self, "_eventbus_connected", False):
+            return
+        try:
+            bus.playback_device_changed.connect(self._on_playback_device_changed)
+            self._eventbus_connected = True
+        except Exception:
+            pass
+
+    def cleanup(self) -> None:
+        """Освобождение таймеров и безопасная отписка от EventBus."""
+        if hasattr(self, "poll_timer") and self.poll_timer.isActive():
+            self.poll_timer.stop()
+        if getattr(self, "_eventbus_connected", False):
+            import warnings
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+                try:
+                    bus.playback_device_changed.disconnect(self._on_playback_device_changed)
+                except Exception:
+                    pass
+            self._eventbus_connected = False
+
+    def closeEvent(self, event) -> None:
+        self.cleanup()
+        super().closeEvent(event)
