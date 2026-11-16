@@ -59,10 +59,17 @@ flowchart TD
         subgraph ModDeck ["modules.deck"]
             DeckDisp["action_dispatcher.DeckActionDispatcher"]
             DeckActs["actions.* (Hotkey / Process / HTTP / Screen)"]
-            DeckModels["models.DeckRootConfig & ActionParams"]
-            DeckView["view.DeckView (TouchModuleView)"]
+            DeckModels["models.DeckRootConfig, SoundSettings & ActionParams"]
+            DeckView["view.DeckView (TouchModuleView, 944x600)"]
+            DeckGrid["widgets.deck_grid.DeckGrid (944x372, 2x5)"]
+            DeckPanel["widgets.interactive_panel.DeckInteractivePanel (920x216)"]
+            DeckSwipe["widgets.swipe_detector.DeckSwipeDetector"]
             DeckDisp --> DeckActs
             DeckDisp -.-> DeckModels
+            DeckView --> DeckGrid
+            DeckView --> DeckPanel
+            DeckGrid --> DeckSwipe
+            DeckPanel --> DeckSwipe
         end
 
         subgraph ModSettings ["modules.settings"]
@@ -160,9 +167,9 @@ flowchart TD
 - `widgets.mini_media_bar.MiniMediaBar`: Сенсорный виджет управления медиа в сайдбаре (64×54px) с бегущей строкой `MarqueeLabel` и кнопками ⏮ ⏯ ⏭.
 - `view.YouTubeView(TouchModuleView)`: Полноэкранный плеер с двунаправленной синхронизацией состояния через `EventBus`.
 
-### `modules.deck` — Сенсорная макро-панель DuckDeck
+### `modules.deck` — Сенсорная макро-панель DuckDeck v0.4.0
 
-- `models.py`: Pydantic V2 модели конфигурации DuckDeck (`DeckRootConfig`, `DeckPageConfig`, `DeckButtonConfig`, `DeckActionConfig`) и типизированные параметры действий.
+- `models.py`: Pydantic V2 модели конфигурации DuckDeck (`DeckRootConfig`, `DeckPageConfig`, `DeckButtonConfig`, `DeckActionConfig`, `SoundSettings`) и типизированные параметры действий.
 - `action_dispatcher.DeckActionDispatcher`: Асинхронный диспетчер задач в пуле `QThreadPool` с антидребезгом (250 мс) и сторожевым таймером (5000 мс).
 - `actions/`:
   - `hotkey_sender.py`: Аппаратные скан-коды `SendInput` (`KEYEVENTF_SCANCODE`) с восстановлением фокуса целевого окна.
@@ -170,9 +177,14 @@ flowchart TD
   - `http_client.py`: Неблокирующие REST-запросы к локальным сервисам (Home Assistant, OpenRGB, OBS).
   - `screen_capture.py`: Захват экрана 1 (2560×1440) через `QScreen` / `BitBlt` в буфер обмена.
 - `widgets/`:
-  - `DeckButtonWidget`: Сенсорный тайл с тактильной анимацией, анимацией ошибки (Shake) и реактивными Live Tiles.
-  - `DotPagingWidget`: Индикатор страниц.
-- `view.DeckView(TouchModuleView)`: Сенсорная сетка 944×600 (3×5 или 4×6), переключатель профилей и быстрая перезагрузка конфига.
+  - `deck_button.py` (`DeckButtonWidget`): Сенсорный тайл 174×168 px с тактильной анимацией вдавливания (+2 px), защитой от дребезга, шейком ошибки, авто-сбросом при горизонтальном сдвиге $|dx| \ge 20$ px и подавлением ложных кликов.
+  - `deck_grid.py` (`DeckGrid`): Сетка 944×372 px (2 строки × 5 колонок = 10 кнопок), плавная Fade-In анимация (160 мс) при смене страниц.
+  - `interactive_panel.py` (`DeckInteractivePanel`): Нижняя панель 920×216 px из 3 секций:
+    - Левая (280 px): медиа-пульт (обложка, `MarqueeLabel`, кнопки ⏮ ⏯ ⏭).
+    - Центральная (360 px): часы HH:mm, дата, сенсорный трек свайпа и `DotPagingWidget` (● ○ ○) с кинетической анимацией активной точки (220 мс, OutCubic) и световой вспышкой шевронов.
+    - Правая (280 px): мини-датчики CPU/GPU, бегущий `NotificationTicker` (3с затухание) и сенсорная кнопка настроек ⚙.
+  - `swipe_detector.py` (`DeckSwipeDetector`): Кинематический сенсорный детектор 1-пальцевого свайпа ($dt \le 600$ мс, $|dx| \ge 60$ px, $|dx| > 1.5 \cdot |dy|$) с изоляцией от глобального 2-пальцевого фильтра `TouchCursorFilter`.
+- `view.DeckView(TouchModuleView)`: Сенсорный экран 944×600 px (формула: $12 + 168 + 12 + 168 + 12 + 216 + 12 = 600$ px), двусторонняя реактивность пагинации (`deck_page_changed`), перелистывание страниц свайпом и кликом по точкам.
 
 ### `modules.settings` — Управление конфигурацией приложения
 

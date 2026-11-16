@@ -30,6 +30,7 @@ from modules.deck.models import (
 from modules.deck.widgets.deck_button import DeckButtonWidget
 from modules.deck.widgets.deck_grid import DeckGrid
 from modules.deck.widgets.header_bar import HeaderBar
+from modules.deck.widgets.interactive_panel import DeckInteractivePanel
 
 logger = logging.getLogger("duckdock.deck.ui")
 
@@ -40,10 +41,24 @@ QWidget#DeckView {
 }
 
 /* Зарезервированная интерактивная панель DeckInteractivePanel */
-QFrame#DeckInteractivePanel {
+QWidget#DeckInteractivePanel, QFrame#DeckInteractivePanel {
     background-color: #111622;
     border: 1px solid #1e2638;
     border-radius: 14px;
+}
+
+/* Разделители между секциями интерактивной панели */
+QFrame#DeckCenterSection {
+    background-color: transparent;
+    border-top: none;
+    border-bottom: none;
+    border-left: 1px solid #1e2638;
+    border-right: 1px solid #1e2638;
+}
+
+QFrame#DeckLeftSection, QFrame#DeckRightSection {
+    background-color: transparent;
+    border: none;
 }
 
 /* Сенсорный тайл DeckButtonWidget (состояния [state="..."]) */
@@ -128,6 +143,7 @@ class DeckView(TouchModuleView):
         self.root_config: Optional[DeckRootConfig] = None
         self.active_page_id: str = "default"
         self._eventbus_connected: bool = False
+        self._is_emitting_page_changed: bool = False
         self._status_message: str = ""
 
         self._setup_ui()
@@ -182,11 +198,8 @@ class DeckView(TouchModuleView):
         self.grid = DeckGrid(self)
         layout.addWidget(self.grid)
 
-        # 2. Зарезервированная нижняя область под DeckInteractivePanel (920x216 px)
-        self.interactive_panel = QFrame(self)
-        self.interactive_panel.setObjectName("DeckInteractivePanel")
-        self.interactive_panel.setFixedSize(920, 216)
-        self.interactive_panel.setFocusPolicy(Qt.NoFocus)
+        # 2. Интерактивная сенсорная панель DeckInteractivePanel (920x216 px)
+        self.interactive_panel = DeckInteractivePanel(self)
         layout.addWidget(self.interactive_panel, 0, Qt.AlignHCenter)
 
     def _connect_signals(self) -> None:
@@ -195,12 +208,24 @@ class DeckView(TouchModuleView):
         self.dispatcher.action_started.connect(self._on_action_started)
         self.dispatcher.action_finished.connect(self._on_action_finished)
 
+        # Связка свайпов сетки и интерактивной панели с пагинацией страниц
+        self.grid.swipe_left.connect(self.next_page)
+        self.grid.swipe_right.connect(self.prev_page)
+        self.interactive_panel.swipe_left.connect(self.next_page)
+        self.interactive_panel.swipe_right.connect(self.prev_page)
+
+        # Связка прямого выбора точки в DotPagingWidget
+        self.interactive_panel.center_section.dots.page_selected.connect(
+            self._on_dot_page_selected
+        )
+
     def _subscribe_eventbus(self) -> None:
-        """Подписка на сигналы шины событий для живых тайлов."""
+        """Подписка на сигналы шины событий для живых тайлов и синхронизации страниц."""
         if not self._eventbus_connected:
             bus.playback_device_changed.connect(self._on_playback_device_changed)
             bus.mic_mute_changed.connect(self._on_mic_mute_changed)
             bus.dimmer_opacity_changed.connect(self._on_dimmer_opacity_changed)
+            bus.deck_page_changed.connect(self._on_deck_page_changed)
             self._eventbus_connected = True
 
     def _unsubscribe_eventbus(self) -> None:
@@ -218,6 +243,10 @@ class DeckView(TouchModuleView):
                 bus.dimmer_opacity_changed.disconnect(self._on_dimmer_opacity_changed)
             except Exception:
                 pass
+            try:
+                bus.deck_page_changed.disconnect(self._on_deck_page_changed)
+            except Exception:
+                pass
             self._eventbus_connected = False
 
     def load_config(self) -> None:
@@ -226,8 +255,13 @@ class DeckView(TouchModuleView):
         if not self.root_config.pages:
             self.root_config = DeckConfigLoader.get_default_config()
 
+        # Регистрация страниц в виджете пагинации
+        if hasattr(self, "interactive_panel"):
+            page_ids = [p.id for p in self.root_config.pages]
+            self.interactive_panel.set_page_ids(page_ids)
+
         self.active_page_id = self.root_config.active_profile or self.root_config.pages[0].id
-        self.set_active_page(self.active_page_id)
+        self.set_active_page(self.active_page_id, emit_signal=False, animated_dots=False)
 
     def reload_config(self) -> None:
         """Горячая перезагрузка конфигурации с обновлением статуса."""
@@ -238,21 +272,110 @@ class DeckView(TouchModuleView):
             logger.error(f"Ошибка перезагрузки конфигурации DuckDeck: {e}")
             self.set_status(f"Ошибка: {e}")
 
-    def set_active_page(self, page_id: str) -> None:
-        """Переключение отображаемой страницы сетки."""
-        if not self.root_config:
+    def get_current_page_index(self) -> int:
+        """Возвращает индекс активной страницы в конфигурации (0-based)."""
+        if not self.root_config or not self.root_config.pages:
+            return 0
+        for idx, p in enumerate(self.root_config.pages):
+            if p.id == self.active_page_id:
+                return idx
+        return 0
+
+    def next_page(self) -> None:
+        """
+        Переход на следующую страницу (жест свайпа влево: dx < -60 px).
+        page_idx + 1 с синхронной анимацией точек DotPagingWidget и эмиссией bus.deck_page_changed.
+        """
+        if not self.root_config or not self.root_config.pages:
+            return
+        curr_idx = self.get_current_page_index()
+        if curr_idx < len(self.root_config.pages) - 1:
+            next_page = self.root_config.pages[curr_idx + 1]
+            logger.info("Свайп влево: переход на следующую страницу '%s'", next_page.id)
+            if hasattr(self, "interactive_panel"):
+                self.interactive_panel.trigger_swipe_feedback("left")
+            self.set_active_page(next_page.id, emit_signal=True, animated_dots=True)
+
+    def prev_page(self) -> None:
+        """
+        Переход на предыдущую страницу (жест свайпа вправо: dx > +60 px).
+        page_idx - 1 с синхронной анимацией точек DotPagingWidget и эмиссией bus.deck_page_changed.
+        """
+        if not self.root_config or not self.root_config.pages:
+            return
+        curr_idx = self.get_current_page_index()
+        if curr_idx > 0:
+            prev_page = self.root_config.pages[curr_idx - 1]
+            logger.info("Свайп вправо: переход на предыдущую страницу '%s'", prev_page.id)
+            if hasattr(self, "interactive_panel"):
+                self.interactive_panel.trigger_swipe_feedback("right")
+            self.set_active_page(prev_page.id, emit_signal=True, animated_dots=True)
+
+    def set_active_page(
+        self,
+        page_id: str,
+        emit_signal: bool = True,
+        animated_dots: bool = True,
+    ) -> None:
+        """
+        Переключение отображаемой страницы сетки.
+        Синхронизирует активную точку DotPagingWidget и эмитирует bus.deck_page_changed.
+        """
+        if not self.root_config or not self.root_config.pages:
             return
 
-        target_page = next((p for p in self.root_config.pages if p.id == page_id), None)
+        target_page = None
+        target_index = -1
+        for idx, p in enumerate(self.root_config.pages):
+            if p.id == page_id:
+                target_page = p
+                target_index = idx
+                break
+
+        # Fallback на индекс, если передан формат 'page_X'
+        if target_page is None and page_id.startswith("page_") and page_id[5:].isdigit():
+            idx = int(page_id[5:])
+            if 0 <= idx < len(self.root_config.pages):
+                target_page = self.root_config.pages[idx]
+                target_index = idx
+
         if not target_page:
-            logger.warning(f"Страница '{page_id}' не найдена в конфигурации DuckDeck")
+            logger.warning("Страница '%s' не найдена в конфигурации DuckDeck", page_id)
             return
 
-        self.active_page_id = page_id
+        page_changed = (self.active_page_id != target_page.id)
+        self.active_page_id = target_page.id
         self.grid.load_page(target_page)
+
+        # Синхронизация точек пагинации
+        if hasattr(self, "interactive_panel"):
+            self.interactive_panel.set_current_page(target_index, animated=animated_dots)
 
         # Начальная синхронизация Live Dynamic Tiles с реальным состоянием
         self._sync_live_tiles()
+
+        # Эмиссия сигнала в шину событий при смене страницы
+        if emit_signal and page_changed:
+            self._is_emitting_page_changed = True
+            try:
+                bus.deck_page_changed.emit(target_page.id)
+            finally:
+                self._is_emitting_page_changed = False
+
+    def _on_deck_page_changed(self, page_id: str) -> None:
+        """Реакция на внешнюю смену страницы через шину событий EventBus."""
+        if getattr(self, "_is_emitting_page_changed", False):
+            return
+        if page_id != self.active_page_id:
+            self.set_active_page(page_id, emit_signal=False, animated_dots=True)
+
+    def _on_dot_page_selected(self, page_idx: int) -> None:
+        """Обработка нажатия на точку в DotPagingWidget."""
+        if not self.root_config or not self.root_config.pages:
+            return
+        if 0 <= page_idx < len(self.root_config.pages):
+            target_page = self.root_config.pages[page_idx]
+            self.set_active_page(target_page.id, emit_signal=True, animated_dots=True)
 
     def _on_button_triggered(self, btn_config: DeckButtonConfig) -> None:
         """Обработка нажатия на кнопку тайла."""
