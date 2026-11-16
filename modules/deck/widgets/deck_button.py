@@ -1,13 +1,15 @@
 """
 Сенсорный тайл кнопки макро-панели DuckDeck.
 """
+import time
 from typing import List, Optional, Tuple
 
-from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtGui import QMouseEvent
+from PySide6.QtCore import Qt, QTimer, Signal, QPointF, QEvent
+from PySide6.QtGui import QMouseEvent, QTouchEvent, QEventPoint
 from PySide6.QtWidgets import QFrame, QLabel, QVBoxLayout, QWidget
 
 from modules.deck.models import DeckButtonConfig
+from modules.deck.widgets.swipe_detector import _extract_point_pos
 
 
 class DeckButtonWidget(QFrame):
@@ -60,6 +62,10 @@ class DeckButtonWidget(QFrame):
         # Состояния и тактильный сдвиг содержимого
         self._state: str = "idle"
         self._is_pressed: bool = False
+        self._swipe_consumed: bool = False
+        self._press_start_pos: Optional[QPointF] = None
+        self._press_start_time: float = 0.0
+        self._swipe_threshold_dx: float = 20.0
         self._content_offset_x: int = 0
         self._content_offset_y: int = 0
 
@@ -124,6 +130,22 @@ class DeckButtonWidget(QFrame):
     def state(self) -> str:
         """Текущее состояние тайла."""
         return self._state
+
+    @property
+    def is_pressed(self) -> bool:
+        """Флаг активного нажатия кнопки."""
+        return self._is_pressed
+
+    @property
+    def swipe_consumed(self) -> bool:
+        """Флаг поглощения жестом (подавление клика при отпускании)."""
+        return self._swipe_consumed
+
+    def cancel_press(self) -> None:
+        """Принудительный сброс состояния нажатия при распознанном жесте или свайпе."""
+        self._is_pressed = False
+        self._swipe_consumed = True
+        self.set_state("idle")
 
     @property
     def content_offset(self) -> Tuple[int, int]:
@@ -236,23 +258,44 @@ class DeckButtonWidget(QFrame):
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.LeftButton:
             self._is_pressed = True
+            self._swipe_consumed = False
+            pos = event.position() if hasattr(event, "position") else event.pos()
+            self._press_start_pos = QPointF(pos.x(), pos.y())
+            self._press_start_time = time.monotonic()
             self.set_state("pressed")
             event.accept()
             return
         super().mousePressEvent(event)
 
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        if self._is_pressed and self._press_start_pos is not None:
+            pos = event.position() if hasattr(event, "position") else event.pos()
+            dx = pos.x() - self._press_start_pos.x()
+            if abs(dx) >= self._swipe_threshold_dx:
+                self.cancel_press()
+        super().mouseMoveEvent(event)
+
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-        if self._is_pressed and event.button() == Qt.LeftButton:
-            self._is_pressed = False
-            # Проверяем, отпущена ли точка внутри геометрии кнопки
-            pos = event.position().toPoint() if hasattr(event, "position") else event.pos()
-            if self.rect().contains(pos):
-                self.set_state("executing")
-                self.triggered.emit(self.button_config)
-            else:
+        if event.button() == Qt.LeftButton:
+            # Если жест был распознан как свайп или превысил порог смещения, клик подавляется
+            if self._swipe_consumed:
+                self._swipe_consumed = False
+                self._is_pressed = False
                 self.set_state("idle")
-            event.accept()
-            return
+                event.accept()
+                return
+
+            if self._is_pressed:
+                self._is_pressed = False
+                # Проверяем, отпущена ли точка внутри геометрии кнопки
+                pos = event.position().toPoint() if hasattr(event, "position") else event.pos()
+                if self.rect().contains(pos):
+                    self.set_state("executing")
+                    self.triggered.emit(self.button_config)
+                else:
+                    self.set_state("idle")
+                event.accept()
+                return
         super().mouseReleaseEvent(event)
 
     def leaveEvent(self, event) -> None:
@@ -260,6 +303,53 @@ class DeckButtonWidget(QFrame):
             self._is_pressed = False
             self.set_state("idle")
         super().leaveEvent(event)
+
+    def event(self, event: QEvent) -> bool:
+        """
+        Перехват тач-событий (QTouchEvent) для кинематического сброса и
+        бесконфликтной изоляции от двухпальцевого фильтра TouchCursorFilter.
+        """
+        etype = event.type()
+        if etype in (
+            QEvent.Type.TouchBegin,
+            QEvent.Type.TouchUpdate,
+            QEvent.Type.TouchEnd,
+            QEvent.Type.TouchCancel,
+        ):
+            points = []
+            if hasattr(event, "points"):
+                points = event.points()
+            elif hasattr(event, "touchPoints"):
+                points = event.touchPoints()
+
+            # 2 пальца и более -> жест переключения вкладок TouchCursorFilter
+            # Кнопка сбрасывается в idle и не блокирует событие
+            if len(points) > 1:
+                if self._is_pressed:
+                    self.cancel_press()
+                else:
+                    self._swipe_consumed = True
+                return False
+
+            if etype == QEvent.Type.TouchBegin and len(points) == 1:
+                pt_pos = _extract_point_pos(points[0])
+                self._press_start_pos = pt_pos
+                self._press_start_time = time.monotonic()
+                self._swipe_consumed = False
+
+            elif etype == QEvent.Type.TouchUpdate and len(points) == 1:
+                if self._is_pressed and self._press_start_pos is not None:
+                    curr = _extract_point_pos(points[0])
+                    dx = curr.x() - self._press_start_pos.x()
+                    if abs(dx) >= self._swipe_threshold_dx:
+                        self.cancel_press()
+
+            elif etype in (QEvent.Type.TouchEnd, QEvent.Type.TouchCancel):
+                if self._swipe_consumed:
+                    self._is_pressed = False
+                    self.set_state("idle")
+
+        return super().event(event)
 
     def cleanup(self) -> None:
         """Остановка всех активных таймеров виджета."""

@@ -4,11 +4,18 @@
 import logging
 from typing import Dict, Optional
 
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import QGridLayout, QSizePolicy, QSpacerItem, QWidget
+from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt, Signal
+from PySide6.QtWidgets import (
+    QGraphicsOpacityEffect,
+    QGridLayout,
+    QSizePolicy,
+    QSpacerItem,
+    QWidget,
+)
 
 from modules.deck.models import DeckPageConfig
 from modules.deck.widgets.deck_button import DeckButtonWidget
+from modules.deck.widgets.swipe_detector import DeckSwipeDetector
 
 logger = logging.getLogger("duckdock.deck.grid")
 
@@ -19,20 +26,39 @@ class DeckGrid(QWidget):
     Габариты строго 944x372 px (с отступами 12 px и промежутками 12 px).
     Матрица: 2 строки x 5 колонок = 10 кнопок на страницу.
     Кнопки фиксированного размера 174x168 px.
+    Поддерживает распознавание 1-пальцевого горизонтального свайпа и сброс состояния кнопок.
     """
     button_triggered = Signal(object)  # DeckButtonConfig
+    swipe_detected = Signal(str)  # "left" | "right"
+    swipe_left = Signal()
+    swipe_right = Signal()
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.setObjectName("DeckGrid")
         self.setFocusPolicy(Qt.NoFocus)
         self.setFixedSize(944, 372)
+        self.setAttribute(Qt.WA_AcceptTouchEvents, True)
 
         self._buttons: Dict[str, DeckButtonWidget] = {}
+
+        # Детектор свайпа по сетке и кнопкам
+        self.swipe_detector = DeckSwipeDetector(self)
+        self.swipe_detector.swipe_detected.connect(self.swipe_detected)
+        self.swipe_detector.swipe_left.connect(self.swipe_left)
+        self.swipe_detector.swipe_right.connect(self.swipe_right)
+        self.installEventFilter(self.swipe_detector)
 
         self.grid_layout = QGridLayout(self)
         self.grid_layout.setContentsMargins(12, 12, 12, 12)
         self.grid_layout.setSpacing(12)
+
+        # Анимация плавного проявления сетки при смене страниц (Fade-In 160 мс)
+        self._opacity_effect = QGraphicsOpacityEffect(self)
+        self.setGraphicsEffect(self._opacity_effect)
+        self._fade_anim = QPropertyAnimation(self._opacity_effect, b"opacity")
+        self._fade_anim.setDuration(160)
+        self._fade_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
 
     def load_page(self, page_config: DeckPageConfig) -> None:
         """
@@ -41,6 +67,13 @@ class DeckGrid(QWidget):
         """
         # Очистка существующих элементов
         self.clear()
+
+        # Плавный Fade-In эффект при загрузке страницы
+        if hasattr(self, "_fade_anim"):
+            self._fade_anim.stop()
+            self._fade_anim.setStartValue(0.4)
+            self._fade_anim.setEndValue(1.0)
+            self._fade_anim.start()
 
         rows = min(page_config.grid_rows or 2, 2)
         cols = page_config.grid_cols or 5
@@ -61,6 +94,7 @@ class DeckGrid(QWidget):
                 cols=cols,
                 parent=self,
             )
+            btn_widget.installEventFilter(self.swipe_detector)
             btn_widget.triggered.connect(self.button_triggered.emit)
             self.grid_layout.addWidget(btn_widget, row, col, Qt.AlignCenter)
             self._buttons[btn_cfg.id] = btn_widget
@@ -91,6 +125,10 @@ class DeckGrid(QWidget):
     def clear(self) -> None:
         """Безопасная очистка сетки с удалением виджетов через deleteLater."""
         for btn in self._buttons.values():
+            try:
+                btn.removeEventFilter(self.swipe_detector)
+            except Exception:
+                pass
             btn.cleanup()
             btn.setParent(None)
             btn.deleteLater()
@@ -105,6 +143,8 @@ class DeckGrid(QWidget):
 
     def cleanup(self) -> None:
         """Освобождение ресурсов сетки."""
+        if hasattr(self, "_fade_anim") and self._fade_anim.state() == QPropertyAnimation.State.Running:
+            self._fade_anim.stop()
         self.clear()
 
 

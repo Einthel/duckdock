@@ -8,21 +8,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.4.0] - 2026-11-16
 
 ### Added
-- **DuckDeck v0.4.0 (Этап 1: Архитектурный фундамент, раскладка 2x5 и спецификация ресурсов)**:
-  - `core/event_bus.py`:
-    - Зарегистрированы сигналы `deck_notification = Signal(str)` (трансляция сообщений в тикер панели) и `deck_page_changed = Signal(str)` (синхронизация смены активного профиля).
-  - `modules/deck/models.py`:
-    - Расширение Pydantic v2 модели `DeckButtonConfig`: `slot_index` (0..9), `category` (`system`, `shortcut`, `program`, `api`), `icon_size` (16..128 px), `icon_path`, `sound_override`.
-    - Модель `SoundSettings` (`enabled`, `volume` 0.0..1.0, `default_tap_sound`, `page_switch_sound`, `error_sound`, `success_sound`).
-    - Поддержка `simulation_mode` и `sound_settings` в `DeckRootConfig`.
-  - `config/deck_config.json`:
-    - Актуализация страниц `default` и `grid4x6` под строгую сетку 2x5 (ровно 10 кнопок на страницу со слотами 0..9).
-  - `DuckDock.spec`:
-    - Регистрация `resources/deck` и `config/deck_config.json` в `datas`, `PySide6.QtMultimedia` в `hiddenimports`.
-  - `.gitignore`:
-    - Белый список `!DuckDock.spec` для контроля спецификации сборки в Git.
-  - Тестирование:
-    - Модульные тесты геометрии `test_deck_view.py` и интеграционный тест `test_duckdock_spec_configuration`. Общий сьют: 140 тестов (100% PASS).
+- **DuckDeck v0.4.0 (Этапы 1–3: Архитектурный фундамент, интерактивная панель и кинематика свайпа)**:
+  - **Этап 1: Раскладка 2×5 и спецификация ресурсов:**
+    - `core/event_bus.py`:
+      - Зарегистрированы сигналы `deck_notification = Signal(str)` (трансляция сообщений в тикер панели) и `deck_page_changed = Signal(str)` (синхронизация смены активного профиля).
+    - `modules/deck/models.py`:
+      - Расширение Pydantic v2 модели `DeckButtonConfig`: `slot_index` (0..9), `category` (`system`, `shortcut`, `program`, `api`), `icon_size` (16..128 px), `icon_path`, `sound_override`.
+      - Модель `SoundSettings` (`enabled`, `volume` 0.0..1.0, `default_tap_sound`, `page_switch_sound`, `error_sound`, `success_sound`).
+      - Поддержка `simulation_mode` и `sound_settings` в `DeckRootConfig`.
+    - `config/deck_config.json`:
+      - Актуализация страниц `default` и `grid4x6` под строгую сетку 2x5 (ровно 10 кнопок на страницу со слотами 0..9).
+    - `DuckDock.spec`:
+      - Регистрация `resources/deck` и `config/deck_config.json` в `datas`, `PySide6.QtMultimedia` в `hiddenimports`.
+    - `.gitignore`:
+      - Белый список `!DuckDock.spec` для контроля спецификации сборки в Git.
+  - **Этап 2: Интерактивная сенсорная панель (`DeckInteractivePanel`):**
+    - `modules/deck/widgets/interactive_panel.py`:
+      - Создана сенсорная панель 920×216 px (`TouchModuleView`, `Qt.NoFocus`, фон `#111622`, радиус 14 px) с 3 секциями:
+        - Левая секция (280 px): медиа-пульт с обложкой 48×48 px, бегущей строкой `MarqueeLabel` и сенсорными кнопками ⏮ ⏯ ⏭ (`media_action_requested` / `media_state_changed`).
+        - Центральная секция (360 px): моноширинные цифровые часы 34 px Bold `#38bdf8` с датой, сенсорный трек свайпа и точечная пагинация `DotPagingWidget` (● ○ ○) с кинетическим перекатом точки (220 мс, OutCubic) и световыми шевронами ‹ ›.
+        - Правая секция (280 px): мини-индикаторы температур CPU/GPU (`sensors_updated`), `NotificationTicker` для системных уведомлений с затуханием 3с и кнопка настроек ⚙.
+  - **Этап 3: Детекция горизонтального свайпа и кинематика переключения страниц:**
+    - `modules/deck/widgets/swipe_detector.py`:
+      - Реализован кинематический детектор 1-пальцевого горизонтального свайпа `DeckSwipeDetector` (пороги $dt \le 600$ мс, $|dx| \ge 60$ px, угловой фильтр $|dx| > 1.5 \cdot |dy|$).
+      - Защита от синтетического клика мыши (`_suppress_mouse_release`).
+      - Бесконфликтная изоляция с глобальным 2-пальцевым фильтром `TouchCursorFilter` (`len(points) > 1` беспрепятственно передается выше).
+    - `modules/deck/widgets/deck_button.py`:
+      - Автоматический сброс нажатия кнопки (`cancel_press()`, возврат в `"idle"`) при смещении пальца $|dx| \ge 20$ px с гарантированным подавлением клика при отпускании (`_swipe_consumed = True`).
+    - `modules/deck/widgets/deck_grid.py`:
+      - Интеграция `DeckSwipeDetector` на сетку и все кнопки тайлов, плавная Fade-In анимация (160 мс) при смене страниц.
+    - `modules/deck/view.py`:
+      - Связка свайпов сетки и панели с перелистыванием страниц `next_page()` / `prev_page()` и шиной `bus.deck_page_changed`.
+  - **Тестирование и верификация:**
+    - Новые сьюты: `tests/unit/test_deck_panel.py`, `tests/unit/test_deck_swipe_isolation.py`, `tests/unit/test_deck_swipe_paging.py`.
+    - Общий тест-сьют увеличен до **165 тестов (100% PASS)** без регрессий.
 - **Спринт 6: Переход на Feature-First модульную архитектуру и Foundation Decoupling**:
   - `core/ui_base.py`:
     - Базовый абстрактный класс `TouchModuleView(QWidget)` с принудительной политикой `setFocusPolicy(Qt.NoFocus)` и методом жизненного цикла `cleanup()`.

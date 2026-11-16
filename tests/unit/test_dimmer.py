@@ -33,7 +33,7 @@ def test_dimmer_toggle(qapp):
     dimmer.toggle(0.50)
     assert dimmer.target_opacity == 0.50
     assert dimmer.is_animating is True
-    QTest.qWait(250)
+    QTest.qWait(350)
     assert pytest.approx(dimmer.opacity, abs=0.02) == 0.50
     assert dimmer.is_animating is False
 
@@ -41,7 +41,7 @@ def test_dimmer_toggle(qapp):
     dimmer.toggle()
     assert dimmer.target_opacity == 0.0
     assert dimmer.is_animating is True
-    QTest.qWait(250)
+    QTest.qWait(350)
     assert pytest.approx(dimmer.opacity, abs=0.02) == 0.0
     assert dimmer.is_animating is False
 

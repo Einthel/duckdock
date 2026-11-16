@@ -3,7 +3,7 @@
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![PySide6](https://img.shields.io/badge/GUI-PySide6%20Qt6-green.svg)](https://wiki.qt.io/Qt_for_Python)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-lightgrey.svg)](https://microsoft.com/windows)
-[![Tests](https://img.shields.io/badge/tests-135%20passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-165%20passed-brightgreen.svg)]()
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Легковесный сенсорный оконный менеджер и панель управления (**Touch Dashboard & Macro Deck**) для вспомогательного 7-дюймового IPS-дисплея (1024×600 JRP7813S) под управлением Windows 10/11 x64.
@@ -21,8 +21,14 @@
 * **Touch Gesture Engine**: Двухпальцевый вертикальный свайп для быстрого циклического переключения экранов (`core.touch_filter`).
 * **Per-Monitor DPI Awareness V2**: Честная попиксельная координатная сетка 1024×600 без искажений масштабирования Windows.
 
-### 2. 🎛 DuckDeck — Сенсорная макро-панель и системный контроллер
-* **Сетка кнопок с профилями**: 3×5 (174×168 px) или 4×6 (145×124 px) с поддержкой страниц профилей (`Default`, `Dev / Tools`, `Gaming`).
+### 2. 🎛 DuckDeck — Сенсорная макро-панель и интерактивный контроллер (v0.4.0)
+* **Сетка кнопок 2×5 (944×372 px)**: 10 сенсорных тайлов (174×168 px, R=14 px) на страницу с тактильным откликом (+2 px вдавливание), защитой от дребезга и Live Dynamic Tiles.
+* **Интерактивная панель `DeckInteractivePanel` (920×216 px)**:
+  * **Медиа-пульт**: бегущая строка `MarqueeLabel` текущего трека и сенсорные кнопки плеера (⏮ ⏯ ⏭).
+  * **Часы и сенсорная пагинация**: моноширинные часы 34 px Bold с датой и виджет `DotPagingWidget` (● ○ ○) с кинетическим скольжением точки (220 мс) и световыми шевронами.
+  * **NOC-телеметрия и тикер**: мини-индикаторы температур CPU/GPU, всплывающий `NotificationTicker` и сенсорная кнопка настроек ⚙.
+* **Кинематический горизонтальный свайп**: 1-пальцевый свайп страниц ($dt \le 600$ мс, $|dx| \ge 60$ px, $|dx| > 1.5 \cdot |dy|$) с авто-сбросом нажатия кнопок при $|dx| \ge 20$ px и подавлением синтетического клика мыши.
+* **Изоляция жестов**: полная бесконфликтность с глобальным 2-пальцевым вертикальным свайпом переключения экранов (`TouchCursorFilter`).
 * **Асинхронный диспетчер (`QThreadPool`)**: Защита от дребезга нажатий (cooldown 250 мс) и сторожевой таймер от зависания (Watchdog 5000 мс).
 * **Аппаратные хоткеи (`hotkey_sender`)**: Отправка скан-кодов через `SendInput` (`KEYEVENTF_SCANCODE`) с автоматическим предварительным восстановлением фокуса целевого окна.
 * **Переключение аудиовыхода (`audio_device_switcher`)**: Нативное переключение конечных точек Windows по умолчанию через COM `IPolicyConfigClient` (Console, Multimedia, Communications).
