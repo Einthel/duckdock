@@ -191,13 +191,19 @@ def test_main_window_dimmer_integration(qapp):
     # Запрос на переключение диммера через EventBus
     bus.dimmer_toggle_requested.emit()
     assert win.dimmer.target_opacity == config.dimmer.night_mode_opacity
-    QTest.qWait(350)
+    for _ in range(20):
+        if not win.dimmer.is_animating:
+            break
+        QTest.qWait(50)
     assert pytest.approx(win.dimmer.opacity, abs=0.02) == config.dimmer.night_mode_opacity
 
     # Повторный запрос — отключение
     bus.dimmer_toggle_requested.emit()
     assert win.dimmer.target_opacity == 0.0
-    QTest.qWait(350)
+    for _ in range(20):
+        if not win.dimmer.is_animating:
+            break
+        QTest.qWait(50)
     assert pytest.approx(win.dimmer.opacity, abs=0.02) == 0.0
 
     win.close()

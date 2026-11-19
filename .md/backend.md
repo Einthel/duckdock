@@ -1,6 +1,6 @@
 # DuckDock / TouchWM: Архитектурная спецификация модулей
 
-> **Статус:** v0.4.0 (Спринт 6: Модуляризация Feature-First и Deck Foundation)  
+> **Статус:** v0.4.1 (Спринт 6: DuckDeck v0.4.1 — Stubs Mode, Zero-Latency Audio и кинематика свайпа)  
 > **Целевая среда:** Windows 10/11 x64, 27" Primary (dGPU) + 7" 1024×600 JRP7813S Touchscreen (iGPU AMD Radeon Graphics).
 
 ---
@@ -58,6 +58,7 @@ flowchart TD
 
         subgraph ModDeck ["modules.deck"]
             DeckDisp["action_dispatcher.DeckActionDispatcher"]
+            DeckSound["sound_engine.DeckSoundEngine (QSoundEffect)"]
             DeckActs["actions.* (Hotkey / Process / HTTP / Screen)"]
             DeckModels["models.DeckRootConfig, SoundSettings & ActionParams"]
             DeckView["view.DeckView (TouchModuleView, 944x600)"]
@@ -68,6 +69,8 @@ flowchart TD
             DeckDisp -.-> DeckModels
             DeckView --> DeckGrid
             DeckView --> DeckPanel
+            DeckView --> DeckSound
+            DeckSound -.-> DeckModels
             DeckGrid --> DeckSwipe
             DeckPanel --> DeckSwipe
         end
@@ -167,10 +170,11 @@ flowchart TD
 - `widgets.mini_media_bar.MiniMediaBar`: Сенсорный виджет управления медиа в сайдбаре (64×54px) с бегущей строкой `MarqueeLabel` и кнопками ⏮ ⏯ ⏭.
 - `view.YouTubeView(TouchModuleView)`: Полноэкранный плеер с двунаправленной синхронизацией состояния через `EventBus`.
 
-### `modules.deck` — Сенсорная макро-панель DuckDeck v0.4.0
+### `modules.deck` — Сенсорная макро-панель DuckDeck v0.4.1
 
 - `models.py`: Pydantic V2 модели конфигурации DuckDeck (`DeckRootConfig`, `DeckPageConfig`, `DeckButtonConfig`, `DeckActionConfig`, `SoundSettings`) и типизированные параметры действий.
-- `action_dispatcher.DeckActionDispatcher`: Асинхронный диспетчер задач в пуле `QThreadPool` с антидребезгом (250 мс) и сторожевым таймером (5000 мс).
+- `action_dispatcher.DeckActionDispatcher`: Асинхронный диспетчер задач в пуле `QThreadPool` с антидребезгом (250 мс), сторожевым таймером (5000 мс) и режимом заглушек `simulation_mode` (тактильный цикл кнопки и эмиссия в `deck_notification` без нагрузки на пул потоков).
+- `sound_engine.DeckSoundEngine`: Звуковой движок интерфейса (Zero-Latency Audio) на базе `PySide6.QtMultimedia.QSoundEffect` с предзагрузкой семплов в RAM (tap, page_switch, offline/error, online/success), регулировкой громкости и поддержкой индивидуального `sound_override`.
 - `actions/`:
   - `hotkey_sender.py`: Аппаратные скан-коды `SendInput` (`KEYEVENTF_SCANCODE`) с восстановлением фокуса целевого окна.
   - `process_launcher.py`: Detached-запуск процессов и URL-схем (`CREATE_NO_WINDOW`, `DETACHED_PROCESS`).

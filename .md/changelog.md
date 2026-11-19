@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-11-19
+
+### Added
+- **DuckDeck v0.4.1 (Этап 4: Режим заглушек Stubs Mode, звуковой движок DeckSoundEngine и DoD верификация)**:
+  - **Stubs Mode (`simulation_mode`)**:
+    - В `modules/deck/action_dispatcher.py` внедрен флаг `simulation_mode: bool = False`.
+    - В режиме симуляции при тапе по кнопке воспроизводится тактильный цикл (`action_started` -> `executing`, `action_finished` -> `success`) с трансляцией сообщения в `bus.deck_notification` без запуска задач в `QThreadPool`.
+    - Изолированный антидребезг (cooldown 250 мс) по идентификаторам кнопок.
+    - Корневой параметр `"simulation_mode": false` в `config/deck_config.json` с валидацией Pydantic v2.
+  - **Звуковой движок интерфейса (`DeckSoundEngine`)**:
+    - В `modules/deck/sound_engine.py` реализован движок аппаратных звуковых эффектов (Zero-Latency Audio) на базе `PySide6.QtMultimedia.QSoundEffect` с предзагрузкой семплов в RAM (0 мс задержка, без кражи фокуса и без блокировки Qt Event Loop):
+      - `button_click.wav` (клик плитки / tap),
+      - `button_sw_page.wav` (переключение страницы / page_switch),
+      - `button_offline.wav` (ошибка / блокировка / error),
+      - `button_online.wav` (успешное выполнение / success).
+    - Управление громкостью (`0.0 .. 1.0`) и включением/выключением из модели `SoundSettings`.
+    - Поддержка индивидуального переопределения звука кнопки (`sound_override`).
+    - Создан фасад обратной совместимости `core/deck/sound_engine.py` (Re-export Shim) и экспорт в `modules/deck/__init__.py`.
+  - **Связка с `DeckView` и жизненный цикл**:
+    - Озвучивание тапов по плиткам, смены страниц (свайп/пагинация) и ошибок выполнения.
+    - Каскадный метод `cleanup()` с гарантированной остановкой `QSoundEffect` и очисткой ресурсов.
+  - **Модульное и интеграционное тестирование**:
+    - Создан сьют `tests/unit/test_deck_sound_engine.py` (6 тестов).
+    - Расширены сьюты `tests/unit/test_deck_actions.py` и `tests/unit/test_deck_panel.py`.
+    - Рекурсивный аудит Stealth Focus (`test_deck_interactive_panel_full_stealth_focus_audit`) — 100% дочерних виджетов имеют `Qt.NoFocus`.
+    - Проверка сохранности боевых экшенов `modules/deck/actions/` (`hotkey_sender`, `process_launcher`, `http_client`, `screen_capture`, `audio_device_switcher`).
+    - Тест-сьют увеличен со 165 до **181 теста (100% PASS)**.
+
+### Fixed
+- **Стабилизация тайминга анимации диммера**:
+  - В `tests/unit/test_dimmer.py` оптимизировано ожидание завершения анимации `DimmerOverlay` при высокой нагрузке на процессор во время прогона полного тест-сьюта.
+
 ## [0.4.0] - 2026-11-16
 
 ### Added

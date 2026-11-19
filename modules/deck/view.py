@@ -21,6 +21,7 @@ from PySide6.QtWidgets import QFrame, QVBoxLayout, QWidget
 from core.event_bus import bus
 from core.ui_base import TouchModuleView
 from modules.deck.action_dispatcher import DeckActionDispatcher
+from modules.deck.sound_engine import DeckSoundEngine
 from modules.deck.models import (
     DeckButtonConfig,
     DeckConfigLoader,
@@ -124,15 +125,19 @@ class DeckView(TouchModuleView):
         config_path: str = "config/deck_config.json",
         dispatcher: Optional[DeckActionDispatcher] = None,
         audio_manager: Optional[Any] = None,
+        sound_engine: Optional[DeckSoundEngine] = None,
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
         self.config_path = config_path
         self._audio_manager = audio_manager
+        self._custom_dispatcher = (dispatcher is not None)
         self.dispatcher = dispatcher or DeckActionDispatcher(
             audio_manager=self._audio_manager,
             parent=self,
         )
+        self._custom_sound_engine = (sound_engine is not None)
+        self.sound_engine = sound_engine or DeckSoundEngine(parent=self)
 
         # Инварианты геометрии и фокуса
         self.setObjectName("DeckView")
@@ -263,6 +268,16 @@ class DeckView(TouchModuleView):
         self.active_page_id = self.root_config.active_profile or self.root_config.pages[0].id
         self.set_active_page(self.active_page_id, emit_signal=False, animated_dots=False)
 
+        # Синхронизация simulation_mode из конфигурации, если диспетчер не переопределен вручную
+        if hasattr(self, "dispatcher") and self.dispatcher is not None:
+            if not getattr(self, "_custom_dispatcher", False):
+                self.dispatcher.simulation_mode = getattr(self.root_config, "simulation_mode", False)
+
+        # Синхронизация настроек звукового движка из конфигурации
+        if hasattr(self, "sound_engine") and self.sound_engine is not None:
+            if not getattr(self, "_custom_sound_engine", False) and hasattr(self.root_config, "sound_settings"):
+                self.sound_engine.apply_settings(self.root_config.sound_settings)
+
     def reload_config(self) -> None:
         """Горячая перезагрузка конфигурации с обновлением статуса."""
         try:
@@ -351,6 +366,10 @@ class DeckView(TouchModuleView):
         if hasattr(self, "interactive_panel"):
             self.interactive_panel.set_current_page(target_index, animated=animated_dots)
 
+        # Звуковой отклик смены страницы (при фактическом изменении)
+        if page_changed and hasattr(self, "sound_engine") and self.sound_engine is not None:
+            self.sound_engine.play_page_switch()
+
         # Начальная синхронизация Live Dynamic Tiles с реальным состоянием
         self._sync_live_tiles()
 
@@ -379,6 +398,10 @@ class DeckView(TouchModuleView):
 
     def _on_button_triggered(self, btn_config: DeckButtonConfig) -> None:
         """Обработка нажатия на кнопку тайла."""
+        # Звуковой отклик клика кнопки (с поддержкой sound_override)
+        if hasattr(self, "sound_engine") and self.sound_engine is not None:
+            self.sound_engine.play_tap(sound_override=btn_config.sound_override)
+
         # Навигационные действия обрабатываются внутри UI без отправки в worker thread
         if btn_config.action.action_type == "navigation":
             typed = btn_config.action.get_typed_params()
@@ -391,7 +414,14 @@ class DeckView(TouchModuleView):
                 return
 
         # Отправка действия в ActionDispatcher
-        accepted = self.dispatcher.dispatch(btn_config.id, btn_config.action)
+        try:
+            accepted = self.dispatcher.dispatch(
+                btn_config.id,
+                btn_config.action,
+                button_title=btn_config.title,
+            )
+        except TypeError:
+            accepted = self.dispatcher.dispatch(btn_config.id, btn_config.action)
         if not accepted:
             # Сработал антидребезг (cooldown 250 мс)
             btn = self.grid.get_button(btn_config.id)
@@ -409,6 +439,10 @@ class DeckView(TouchModuleView):
         btn = self.grid.get_button(button_id)
         if btn:
             btn.set_state("success" if success else "error")
+
+        # Звуковой отклик при ошибке выполнения действия
+        if not success and hasattr(self, "sound_engine") and self.sound_engine is not None:
+            self.sound_engine.play_error()
 
         if message:
             self.set_status(message)
@@ -465,6 +499,8 @@ class DeckView(TouchModuleView):
         self._unsubscribe_eventbus()
         if hasattr(self, "interactive_panel") and hasattr(self.interactive_panel, "cleanup"):
             self.interactive_panel.cleanup()
+        if hasattr(self, "sound_engine") and hasattr(self.sound_engine, "cleanup"):
+            self.sound_engine.cleanup()
         self.grid.cleanup()
         super().cleanup()
 
@@ -479,4 +515,5 @@ __all__ = [
     "DeckGrid",
     "HeaderBar",
     "DeckView",
+    "DeckSoundEngine",
 ]

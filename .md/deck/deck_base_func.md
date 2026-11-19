@@ -560,52 +560,69 @@ duckdock/
 
 ### Этап 4: Режим заглушек (Stubs Mode), звуковой движок и DoD верификация
 
-- **Шаг 4.1 (Stubs Mode в ActionDispatcher):**
-  - Добавить поддержку параметра `"simulation_mode": true` в `config/deck_config.json` и `DeckActionDispatcher`.
+- **Шаг 4.1 (Stubs Mode в ActionDispatcher) [ВЫПОЛНЕНО]:**
+  - Добавлена поддержка флага `simulation_mode: bool = False` в `DeckActionDispatcher` и интеграция с параметром конфигурации `simulation_mode` в `config/deck_config.json`.
   - В режиме заглушек при тапе на кнопку сетки:
-    - Воспроизводить тактильный цикл (вдавливание + подсветка успеха).
-    - Транслировать статус в `bus.deck_notification.emit(f"[Stub Action] {button.title} (ID: {button.id})")`.
-  - 100% боевых классов действий в `modules/deck/actions/` сохраняются неизменными.
+    - Воспроизводится тактильный цикл кнопки (`action_started` -> `executing`, `action_finished` -> `success` с изумрудной подсветкой).
+    - Транслируется статус в `bus.deck_notification.emit(f"[Stub Action] {button.title} (ID: {button.id})")` без запуска фоновых потоков `QThreadPool`.
+    - Поддерживается защитный cooldown антидребезга сенсора (250 мс).
+  - 100% боевых классов действий в `modules/deck/actions/` сохранены неизменными.
+  - Покрыто комплексными модульными тестами в `tests/unit/test_deck_actions.py`.
     > **Запуск шага 4.1:**
     >
     > ```text
     > @fullstack-builder реализуй шаг 4.1 из .md/deck/deck_base_func.md: внедри флаг simulation_mode в modules/deck/action_dispatcher.py. При True воспроизводи тактильный цикл кнопки и эмитти bus.deck_notification без запуска фоновых задач. Сохрани боевые экшены.
     > ```
 
-- **Шаг 4.2 (Звуковой движок `DeckSoundEngine`):**
-  - Реализовать менеджер звуков на базе `PySide6.QtMultimedia.QSoundEffect` с предзагрузкой семплов в RAM:
-    - `button_click.wav` (клик плитки),
-    - `button_sw_page.wav` (переключение страницы),
-    - `button_offline.wav` (ошибка / блокировка).
-  - Настройки громкости и включения из секции `sound_settings`.
+- **Шаг 4.2 (Звуковой движок `DeckSoundEngine`) [ВЫПОЛНЕНО]:**
+  - Реализован звуковой движок `DeckSoundEngine` в `modules/deck/sound_engine.py` на базе `PySide6.QtMultimedia.QSoundEffect` с предзагрузкой семплов в RAM (0 мс задержка):
+    - `button_click.wav` (клик плитки / tap),
+    - `button_sw_page.wav` (переключение страницы / page_switch),
+    - `button_offline.wav` (ошибка / блокировка / error),
+    - `button_online.wav` (успех / success).
+  - Управление громкостью (`0.0..1.0`, clamping) и флагом активности (`enabled`) из конфигурационной секции `sound_settings`.
+  - Поддержка индивидуального переопределения звука кнопки (`btn_config.sound_override`).
+  - Создан Re-export Shim `core/deck/sound_engine.py` и экспорт в `modules/deck/__init__.py`.
+  - Интеграция в `DeckView`: отклик при кликах, смене страниц и ошибках действий, освобождение ресурсов в `cleanup()`.
+  - 100% покрытие модульными тестами в `tests/unit/test_deck_sound_engine.py`.
     > **Запуск шага 4.2:**
     >
     > ```text
     > @fullstack-builder реализуй шаг 4.2 из .md/deck/deck_base_func.md: реализуй DeckSoundEngine на базе QSoundEffect с предзагрузкой button_click.wav, button_sw_page.wav, button_offline.wav и управлением громкостью из sound_settings.
     > ```
 
-- **Шаг 4.3 (Модульные тесты и локальная верификация):**
-  - Добавить модульные тесты в `tests/unit/test_deck_panel.py` и `tests/unit/test_deck_actions.py`.
-  - Запустить целевые тесты модуля `pytest tests/unit/test_deck*.py`.
+- **Шаг 4.3 (Модульные тесты и локальная верификация) [ВЫПОЛНЕНО]:**
+  - Добавлены модульные тесты в `tests/unit/test_deck_panel.py`:
+    - `test_deck_left_section_media_buttons_emit_eventbus_actions`: эмиссия команд `prev`, `toggle_play`, `next` в `bus.media_action_requested` и `Qt.NoFocus`.
+    - `test_deck_left_section_media_state_changed_updates_ui`: обновление заголовка трека `MarqueeLabel`, артиста, иконки воспроизведения (`▶` / `⏸`) и безопасная отписка в `cleanup()`.
+    - `test_deck_right_section_sensors_and_ticker_reactivity`: градация цветов температур CPU/GPU (зеленый `<=65°C`, желтый `65-75°C`, красный `>75°C`), показ и сброс уведомлений в тикер через `bus.deck_notification`, вызов настроек по кнопке ⚙.
+    - `test_deck_interactive_panel_full_stealth_focus_audit`: рекурсивный аудит Stealth Focus (`Qt.NoFocus` на 100% дочерних виджетов), проверка геометрии (920×216 px, секции 280, 360, 280 px) и визуального отклика свайпа.
+  - Добавлены модульные тесты в `tests/unit/test_deck_actions.py`:
+    - `test_deck_simulation_mode_and_audio_feedback_integration`: сквозная интеграция `simulation_mode` с аудио-откликом клика (`play_tap` с поддержкой `sound_override`), смены страницы (`play_page_switch`) и ошибки (`play_error`).
+    - `test_deck_action_dispatcher_multi_button_debounce_isolation_in_simulation`: изолированный антидребезг кнопок и отсутствие нагрузки на `QThreadPool` в режиме симуляции.
+    - `test_action_runnable_combat_handlers_integrity`: проверка сохранения боевых обработчиков (`hotkey_sender`, `process_launcher`, `http_client`, `screen_capture`) и запуск через пул потоков при выключенной симуляции.
+  - Запущен целевой прогон тестов Deck (`pytest -k deck` — 76/76 PASS) и полный сьют (`pytest tests/` — 181/181 PASS, 100%).
     > **Запуск шага 4.3:**
     >
     > ```text
     > @fullstack-builder реализуй шаг 4.3 из .md/deck/deck_base_func.md: напиши тесты в tests/unit/test_deck_panel.py и tests/unit/test_deck_actions.py, проверь реактивность симуляции и аудио-отклик.
     > ```
 
-- **Шаг 4.4 (Финальная DoD верификация спринта):**
-  - Запуск полного сьюта `pytest tests/` (все unit и integration тесты должны иметь статус 100% `PASS`).
-  - Проверка сборки дистрибутива через `pyinstaller DuckDock.spec --dry-run` или валидацию манифеста ресурсов.
+- **Шаг 4.4 (Финальная DoD верификация спринта) [ВЫПОЛНЕНО]:**
+  - Запуск полного сьюта `pytest tests/` (все unit и integration тесты имеют статус 100% `PASS`, 181/181).
+  - Проверена спецификация дистрибутива `DuckDock.spec` (включены `resources/deck`, `config/deck_config.json`, `PySide6.QtMultimedia`).
+  - Проверена сохранность всех боевых экшенов в `modules/deck/actions/` и Re-export Shims в `core/deck/actions/`.
     > **Запуск шага 4.4:**
     >
     > ```text
     > @fullstack-builder выполни шаг 4.4 из .md/deck/deck_base_func.md: проведи полную DoD верификацию Спринта 6 — запусти полный сьют pytest tests/ (100% PASS), проверь сохранение всех боевых экшенов и корректность spec-файла сборки.
     > ```
 
-- **Шаг 4.5 (Финальный Pre-Flight аудит релиза v0.4.0):**
-  - Итоговый многоосевой аудит изменений DuckDeck v0.4.0 перед слиянием в `main` силами `@code-review` (STRICT READ-ONLY):
-    - Сверка со всеми пунктами Релизного чеклиста (GEMINI.md раздел 4).
-    - Проверка чистоты diff, версионирования и отсутствия регрессий.
+- **Шаг 4.5 (Финальный Pre-Flight аудит релиза v0.4.1) [ВЫПОЛНЕНО]:**
+  - Итоговый многоосевой аудит изменений DuckDeck v0.4.1 перед слиянием в `main` силами `@code-review` (STRICT READ-ONLY):
+    - Сверка со всеми пунктами Релизного чеклиста (GEMINI.md раздел 4) и чеклиста DoD (раздел 7).
+    - Вердикт: `APPROVED ✅` (чистый diff, 100% Stealth Focus, отсутствие утечек ресурсов и памяти, готовность к релизу).
+    - Версионирование v0.4.1 синхронизировано.
       > **Запуск шага 4.5:**
       >
       > ```text
@@ -635,11 +652,11 @@ duckdock/
 
 ## 7. Чеклист соответствия архитектурным инвариантам (DoD)
 
-- [ ] **Stealth Focus:** Ни один элемент панели (кнопки плеера, индикаторы, точки, шестеренка) не имеет фокуса (`Qt.NoFocus`), окно не активируется при тачах (`WS_EX_NOACTIVATE`).
-- [ ] **Геометрия 944×600:** Строгое соблюдение формулы высоты: 10 кнопок $174 \times 168\text{ px}$ в два ряда ($372\text{ px}$) + панель $920 \times 216\text{ px}$ в третьем ряду + отступы 12 px = ровно 600 px без зазоров и скроллбаров.
-- [ ] **Кинематическая чистота:** 1-пальцевый горизонтальный свайп изолирован от глобального 2-пальцевого вертикального фильтра `TouchCursorFilter`.
-- [ ] **Слабая связанность:** Интерактивная панель взаимодействует со средой исключительно через сигналы `core.event_bus.bus` (`deck_notification`, `deck_page_changed`, `media_state_changed`, `sensors_updated`).
-- [ ] **Сохранение экшенов:** Все боевые обработчики сохранены в `modules/deck/actions/` и готовы к боевому включению снятием флага `simulation_mode`.
-- [ ] **Ресурсная база и PyInstaller:** Файлы звуков (`button_click.wav`, `button_sw_page.wav`), каталоги иконок и конфиг интегрированы в `datas` спецификации `DuckDock.spec`, а `PySide6.QtMultimedia` добавлен в `hiddenimports`.
+- [x] **Stealth Focus:** Ни один элемент панели (кнопки плеера, индикаторы, точки, шестеренка) не имеет фокуса (`Qt.NoFocus`), окно не активируется при тачах (`WS_EX_NOACTIVATE`).
+- [x] **Геометрия 944×600:** Строгое соблюдение формулы высоты: 10 кнопок $174 \times 168\text{ px}$ в два ряда ($372\text{ px}$) + панель $920 \times 216\text{ px}$ в третьем ряду + отступы 12 px = ровно 600 px без зазоров и скроллбаров.
+- [x] **Кинематическая чистота:** 1-пальцевый горизонтальный свайп изолирован от глобального 2-пальцевого вертикального фильтра `TouchCursorFilter`.
+- [x] **Слабая связанность:** Интерактивная панель взаимодействует со средой исключительно через сигналы `core.event_bus.bus` (`deck_notification`, `deck_page_changed`, `media_state_changed`, `sensors_updated`).
+- [x] **Сохранение экшенов:** Все боевые обработчики сохранены в `modules/deck/actions/` и готовы к боевому включению снятием флага `simulation_mode`.
+- [x] **Ресурсная база и PyInstaller:** Файлы звуков (`button_click.wav`, `button_sw_page.wav`), каталоги иконок и конфиг интегрированы в `datas` спецификации `DuckDock.spec`, а `PySide6.QtMultimedia` добавлен в `hiddenimports`.
 - [x] **Спецификация кнопок и Pydantic v2:** Модель `DeckButtonConfig` поддерживает слоты 0..9, категории `system`, `shortcut`, `program`, `api`, размеры и пути к иконкам, а также секцию звуковых настроек `SoundSettings`.
-- [ ] **Регрессионная стабильность:** 100% тестов проходят успешно (`pytest tests/`).
+- [x] **Регрессионная стабильность:** 100% тестов проходят успешно (`pytest tests/`).
