@@ -33,7 +33,7 @@ from modules.settings.config import load_config
 from ui.main_window import MainWindow
 
 def main():
-    print("[*] Запуск DuckDock / TouchWM v0.4.0...")
+    print("[*] Запуск DuckDock / TouchWM v0.4.1...")
 
     # Создание приложения Qt
     app = QApplication(sys.argv)

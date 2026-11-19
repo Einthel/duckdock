@@ -2,6 +2,7 @@
 Пакет модуля сенсорной макро-панели DuckDeck.
 """
 from modules.deck.action_dispatcher import ActionRunnable, DeckActionDispatcher, WorkerSignals
+from modules.deck.sound_engine import DeckSoundEngine
 from modules.deck.models import (
     ActionCategory,
     ActionType,
@@ -24,6 +25,7 @@ from modules.deck.view import DECK_QSS, DeckButtonWidget, DeckGrid, DeckView, He
 
 __all__ = [
     "DeckView",
+    "DeckSoundEngine",
     "DeckActionDispatcher",
     "ActionRunnable",
     "WorkerSignals",

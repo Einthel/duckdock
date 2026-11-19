@@ -530,3 +530,265 @@ def test_deck_event_bus_signals():
         bus.deck_notification.disconnect(on_notification)
         bus.deck_page_changed.disconnect(on_page_changed)
 
+
+# -------------------------------------------------------------
+# 10. Тесты simulation_mode (Stubs Mode) в ActionDispatcher (Шаг 4.1)
+# -------------------------------------------------------------
+def test_deck_action_dispatcher_simulation_mode_signals_and_no_background_tasks(qapp):
+    """
+    Тест режима simulation_mode в DeckActionDispatcher (Шаг 4.1):
+    - При simulation_mode=True не запускаются фоновые задачи в QThreadPool (_active_tasks пуст).
+    - Эмитятся сигналы action_started и action_finished с success=True.
+    - В bus.deck_notification транслируется сообщение '[Stub Action] {title} (ID: {button_id})'.
+    - Сохраняется защита от дребезга (debounce).
+    """
+    from core.event_bus import bus
+
+    dispatcher = DeckActionDispatcher(simulation_mode=True, debounce_ms=200)
+    assert dispatcher.simulation_mode is True
+
+    started_events = []
+    finished_events = []
+    notifications = []
+
+    dispatcher.action_started.connect(started_events.append)
+    dispatcher.action_finished.connect(lambda b_id, ok, msg: finished_events.append((b_id, ok, msg)))
+
+    def on_notif(msg: str):
+        notifications.append(msg)
+
+    bus.deck_notification.connect(on_notif)
+
+    try:
+        act = DeckActionConfig(action_type="system", params={"command": "toggle_mic_mute"})
+
+        # Первый тап - принимается
+        accepted = dispatcher.dispatch("btn_mute_mic", act, button_title="Микрофон")
+        assert accepted is True
+
+        # Проверка: фоновые задачи НЕ запущены
+        assert len(dispatcher._active_tasks) == 0
+
+        # Проверка сигналов
+        assert started_events == ["btn_mute_mic"]
+        assert len(finished_events) == 1
+        assert finished_events[0] == ("btn_mute_mic", True, "[Stub Action] Микрофон (ID: btn_mute_mic)")
+        assert notifications == ["[Stub Action] Микрофон (ID: btn_mute_mic)"]
+
+        # Второй тап немедленно - отклоняется антидребезгом
+        accepted_debounce = dispatcher.dispatch("btn_mute_mic", act, button_title="Микрофон")
+        assert accepted_debounce is False
+        assert len(finished_events) == 1
+
+        # Отключение simulation_mode переводит диспетчер в боевой режим
+        dispatcher.simulation_mode = False
+        assert dispatcher.simulation_mode is False
+
+    finally:
+        bus.deck_notification.disconnect(on_notif)
+
+
+def test_deck_action_dispatcher_simulation_mode_button_object_and_fallback_title(qapp):
+    """
+    Тест поддержки объекта DeckButtonConfig и автоматического fallback заголовка.
+    """
+    from core.event_bus import bus
+
+    dispatcher = DeckActionDispatcher(simulation_mode=True, debounce_ms=10)
+    notifications = []
+
+    def on_notif(msg: str):
+        notifications.append(msg)
+
+    bus.deck_notification.connect(on_notif)
+
+    try:
+        act = DeckActionConfig(action_type="hotkey", params={"keys": ["ctrl", "v"]})
+
+        # 1. Вызов без указания button_title - fallback на button_id
+        dispatcher.dispatch("btn_raw_id", act)
+        assert notifications[-1] == "[Stub Action] btn_raw_id (ID: btn_raw_id)"
+
+        # 2. Вызов с передачей объекта DeckButtonConfig
+        btn_obj = DeckButtonConfig(
+            id="btn_headphones",
+            title="Наушники",
+            slot_index=2,
+            action=act,
+        )
+        dispatcher.dispatch(btn_obj, act)
+        assert notifications[-1] == "[Stub Action] Наушники (ID: btn_headphones)"
+
+    finally:
+        bus.deck_notification.disconnect(on_notif)
+
+
+def test_deck_view_simulation_mode_integration(qapp):
+    """
+    Интеграционный тест DeckView со сквозным тактильным циклом в simulation_mode:
+    - Конфигурация DeckRootConfig с simulation_mode=True передается в диспетчер.
+    - При нажатии на кнопку сетки вызывается dispatch с button_title.
+    - Кнопка проходит тактильный цикл (executing -> success).
+    - Сообщение транслируется в тикер и статус.
+    """
+    from core.event_bus import bus
+    from ui.modules.deck_view import DeckView
+
+    notifs = []
+    def on_notif(msg: str):
+        notifs.append(msg)
+    bus.deck_notification.connect(on_notif)
+
+    try:
+        view = DeckView(config_path="config/deck_config.json")
+        # Активируем режим симуляции
+        view.dispatcher.simulation_mode = True
+
+        btn_target = view.grid.get_button("btn_toggle_audio_device")
+        assert btn_target is not None
+
+        # Эмулируем срабатывание кнопки
+        view._on_button_triggered(btn_target.button_config)
+
+        # Проверяем переход в состояние success и отправку уведомления
+        assert btn_target._state == "success"
+        assert len(notifs) >= 1
+        assert "[Stub Action] Аудиовыход (ID: btn_toggle_audio_device)" in notifs[-1]
+        assert "[Stub Action]" in view.status_message
+
+    finally:
+        bus.deck_notification.disconnect(on_notif)
+        view.cleanup()
+        view.close()
+
+
+# =============================================================================
+# 8. Тесты реактивности симуляции, звукового отклика и DoD верификация (Шаг 4.3)
+# =============================================================================
+
+def test_deck_simulation_mode_and_audio_feedback_integration(qapp):
+    """
+    Проверка сквозного взаимодействия DeckView в simulation_mode с аудио-движком:
+    - При клике на плитку: вызов sound_engine.play_tap(sound_override=...).
+    - При смене страницы: вызов sound_engine.play_page_switch().
+    - При ошибке действия: вызов sound_engine.play_error().
+    - Тактильный цикл кнопки (executing -> success или executing -> error).
+    """
+    from core.event_bus import bus
+    from modules.deck.sound_engine import DeckSoundEngine
+    from ui.modules.deck_view import DeckView
+
+    mock_sound_engine = MagicMock(spec=DeckSoundEngine)
+    notifs = []
+
+    def on_notif(msg: str):
+        notifs.append(msg)
+
+    bus.deck_notification.connect(on_notif)
+
+    try:
+        view = DeckView(
+            config_path="config/deck_config.json",
+            sound_engine=mock_sound_engine,
+        )
+        view.dispatcher.simulation_mode = True
+
+        btn_target = view.grid.get_button("btn_toggle_audio_device")
+        assert btn_target is not None
+
+        # 1. Клик по плитке в режиме симуляции
+        view._on_button_triggered(btn_target.button_config)
+
+        # Проверка аудио-отклика клика
+        mock_sound_engine.play_tap.assert_called_once_with(
+            sound_override=btn_target.button_config.sound_override
+        )
+
+        # Проверка тактильного статуса кнопки и уведомления
+        assert btn_target._state == "success"
+        assert len(notifs) >= 1
+        assert "[Stub Action] Аудиовыход" in notifs[-1]
+
+        # 2. Аудио-отклик при завершении действия с ошибкой
+        mock_sound_engine.reset_mock()
+        view._on_action_finished("btn_toggle_audio_device", False, "Имитация ошибки")
+        mock_sound_engine.play_error.assert_called_once()
+        assert btn_target._state == "error"
+        assert view.status_message == "Имитация ошибки"
+
+        # 3. Аудио-отклик при смене страницы (свайп / пагинация)
+        mock_sound_engine.reset_mock()
+        view.next_page()
+        mock_sound_engine.play_page_switch.assert_called_once()
+
+    finally:
+        bus.deck_notification.disconnect(on_notif)
+        view.cleanup()
+        view.close()
+
+
+def test_deck_action_dispatcher_multi_button_debounce_isolation_in_simulation(qapp):
+    """
+    Проверка независимости антидребезга и изоляции задач в simulation_mode:
+    - Тап по кнопке 1 блокирует повторный тап по кнопке 1 на время debounce (250 мс).
+    - Тап по кнопке 2 принимается независимо без ложных блокировок.
+    - В simulation_mode пул потоков QThreadPool не нагружается (_active_tasks == 0).
+    """
+    dispatcher = DeckActionDispatcher(simulation_mode=True, debounce_ms=250)
+    started = []
+    finished = []
+
+    dispatcher.action_started.connect(started.append)
+    dispatcher.action_finished.connect(lambda b_id, ok, msg: finished.append((b_id, ok, msg)))
+
+    act1 = DeckActionConfig(action_type="system", params={"command": "toggle_dimmer"})
+    act2 = DeckActionConfig(action_type="hotkey", params={"keys": ["ctrl", "c"]})
+
+    # Тап 1: Кнопка A
+    assert dispatcher.dispatch("btn_a", act1, button_title="Диммер") is True
+    assert started == ["btn_a"]
+    assert len(finished) == 1
+    assert len(dispatcher._active_tasks) == 0
+
+    # Повторный тап Кнопки A сразу — блокируется антидребезгом
+    assert dispatcher.dispatch("btn_a", act1, button_title="Диммер") is False
+    assert len(finished) == 1
+
+    # Тап Кнопки B сразу — принимается успешно (антидребезг изолирован по ID кнопки)
+    assert dispatcher.dispatch("btn_b", act2, button_title="Копировать") is True
+    assert started == ["btn_a", "btn_b"]
+    assert len(finished) == 2
+    assert finished[-1][0] == "btn_b"
+    assert len(dispatcher._active_tasks) == 0
+
+
+def test_action_runnable_combat_handlers_integrity(qapp):
+    """
+    Архитектурная проверка сохранения боевых обработчиков (DoD Invariant):
+    - Все боевые функции модулей modules/deck/actions/ импортируются и работоспособны.
+    - При выключенном simulation_mode диспетчер запускает боевую задачу через QThreadPool.
+    """
+    from core.deck.actions.hotkey_sender import send_hotkey
+    from core.deck.actions.process_launcher import launch_process
+    from core.deck.actions.http_client import execute_http_request
+    from core.deck.actions.screen_capture import capture_screen
+
+    # Проверка доступности боевых функций модулей
+    assert callable(send_hotkey)
+    assert callable(launch_process)
+    assert callable(execute_http_request)
+    assert callable(capture_screen)
+
+    dispatcher = DeckActionDispatcher(simulation_mode=False, debounce_ms=50)
+    act = DeckActionConfig(action_type="system", params={"command": "toggle_dimmer"})
+
+    with patch.object(dispatcher.thread_pool, "start") as mock_pool_start:
+        accepted = dispatcher.dispatch("btn_live", act, button_title="Диммер")
+        assert accepted is True
+        # В боевом режиме задача отправляется в QThreadPool
+        mock_pool_start.assert_called_once()
+        assert len(dispatcher._active_tasks) == 1
+
+
+
+

@@ -232,49 +232,94 @@ class DeckActionDispatcher(QObject):
         debounce_ms: int = 250,
         thread_pool: Optional[QThreadPool] = None,
         parent: Optional[QObject] = None,
+        simulation_mode: bool = False,
     ):
         super().__init__(parent)
         self.audio_manager = audio_manager
         self.debounce_ms = debounce_ms
         self.thread_pool = thread_pool or QThreadPool.globalInstance()
+        self._simulation_mode: bool = bool(simulation_mode)
         self._last_trigger_times: Dict[str, float] = {}
         # Защита от преждевременного удаления объектов сборщиком мусора Python (GC)
         self._active_tasks: Dict[str, Tuple[ActionRunnable, WorkerSignals]] = {}
         self.action_finished.connect(self._on_action_finished_cleanup)
 
+    @property
+    def simulation_mode(self) -> bool:
+        """Режим симуляции (Stubs Mode) без запуска фоновых задач."""
+        return self._simulation_mode
+
+    @simulation_mode.setter
+    def simulation_mode(self, value: bool) -> None:
+        self._simulation_mode = bool(value)
+
     def _on_action_finished_cleanup(self, button_id: str, success: bool, message: str) -> None:
         """Освобождение сильной ссылки на завершенную задачу."""
         self._active_tasks.pop(button_id, None)
 
-    def dispatch(self, button_id: str, action_config: DeckActionConfig) -> bool:
+    def dispatch(
+        self,
+        button_id: Any,
+        action_config: DeckActionConfig,
+        button_title: Optional[str] = None,
+    ) -> bool:
         """
         Отправляет действие на исполнение в пул потоков с защитой от дребезга.
+        В режиме simulation_mode воспроизводит тактильный цикл кнопки и эмиттит
+        bus.deck_notification без запуска фоновых потоков (сохраняя боевые экшены).
         Возвращает True, если действие принято в обработку, False при срабатывании cooldown.
         """
+        # Поддержка передачи объекта кнопки или строки
+        if hasattr(button_id, "id"):
+            btn_obj = button_id
+            button_id = getattr(btn_obj, "id")
+            if button_title is None and hasattr(btn_obj, "title"):
+                button_title = getattr(btn_obj, "title")
+
+        button_id_str = str(button_id)
+
         now = time.monotonic()
-        last_time = self._last_trigger_times.get(button_id, 0.0)
+        last_time = self._last_trigger_times.get(button_id_str, 0.0)
         cooldown_sec = self.debounce_ms / 1000.0
 
         if now - last_time < cooldown_sec:
-            logger.debug(f"Дребезг нажатия кнопки '{button_id}' отклонен ({now - last_time:.3f}s < {cooldown_sec}s)")
+            logger.debug(f"Дребезг нажатия кнопки '{button_id_str}' отклонен ({now - last_time:.3f}s < {cooldown_sec}s)")
             return False
 
-        self._last_trigger_times[button_id] = now
+        self._last_trigger_times[button_id_str] = now
 
+        # Режим заглушек (Stubs Mode): тактильный цикл + deck_notification без запуска ActionRunnable
+        if self._simulation_mode:
+            title = button_title if button_title else button_id_str
+            stub_msg = f"[Stub Action] {title} (ID: {button_id_str})"
+            logger.info("Simulation mode: %s", stub_msg)
+
+            # Воспроизведение тактильного цикла кнопки
+            self.action_started.emit(button_id_str)
+            self.action_finished.emit(button_id_str, True, stub_msg)
+
+            try:
+                bus.deck_notification.emit(stub_msg)
+            except Exception as e:
+                logger.debug(f"Ошибка эмиссии deck_notification: {e}")
+
+            return True
+
+        # Боевой режим: исполнение в фоновом пуле потоков QThreadPool
         # Создаем сигналы с привязкой родителя к главному объекту диспетчера
         signals = WorkerSignals(self)
         signals.started.connect(self.action_started.emit)
         signals.finished.connect(self.action_finished.emit)
 
         runnable = ActionRunnable(
-            button_id=button_id,
+            button_id=button_id_str,
             action_config=action_config,
             signals=signals,
             audio_manager=self.audio_manager,
         )
 
         # Сохраняем сильную ссылку на задачу до ее завершения в главном потоке
-        self._active_tasks[button_id] = (runnable, signals)
+        self._active_tasks[button_id_str] = (runnable, signals)
         self.thread_pool.start(runnable)
         return True
 

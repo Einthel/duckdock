@@ -420,3 +420,185 @@ def test_deck_interactive_panel_full_layout_and_cleanup(qapp):
 
     finally:
         panel.cleanup()
+
+
+# =============================================================================
+# 4. Тесты медиа-секции, телеметрии, тикера и полного аудита Stealth Focus (Шаг 4.3)
+# =============================================================================
+
+@pytest.mark.unit
+def test_deck_left_section_media_buttons_emit_eventbus_actions(qapp):
+    """
+    Проверка сенсорных кнопок медиа-пульта DeckLeftSection:
+    - Кнопки ⏮, ⏯, ⏭ эмитят соответствующие команды в bus.media_action_requested.
+    - Инвариант: Qt.NoFocus на всех кнопках.
+    """
+    sec = DeckLeftSection()
+    actions_emitted = []
+
+    def on_media_action(action: str):
+        actions_emitted.append(action)
+
+    bus.media_action_requested.connect(on_media_action)
+    try:
+        assert sec.btn_prev.focusPolicy() == Qt.NoFocus
+        assert sec.btn_play.focusPolicy() == Qt.NoFocus
+        assert sec.btn_next.focusPolicy() == Qt.NoFocus
+
+        sec.btn_prev.click()
+        assert actions_emitted[-1] == "prev"
+
+        sec.btn_play.click()
+        assert actions_emitted[-1] == "toggle_play"
+
+        sec.btn_next.click()
+        assert actions_emitted[-1] == "next"
+
+        assert actions_emitted == ["prev", "toggle_play", "next"]
+    finally:
+        bus.media_action_requested.disconnect(on_media_action)
+        sec.cleanup()
+
+
+@pytest.mark.unit
+def test_deck_left_section_media_state_changed_updates_ui(qapp):
+    """
+    Проверка реактивности DeckLeftSection на сигналы bus.media_state_changed:
+    - Обновление названия трека в MarqueeLabel.
+    - Обновление артиста.
+    - Переключение иконки воспроизведения (▶ / ⏸).
+    - Гарантированная остановка таймера и отписка в cleanup().
+    """
+    sec = DeckLeftSection()
+    try:
+        # 1. Воспроизведение трека
+        state_playing = {
+            "title": "Starman",
+            "artist": "David Bowie",
+            "is_playing": True,
+        }
+        bus.media_state_changed.emit(state_playing)
+
+        assert sec.lbl_title._raw_text == "Starman"
+        assert sec.lbl_artist.text() == "David Bowie"
+        assert sec.btn_play.text() == "⏸"
+
+        # 2. Пауза
+        state_paused = {
+            "title": "Space Oddity",
+            "artist": "David Bowie",
+            "is_playing": False,
+        }
+        bus.media_state_changed.emit(state_paused)
+
+        assert sec.lbl_title._raw_text == "Space Oddity"
+        assert sec.lbl_artist.text() == "David Bowie"
+        assert sec.btn_play.text() == "▶"
+
+    finally:
+        sec.cleanup()
+
+    # После cleanup эмит не должен менять виджет
+    bus.media_state_changed.emit({"title": "After Cleanup", "artist": "None", "is_playing": True})
+    assert sec.lbl_title._raw_text == "Space Oddity"
+
+
+@pytest.mark.unit
+def test_deck_right_section_sensors_and_ticker_reactivity(qapp):
+    """
+    Проверка реактивности DeckRightSection:
+    - Обновление датчиков CPU/GPU через bus.sensors_updated с градацией цветов:
+        * T <= 65°C: #10b981 (зеленый)
+        * 65°C < T <= 75°C: #f59e0b (желтый)
+        * T > 75°C: #ef4444 (красный)
+    - Тикер уведомлений через bus.deck_notification.
+    - Сброс тикера по таймеру _reset_ticker().
+    - Кнопка настроек ⚙ шлет уведомление в тикер.
+    - Гарантированная отписка и остановка таймеров в cleanup().
+    """
+    sec = DeckRightSection()
+    try:
+        # 1. Датчики температуры - холодный режим (<= 65°C)
+        bus.sensors_updated.emit({"cpu_temp": 50.0, "gpu_temp": 55.4})
+        assert "CPU: 50°C" in sec.lbl_cpu.text()
+        assert "#10b981" in sec.lbl_cpu.styleSheet()
+        assert "GPU: 55°C" in sec.lbl_gpu.text()
+        assert "#10b981" in sec.lbl_gpu.styleSheet()
+
+        # Теплый режим (65-75°C)
+        bus.sensors_updated.emit({"cpu_temp": 70.0, "gpu_temp": 66.0})
+        assert "CPU: 70°C" in sec.lbl_cpu.text()
+        assert "#f59e0b" in sec.lbl_cpu.styleSheet()
+        assert "GPU: 66°C" in sec.lbl_gpu.text()
+        assert "#f59e0b" in sec.lbl_gpu.styleSheet()
+
+        # Критический режим (> 75°C)
+        bus.sensors_updated.emit({"cpu_temp": 82.1, "gpu_temp": 78.9})
+        assert "CPU: 82°C" in sec.lbl_cpu.text()
+        assert "#ef4444" in sec.lbl_cpu.styleSheet()
+        assert "GPU: 79°C" in sec.lbl_gpu.text()
+        assert "#ef4444" in sec.lbl_gpu.styleSheet()
+
+        # 2. Тикер уведомлений
+        bus.deck_notification.emit("Тест тикера Deck")
+        assert sec.lbl_ticker.text() == "Тест тикера Deck"
+        assert sec._ticker_timer.isActive() is True
+
+        # Сброс тикера
+        sec._reset_ticker()
+        assert sec.lbl_ticker.text() == "Готов к работе"
+
+        # 3. Кнопка настроек ⚙
+        sec.btn_settings.click()
+        assert "Настройки Deck" in sec.lbl_ticker.text()
+
+    finally:
+        sec.cleanup()
+
+    assert sec._ticker_timer.isActive() is False
+
+
+@pytest.mark.unit
+def test_deck_interactive_panel_full_stealth_focus_audit(qapp):
+    """
+    Архитектурный аудит Stealth Focus и геометрии DeckInteractivePanel (DoD):
+    - Все без исключения дочерние виджеты имеют focusPolicy() == Qt.NoFocus.
+    - Геометрия: 920x216 px (Секции 280 + 360 + 280 = 920 px).
+    - Визуальный отклик trigger_swipe_feedback без исключений.
+    - Корректная смена страниц set_page_count, set_current_page, get_current_page.
+    """
+    panel = DeckInteractivePanel()
+    try:
+        assert panel.width() == 920
+        assert panel.height() == 216
+        assert panel.focusPolicy() == Qt.NoFocus
+
+        # Рекурсивный аудит Stealth Focus: ни один виджет не должен иметь TabFocus / StrongFocus
+        all_child_widgets = panel.findChildren(QWidget)
+        assert len(all_child_widgets) > 0
+        for w in all_child_widgets:
+            assert w.focusPolicy() == Qt.NoFocus, f"Виджет {w.objectName() or w} нарушает инвариант Qt.NoFocus!"
+
+        # Проверка ширины секций
+        assert panel.left_section.width() == 280
+        assert panel.center_section.width() == 360
+        assert panel.right_section.width() == 280
+
+        # Управление страницами
+        panel.set_page_count(5)
+        panel.set_page_ids(["p1", "p2", "p3", "p4", "p5"])
+        assert panel.get_current_page() == 0
+
+        panel.set_current_page(3, animated=False)
+        assert panel.get_current_page() == 3
+
+        # Проверка визуального отклика свайпа
+        panel.trigger_swipe_feedback("left")
+        assert panel.center_section._swipe_glow_dir == "left"
+
+        panel.trigger_swipe_feedback("right")
+        assert panel.center_section._swipe_glow_dir == "right"
+
+    finally:
+        panel.cleanup()
+
