@@ -11,7 +11,7 @@
 """
 import time
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from PySide6.QtCore import Qt, QPointF, QEvent, QObject
 from PySide6.QtWidgets import QPushButton, QWidget
 from PySide6.QtGui import QTouchEvent, QEventPoint
@@ -315,7 +315,8 @@ def test_single_touch_on_sidebar_passes_to_button_without_tab_switch(qapp):
 @pytest.mark.unit
 def test_main_window_switch_tab_by_offset_cyclic(qapp):
     """Метод MainWindow.switch_tab_by_offset корректно циклически переключает вкладки (+1 / -1)."""
-    win = MainWindow(AppConfig())
+    with patch("core.window_manager.WindowManager.find_window_by_process_name", return_value=None):
+        win = MainWindow(AppConfig())
     total = win.workspace.count()
     assert total == 5
 

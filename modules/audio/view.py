@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer, QFileInfo
 
 from core.event_bus import bus
+from core.i18n import t, tp
 from core.ui_base import TouchModuleView
 from modules.audio.models import AudioSessionInfo
 from modules.audio.service import AudioManager
@@ -218,7 +219,7 @@ class SessionCardWidget(QFrame):
         self.lbl_name.setProperty("class", "card-title")
         info_layout.addWidget(self.lbl_name)
 
-        sub_info = self.session.process_name if self.session.pid != 0 else "Windows System"
+        sub_info = self.session.process_name if self.session.pid != 0 else t("audio.sessions.system_sounds")
         self.lbl_sub = QLabel(sub_info)
         self.lbl_sub.setProperty("class", "card-subtitle")
         info_layout.addWidget(self.lbl_sub)
@@ -281,6 +282,11 @@ class SessionCardWidget(QFrame):
         self.btn_mute.style().unpolish(self.btn_mute)
         self.btn_mute.style().polish(self.btn_mute)
 
+    def retranslate_ui(self) -> None:
+        """Обновление локализованных надписей сессии."""
+        if self.session.pid == 0:
+            self.lbl_sub.setText(t("audio.sessions.system_sounds"))
+
 
 class AudioMixerView(TouchModuleView):
     """
@@ -320,9 +326,9 @@ class AudioMixerView(TouchModuleView):
         title_box = QVBoxLayout()
         title_box.setSpacing(2)
 
-        lbl_title = QLabel("WINDOWS CORE AUDIO MIXER")
-        lbl_title.setStyleSheet("color: #f1f5f9; font-size: 16px; font-weight: bold;")
-        title_box.addWidget(lbl_title)
+        self.lbl_title = QLabel("WINDOWS CORE AUDIO MIXER")
+        self.lbl_title.setStyleSheet("color: #f1f5f9; font-size: 16px; font-weight: bold;")
+        title_box.addWidget(self.lbl_title)
 
         self.lbl_device = QLabel(self.audio_manager.get_master_device_name())
         self.lbl_device.setStyleSheet("color: #64748b; font-size: 12px;")
@@ -340,7 +346,7 @@ class AudioMixerView(TouchModuleView):
         self.btn_switch_device.clicked.connect(self._on_switch_device_clicked)
         header_layout.addWidget(self.btn_switch_device)
 
-        self.btn_refresh = QPushButton("🔄 Обновить")
+        self.btn_refresh = QPushButton("🔄 " + t("audio.actions.refresh"))
         self.btn_refresh.setProperty("class", "refresh-btn")
         self.btn_refresh.setFocusPolicy(Qt.NoFocus)
         self.btn_refresh.clicked.connect(lambda: self._refresh_sessions(force_rebuild=True))
@@ -355,9 +361,9 @@ class AudioMixerView(TouchModuleView):
         m_layout.setSpacing(8)
 
         m_header = QHBoxLayout()
-        lbl_m_title = QLabel("🔊 ОБЩАЯ ГРОМКОСТЬ (MASTER VOLUME)")
-        lbl_m_title.setProperty("class", "section-header")
-        m_header.addWidget(lbl_m_title)
+        self.lbl_m_title = QLabel(f"🔊 {t('audio.master.section_title')}")
+        self.lbl_m_title.setProperty("class", "section-header")
+        m_header.addWidget(self.lbl_m_title)
         m_header.addStretch()
 
         self.lbl_master_vol = QLabel("100%")
@@ -374,7 +380,7 @@ class AudioMixerView(TouchModuleView):
         self.master_slider.valueChanged.connect(self._on_master_slider_changed)
         m_controls.addWidget(self.master_slider, stretch=1)
 
-        self.btn_master_mute = QPushButton("🔊 ЗВУК")
+        self.btn_master_mute = QPushButton(f"🔊 {t('audio.master.mute_inactive')}")
         self.btn_master_mute.setProperty("class", "master-mute-btn")
         self.btn_master_mute.setFocusPolicy(Qt.NoFocus)
         self.btn_master_mute.clicked.connect(self._on_master_mute_clicked)
@@ -384,9 +390,9 @@ class AudioMixerView(TouchModuleView):
         root_layout.addWidget(master_card)
 
         # --- 3. Список аудиосессий приложений с тач-скроллом ---
-        lbl_apps = QLabel("🎵 ПРИЛОЖЕНИЯ И ПРОЦЕССЫ")
-        lbl_apps.setProperty("class", "section-header")
-        root_layout.addWidget(lbl_apps)
+        self.lbl_apps = QLabel(f"🎵 {t('audio.sessions.section_title')}")
+        self.lbl_apps.setProperty("class", "section-header")
+        root_layout.addWidget(self.lbl_apps)
 
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
@@ -405,6 +411,8 @@ class AudioMixerView(TouchModuleView):
         self.scroll_area.setWidget(self.sessions_container)
         root_layout.addWidget(self.scroll_area, stretch=1)
 
+        self.retranslate_ui()
+
     def _refresh_master(self):
         """Чтение актуального состояния общей громкости."""
         vol = self.audio_manager.get_master_volume()
@@ -416,7 +424,9 @@ class AudioMixerView(TouchModuleView):
         self.master_slider.blockSignals(False)
 
         self.lbl_master_vol.setText(f"{vol_pct}%")
-        self.btn_master_mute.setText("🔇 MUTE" if muted else "🔊 ЗВУК")
+        mute_txt = t("audio.master.mute_active") if muted else t("audio.master.mute_inactive")
+        icon = "🔇" if muted else "🔊"
+        self.btn_master_mute.setText(f"{icon} {mute_txt}")
         self.btn_master_mute.setProperty("muted", "true" if muted else "false")
         self.btn_master_mute.style().unpolish(self.btn_master_mute)
         self.btn_master_mute.style().polish(self.btn_master_mute)
@@ -472,7 +482,9 @@ class AudioMixerView(TouchModuleView):
     def _on_master_mute_clicked(self):
         """Слот кнопки отключения общего звука."""
         new_state = self.audio_manager.toggle_master_mute()
-        self.btn_master_mute.setText("🔇 MUTE" if new_state else "🔊 ЗВУК")
+        mute_txt = t("audio.master.mute_active") if new_state else t("audio.master.mute_inactive")
+        icon = "🔇" if new_state else "🔊"
+        self.btn_master_mute.setText(f"{icon} {mute_txt}")
         self.btn_master_mute.setProperty("muted", "true" if new_state else "false")
         self.btn_master_mute.style().unpolish(self.btn_master_mute)
         self.btn_master_mute.style().polish(self.btn_master_mute)
@@ -505,8 +517,30 @@ class AudioMixerView(TouchModuleView):
         """Формирование подписи кнопки с адаптивной иконкой наушников/динамиков."""
         is_headphones = any(k in (device_name or "").lower() for k in ["наушники", "headphone", "headset"])
         icon = "🎧" if is_headphones else "🔊"
-        clean_name = device_name or "Аудиовыход"
+        clean_name = device_name or t("audio.device.default_output")
         return f"{icon} {clean_name}"
+
+    def retranslate_ui(self) -> None:
+        """Обновление всех текстовых элементов интерфейса при смене языка."""
+        if hasattr(self, "lbl_title"):
+            self.lbl_title.setText(t("audio.header.title"))
+        if hasattr(self, "lbl_m_title"):
+            self.lbl_m_title.setText(f"🔊 {t('audio.master.section_title')}")
+        if hasattr(self, "lbl_apps"):
+            self.lbl_apps.setText(f"🎵 {t('audio.sessions.section_title')}")
+            self.lbl_apps.setToolTip(tp("audio.sessions.count", count=len(self._session_cards)))
+        if hasattr(self, "btn_refresh"):
+            self.btn_refresh.setText("🔄 " + t("audio.actions.refresh").lstrip("🔄 "))
+        if hasattr(self, "btn_switch_device"):
+            current_dev = self.audio_manager.get_master_device_name()
+            self.btn_switch_device.setText(self._format_device_button_text(current_dev))
+        if hasattr(self, "btn_master_mute"):
+            muted = self.audio_manager.is_master_muted()
+            mute_txt = t("audio.master.mute_active") if muted else t("audio.master.mute_inactive")
+            icon = "🔇" if muted else "🔊"
+            self.btn_master_mute.setText(f"{icon} {mute_txt}")
+        for card in self._session_cards.values():
+            card.retranslate_ui()
 
     def _on_switch_device_clicked(self) -> None:
         """Переключение устройства воспроизведения между целевыми устройствами."""

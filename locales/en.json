@@ -1,0 +1,357 @@
+{
+  "common": {
+    "app_title": "DuckDock",
+    "app_subtitle": "Touch Control Panel",
+    "actions": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "refresh": "Refresh",
+      "reload": "Reload",
+      "apply": "Apply",
+      "close": "Close"
+    },
+    "status": {
+      "loading": "Loading...",
+      "ready": "Ready",
+      "error": "Error",
+      "success": "Success",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "state": {
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "on": "On",
+      "off": "Off",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "units": {
+      "ms": "ms",
+      "px": "px",
+      "percent": "%",
+      "fps": "fps",
+      "w": "W",
+      "celsius": "°C",
+      "rpm": "RPM",
+      "kb_s": "KB/s",
+      "mb_s": "MB/s",
+      "gb": "GB"
+    },
+    "calendar": {
+      "months": [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec"
+      ],
+      "days": [
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri",
+        "Sat",
+        "Sun"
+      ]
+    }
+  },
+  "sidebar": {
+    "tabs": {
+      "media": "YouTube & Media",
+      "sensors": "AIDA64 Sensors",
+      "deck": "DuckDeck (Macro Panel)",
+      "audio": "Audio Mixer",
+      "showcase": "System Showcase",
+      "settings": "Settings"
+    },
+    "lock": {
+      "stealth_tooltip": "Stealth Focus Mode (Click to allow keyboard input)",
+      "interactive_tooltip": "Interactive Input (Click to restore Stealth)",
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "media": {
+      "open_player": "Open Player",
+      "default_title": "YouTube"
+    }
+  },
+  "audio": {
+    "header": {
+      "title": "WINDOWS CORE AUDIO MIXER"
+    },
+    "master_volume": "Master Volume",
+    "master": {
+      "section_title": "MASTER VOLUME",
+      "title": "Master Volume",
+      "mute_btn": "AUDIO",
+      "mute_active": "MUTE",
+      "mute_inactive": "AUDIO"
+    },
+    "sessions": {
+      "section_title": "APPLICATIONS & PROCESSES",
+      "system_sounds": "System Sounds",
+      "output_empty": "No active audio sessions",
+      "count": {
+        "one": "{count} active process",
+        "other": "{count} active processes"
+      }
+    },
+    "devices_count": {
+      "one": "{count} active device",
+      "other": "{count} active devices"
+    },
+    "device": {
+      "default_output": "Audio Output",
+      "headphones": "Headphones",
+      "speakers": "Speakers",
+      "switch_btn": "Switch Output",
+      "mute": "Mute",
+      "unmute": "Unmute"
+    },
+    "actions": {
+      "refresh": "🔄 Refresh"
+    }
+  },
+  "deck": {
+    "header": {
+      "reload_tooltip": "Reload deck_config.json",
+      "status_ready": "Ready"
+    },
+    "status": {
+      "mic_muted": "Muted",
+      "mic_unmuted": "Unmuted"
+    },
+    "grid": {
+      "page_indicator": "Page {current} of {total}"
+    },
+    "actions": {
+      "hotkey": "Hotkey",
+      "hotkey_info": "Hotkey: {keys}"
+    },
+    "touchbar": {
+      "clock": "Clock",
+      "sensors": "Sensors"
+    },
+    "interactive": {
+      "media_waiting": "Waiting for media...",
+      "media_default": "YouTube Music",
+      "ready": "Ready",
+      "settings_in_dev": "Deck Settings (under development v0.5.0)"
+    },
+    "notify": {
+      "hotkey_success": "Hotkey {keys}",
+      "hotkey_error": "Hotkey simulation error",
+      "mic_muted": "Microphone muted",
+      "mic_unmuted": "Microphone unmuted",
+      "audio_muted": "Audio muted",
+      "audio_unmuted": "Audio unmuted",
+      "audio_switched": "Audio: {name}",
+      "audio_switch_error": "Audio switch error",
+      "device_set": "Device set",
+      "device_set_error": "Device switch error",
+      "pc_locked": "PC locked",
+      "pc_lock_error": "Lock error: {error}",
+      "dimmer_toggled": "Night mode",
+      "dimmer_error": "Dimmer error: {error}",
+      "page_navigated": "Navigated to page: {page}",
+      "unknown_cmd": "Unknown command: {cmd}",
+      "unsupported_action": "Unsupported action type: {action}",
+      "generic_error": "Error: {error}"
+    },
+    "feedback": {
+      "switched": "Switched"
+    }
+  },
+  "telemetry": {
+    "header": {
+      "title": "NOC TELEMETRY DASHBOARD",
+      "lhm_active": "● LibreHardwareMonitor (Direct Ring0)",
+      "lhm_fallback": "● Hardware Telemetry (OS Fallback)",
+      "uac_admin": "[UAC: ADMIN]",
+      "uac_user": "[UAC: USER]",
+      "uptime": "UPTIME: {uptime}",
+      "stream": "STREAM: {interval}ms"
+    },
+    "cards": {
+      "cpu_master": "CPU MASTER",
+      "gpu_master": "GPU MASTER",
+      "ram": "RAM DDR5",
+      "network": "NETWORK & PING",
+      "storage": "NVME STORAGE",
+      "chassis": "CHASSIS & MB"
+    },
+    "labels": {
+      "load": "LOAD",
+      "clock": "CLOCK",
+      "cooler": "COOLER",
+      "pump": "PUMP",
+      "hotspot": "HOTSPOT: {temp}°C",
+      "vram": "VRAM",
+      "down": "DOWN",
+      "up": "UP",
+      "ping": "PING",
+      "power": "POWER",
+      "activity": "ACTIVITY",
+      "tctl_tdie": "Tctl / Tdie Core",
+      "discrete_gpu": "Discrete GPU",
+      "high_speed_channel": "High-Speed Channel",
+      "dns_gateway": "DNS 1.1.1.1 Gateway",
+      "disconnected": "● DISCONNECTED",
+      "pcie_direct_io": "PCIe Gen4 Direct IO",
+      "optimal_airflow": "● OPTIMAL AIRFLOW",
+      "super_io_bus": "Super I/O Hardware Bus",
+      "cpu_fan_active": "CPU Fan Active",
+      "passive_cooling": "Passive Cooling",
+      "fans_active": "Chassis Coolers Active",
+      "fan_rpm": "FAN: {rpm} RPM",
+      "fans_list": "Fans: {fans} RPM",
+      "vrm_temp": "VRM: {temp}°C",
+      "fan_rpm_val": "{rpm} RPM",
+      "pump_rpm_val": "{rpm} RPM",
+      "power_val": "{power} W",
+      "clock_ghz": "{clock} GHz",
+      "clock_mhz": "{clock} MHz",
+      "vram_gb": "{used} / {total} GB",
+      "ram_gb": "{used} / {total} GB",
+      "speed_kbs": "{speed} KB/s",
+      "speed_mbs": "{speed} MB/s",
+      "ping_ms": "● {ping} ms",
+      "uptime_days": "{days}d",
+      "uptime_hours": "{hours}h",
+      "uptime_minutes": "{minutes}m",
+      "uptime_seconds": "{seconds}s",
+      "unit_w": "W",
+      "unit_rpm": "RPM",
+      "unit_ghz": "GHz",
+      "unit_mhz": "MHz",
+      "unit_gb": "GB"
+    },
+    "tooltips": {
+      "sparkline": "60-second history"
+    }
+  },
+  "media": {
+    "header": {
+      "title": "▶ MEDIA & YOUTUBE"
+    },
+    "nav": {
+      "youtube_music": "YouTube Music",
+      "youtube": "YouTube",
+      "twitch": "Twitch",
+      "login": "🔑 Sign In",
+      "login_tooltip": "Sign in with Google / YouTube Music account"
+    },
+    "player": {
+      "reload_tooltip": "Reload page",
+      "prev": "Previous track",
+      "play": "Play",
+      "pause": "Pause",
+      "next": "Next track",
+      "volume": "Volume"
+    },
+    "fallback": {
+      "title": "System Media Player (iGPU Low-Power Mode)",
+      "subtitle": "Optimized for 944x600 touchscreen. Stealth Focus active.",
+      "volume_label": "Volume:"
+    },
+    "status": {
+      "not_playing": "Not playing",
+      "waiting": "Waiting for media..."
+    }
+  },
+  "settings": {
+    "title": "DuckDock Settings",
+    "subtitle": "Secondary touchscreen, dimmer and focus guardian parameters",
+    "actions": {
+      "reload_json": "Reload JSON"
+    },
+    "language": {
+      "title": "Interface Language",
+      "description": "Select UI display language",
+      "ru": "Русский",
+      "en": "English"
+    },
+    "display": {
+      "title": "Display & Geometry",
+      "screen_index": "Screen index:",
+      "resolution": "Resolution:",
+      "target_fps": "Target FPS:",
+      "fallback_geometry": "Fallback window:"
+    },
+    "dimmer": {
+      "title": "Dimmer & Night Mode",
+      "default_opacity": "Default brightness:",
+      "night_mode_opacity": "Night mode:",
+      "step": "Adjustment step:"
+    },
+    "stealth": {
+      "title": "Focus Guardian (Stealth)",
+      "ws_noactivate": "WS_EX_NOACTIVATE:",
+      "anti_cursor_warp": "Anti-Cursor Warp:",
+      "focus_delay": "Focus delay:",
+      "cursor_delay": "Cursor delay:"
+    },
+    "layout": {
+      "title": "Layout & Geometry",
+      "sidebar_width": "Sidebar width:",
+      "workspace_width": "Workspace width:",
+      "button_size": "Touch button size:",
+      "corner_radius": "Corner radius:"
+    }
+  },
+  "showcase": {
+    "title": "⚙ DUCKDOCK SUB-SYSTEMS & INVARIANTS DIAGNOSTICS",
+    "cards": {
+      "display": "DISPLAY PARAMETERS",
+      "stealth": "STEALTH TOUCH GUARDIAN",
+      "tiling": "BORDERLESS TILING (720x600)",
+      "services": "SERVICE FUNCTIONS (QoL)"
+    },
+    "display": {
+      "resolution": "Resolution:",
+      "resolution_val": "800 x 600 px (4:3)",
+      "dpi_awareness": "DPI Awareness:",
+      "dpi_val": "Per-Monitor V2 (Active)",
+      "rendering": "Rendering:",
+      "rendering_val": "iGPU (AMD Radeon Graphics)"
+    },
+    "stealth": {
+      "ws_noactivate": "WS_EX_NOACTIVATE:",
+      "ws_noactivate_val": "Enabled (0x08000000)",
+      "anti_cursor_warp": "Anti-Cursor Warp:",
+      "anti_cursor_warp_val": "Active (25 ms delay)",
+      "focus_restore": "Primary Focus Restore:",
+      "focus_restore_val": "80 ms"
+    },
+    "tiling": {
+      "tiling_zone": "Tiling zone:",
+      "tiling_zone_val": "X: +80px, W: 720, H: 600",
+      "frame_cutting": "Frame cutting:",
+      "frame_cutting_val": "WS_CAPTION | WS_THICKFRAME",
+      "target_process": "Target process:",
+      "target_process_val": "happ.exe (Proxy UI)"
+    },
+    "services": {
+      "dimmer": "Software Dimmer:",
+      "mouse_barrier": "Mouse Barrier:",
+      "mouse_barrier_val": "Alt Key Bypass",
+      "hotplug": "Display Hotplug:",
+      "hotplug_val": "WM_DISPLAYCHANGE Listener"
+    },
+    "dimmer": {
+      "enable_btn": "🌙 Enable Night Mode (Dimmer)",
+      "disable_btn": "☀️ Disable Dimmer ({percent}%)",
+      "active_status": "Active ({percent}%)",
+      "inactive_status": "Disabled (0%)"
+    }
+  }
+}

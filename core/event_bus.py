@@ -42,6 +42,9 @@ class EventBus(QObject):
     deck_notification = Signal(str)  # трансляция сообщений в тикер панели
     deck_page_changed = Signal(str)  # синхронизация смены активного профиля / страницы
 
+    # Локализация и интернационализация (i18n)
+    language_changed = Signal(str)  # код активного языка ("ru", "en")
+
     # События тача и фокуса
     touch_detected = Signal(int, int)  # x, y на 2-м экране
     primary_focus_lost = Signal(int)   # hwnd потерявшего фокус окна на основном экране

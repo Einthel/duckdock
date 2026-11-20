@@ -26,6 +26,7 @@ from modules.deck.models import (
     SystemParams,
 )
 from core.event_bus import bus
+from core.i18n import t
 
 logger = logging.getLogger("duckdock.deck.dispatcher")
 
@@ -85,18 +86,18 @@ class ActionRunnable(QRunnable):
             if action_type == "hotkey":
                 params: HotkeyParams = typed_params
                 success = send_hotkey(params.keys)
-                message = f"Хоткей {'+'.join(params.keys)}" if success else "Ошибка симуляции хоткея"
+                message = t("deck.notify.hotkey_success", keys='+'.join(params.keys)) if success else t("deck.notify.hotkey_error")
 
             elif action_type == "audio_device":
                 params: AudioDeviceParams = typed_params
                 if self.audio_manager is not None:
                     if params.mode == "set" and params.target_device_id:
                         success = self.audio_manager.set_default_playback_device(params.target_device_id)
-                        message = "Устройство установлено" if success else "Ошибка переключения"
+                        message = t("deck.notify.device_set") if success else t("deck.notify.device_set_error")
                     else:
                         dev = self.audio_manager.toggle_playback_device(params.devices)
                         success = dev is not None
-                        message = f"Аудио: {dev.name}" if dev else "Ошибка переключения аудио"
+                        message = t("deck.notify.audio_switched", name=dev.name) if dev else t("deck.notify.audio_switch_error")
                 else:
                     from modules.audio.platform.device_switcher import (
                         switch_default_device,
@@ -104,11 +105,11 @@ class ActionRunnable(QRunnable):
                     )
                     if params.mode == "set" and params.target_device_id:
                         success = switch_default_device(params.target_device_id)
-                        message = "Устройство установлено" if success else "Ошибка переключения"
+                        message = t("deck.notify.device_set") if success else t("deck.notify.device_set_error")
                     else:
                         dev = toggle_audio_device(params.devices)
                         success = dev is not None
-                        message = f"Аудио: {dev.name}" if dev else "Ошибка переключения аудио"
+                        message = t("deck.notify.audio_switched", name=dev.name) if dev else t("deck.notify.audio_switch_error")
 
             elif action_type == "launch":
                 params: LaunchParams = typed_params
@@ -149,7 +150,7 @@ class ActionRunnable(QRunnable):
                         from modules.audio.service import AudioManager
                         is_muted = AudioManager().toggle_mic_mute()
                     success = True
-                    message = "Микрофон выключен" if is_muted else "Микрофон включен"
+                    message = t("deck.notify.mic_muted") if is_muted else t("deck.notify.mic_unmuted")
 
                 elif cmd == "toggle_master_mute":
                     if self.audio_manager is not None:
@@ -158,7 +159,7 @@ class ActionRunnable(QRunnable):
                         from modules.audio.service import AudioManager
                         is_muted = AudioManager().toggle_master_mute()
                     success = True
-                    message = "Звук выключен" if is_muted else "Звук включен"
+                    message = t("deck.notify.audio_muted") if is_muted else t("deck.notify.audio_unmuted")
 
                 elif cmd == "toggle_playback_device":
                     if self.audio_manager is not None:
@@ -167,43 +168,43 @@ class ActionRunnable(QRunnable):
                         from modules.audio.platform.device_switcher import toggle_audio_device
                         dev = toggle_audio_device()
                     success = dev is not None
-                    message = f"Аудио: {dev.name}" if dev else "Ошибка переключения аудио"
+                    message = t("deck.notify.audio_switched", name=dev.name) if dev else t("deck.notify.audio_switch_error")
 
                 elif cmd == "lock_workstation":
                     try:
                         res = ctypes.windll.user32.LockWorkStation()
                         success = bool(res)
-                        message = "ПК заблокирован" if success else "Ошибка блокировки"
+                        message = t("deck.notify.pc_locked") if success else t("deck.notify.generic_error", error="LockWorkStation failed")
                     except Exception as lock_err:
                         success = False
-                        message = f"Ошибка LockWorkStation: {lock_err}"
+                        message = t("deck.notify.pc_lock_error", error=str(lock_err))
 
                 elif cmd == "toggle_dimmer":
                     try:
                         bus.dimmer_toggle_requested.emit()
                         success = True
-                        message = "Ночной режим"
+                        message = t("deck.notify.dimmer_toggled")
                     except Exception as dim_err:
                         success = False
-                        message = f"Ошибка диммера: {dim_err}"
+                        message = t("deck.notify.dimmer_error", error=str(dim_err))
 
                 else:
                     success = False
-                    message = f"Неизвестная команда: {cmd}"
+                    message = t("deck.notify.unknown_cmd", cmd=cmd)
 
             elif action_type == "navigation":
                 params: NavigationParams = typed_params
                 success = True
-                message = f"Переход на страницу: {params.target_page_id}"
+                message = t("deck.notify.page_navigated", page=params.target_page_id)
 
             else:
                 success = False
-                message = f"Неподдерживаемый тип действия: {action_type}"
+                message = t("deck.notify.unsupported_action", action=action_type)
 
         except Exception as e:
             logger.error(f"Необработанная ошибка выполнения действия '{action_type}': {e}")
             success = False
-            message = f"Ошибка: {e}"
+            message = t("deck.notify.generic_error", error=str(e))
 
         finally:
             try:

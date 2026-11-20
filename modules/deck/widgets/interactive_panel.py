@@ -24,6 +24,7 @@ from PySide6.QtCore import (
     QObject,
     QDate,
     QTime,
+    QLocale,
     QVariantAnimation,
     QEasingCurve,
 )
@@ -48,6 +49,7 @@ from PySide6.QtGui import (
 )
 
 from core.event_bus import bus
+from core.i18n import t, I18nManager
 from core.ui_base import TouchModuleView
 from ui.widgets.marquee_label import MarqueeLabel
 from modules.deck.widgets.swipe_detector import DeckSwipeDetector, _extract_point_pos
@@ -381,7 +383,22 @@ class DeckCenterSection(QFrame):
         now = QTime.currentTime()
         self.lbl_clock.setText(now.toString("HH:mm"))
         today = QDate.currentDate()
-        self.lbl_date.setText(today.toString("d MMM, ddd"))
+        months = t("common.calendar.months")
+        days = t("common.calendar.days")
+        if isinstance(months, list) and isinstance(days, list):
+            m_idx = today.month() - 1
+            d_idx = today.dayOfWeek() - 1
+            month_str = months[m_idx] if 0 <= m_idx < len(months) else ""
+            day_str = days[d_idx] if 0 <= d_idx < len(days) else ""
+            self.lbl_date.setText(f"{today.day()} {month_str}, {day_str}")
+        else:
+            lang = I18nManager().get_language()
+            qloc = QLocale(QLocale.Language.Russian if lang == "ru" else QLocale.Language.English)
+            self.lbl_date.setText(qloc.toString(today, "d MMM, ddd"))
+
+    def retranslate_ui(self) -> None:
+        """Обновление даты при смене языка."""
+        self._update_time()
 
     def _on_swipe_glow_step(self, val: Any) -> None:
         self._swipe_glow_opacity = float(val)
@@ -483,11 +500,11 @@ class DeckLeftSection(QFrame):
         text_layout.setSpacing(2)
         text_layout.setAlignment(Qt.AlignVCenter)
 
-        self.lbl_title = MarqueeLabel("YouTube Music", self)
+        self.lbl_title = MarqueeLabel(t("deck.interactive.media_default"), self)
         self.lbl_title.setStyleSheet("color: #e2e8f0; font-size: 13px; font-weight: bold;")
         text_layout.addWidget(self.lbl_title)
 
-        self.lbl_artist = QLabel("Ожидание медиа...", self)
+        self.lbl_artist = QLabel(t("deck.interactive.media_waiting"), self)
         self.lbl_artist.setFocusPolicy(Qt.NoFocus)
         self.lbl_artist.setStyleSheet("color: #94a3b8; font-size: 11px;")
         text_layout.addWidget(self.lbl_artist)
@@ -561,6 +578,13 @@ class DeckLeftSection(QFrame):
             self.lbl_artist.setText(artist)
 
         self.btn_play.setText("⏸" if self._is_playing else "▶")
+
+    def retranslate_ui(self) -> None:
+        """Обновление текстовых меток при отсутствии активного трека."""
+        if not self._is_playing:
+            self.lbl_artist.setText(t("deck.interactive.media_waiting"))
+            if not self.lbl_title.text() or self.lbl_title.text() in ("YouTube Music", "YouTube", ""):
+                self.lbl_title.setText(t("deck.interactive.media_default"))
 
     def cleanup(self) -> None:
         """Очистка ресурсов и отписка от EventBus."""
@@ -644,7 +668,7 @@ class DeckRightSection(QFrame):
         # Нижняя зона: NotificationTicker
         layout.addStretch()
 
-        self.lbl_ticker = QLabel("Готов к работе", self)
+        self.lbl_ticker = QLabel(t("deck.interactive.ready"), self)
         self.lbl_ticker.setObjectName("DeckNotificationTicker")
         self.lbl_ticker.setFocusPolicy(Qt.NoFocus)
         self.lbl_ticker.setAlignment(Qt.AlignCenter)
@@ -661,7 +685,7 @@ class DeckRightSection(QFrame):
         self._ticker_timer.timeout.connect(self._reset_ticker)
 
     def _on_settings_clicked(self) -> None:
-        self.show_notification("Настройки Deck (в разработке v0.5.0)")
+        self.show_notification(t("deck.interactive.settings_in_dev"))
 
     def _subscribe_eventbus(self) -> None:
         if not self._eventbus_connected:
@@ -704,11 +728,16 @@ class DeckRightSection(QFrame):
         self._ticker_timer.start()
 
     def _reset_ticker(self) -> None:
-        self.lbl_ticker.setText("Готов к работе")
+        self.lbl_ticker.setText(t("deck.interactive.ready"))
         self.lbl_ticker.setStyleSheet(
             "background-color: #161b26; color: #94a3b8; border: 1px solid #232b3e; "
             "border-radius: 8px; padding: 6px; font-size: 11px;"
         )
+
+    def retranslate_ui(self) -> None:
+        """Обновление тикера при смене языка, если нет активного уведомления."""
+        if not self._ticker_timer.isActive():
+            self.lbl_ticker.setText(t("deck.interactive.ready"))
 
     def cleanup(self) -> None:
         """Очистка таймеров и отписка от EventBus."""
@@ -779,6 +808,15 @@ class DeckInteractivePanel(TouchModuleView):
 
     def get_current_page(self) -> int:
         return self.center_section.get_current_page()
+
+    def retranslate_ui(self) -> None:
+        """Каскадная ретрансляция всех трех секций."""
+        if hasattr(self, "left_section"):
+            self.left_section.retranslate_ui()
+        if hasattr(self, "center_section"):
+            self.center_section.retranslate_ui()
+        if hasattr(self, "right_section"):
+            self.right_section.retranslate_ui()
 
     def cleanup(self) -> None:
         """Каскадная очистка всех секций интерактивной панели."""

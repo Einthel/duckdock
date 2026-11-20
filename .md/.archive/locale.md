@@ -212,22 +212,22 @@ class TouchModuleView(QWidget):
 
 ### Фаза 0: Инвентаризация строк и базовые словари (RU/EN)
 
-- [ ] **Шаг 0.1: Глубокая инвентаризация UI-строк и шаблонов**
-  - [ ] **Шаг 0.1.1:** Сканирование кодовой базы `ui/` и `modules/` на UI-вызовы отображения (`setText()`, `setToolTip()`, `setTitle()`, фабрики `_create_nav_button(...)`, карточки `SessionCardWidget`, тикер `NotificationMessage`, всплывающие подсказки).
-  - [ ] **Шаг 0.1.2:** Сепарация контента: исключение логов `logger.*`, `print()`, исключений `raise ...`, строковых констант WinAPI и метаданных Pydantic `Field(description=...)`.
-  - [ ] **Шаг 0.1.3:** Унификация шаблонов с динамической интерполяцией в именованные плейсхолдеры `{param}` (например, `{percent}`, `{name}`, `{page}`, `{count}`).
-- [ ] **Шаг 0.2: Проектирование таксономии и генерация `locales/ru.json`**
-  - [ ] **Шаг 0.2.1:** Иерархическая группировка по 8 пространствам имен: `common`, `sidebar`, `audio`, `deck`, `telemetry`, `media`, `settings`, `showcase`. Базовый каркас (`common`, `sidebar`, `settings`, `showcase`) наполняется сразу для запуска Фаз 1-3; секции модулей (`audio`, `deck`, `telemetry`, `media`) подготавливаются со стартовыми ключами и окончательно обогащаются в Фазе 4.
-  - [ ] **Шаг 0.2.2:** Формирование трехформенных объектов плюрализации для русского языка (`one`, `few`, `many`).
-  - [ ] **Шаг 0.2.3:** Сборка мастер-словаря в `locales/ru.json` в кодировке UTF-8 с валидацией JSON-структуры.
-- [ ] **Шаг 0.3: Формирование зеркального словаря `locales/en.json` (100% паритет)**
-  - [ ] **Шаг 0.3.1:** Синхронный английский перевод с лаконичными терминами под физические ограничения 1024×600 (сайдбар 80px, кнопки 64×64, ячейки колодки 160×110).
-  - [ ] **Шаг 0.3.2:** Полное совпадение контрактов именованных плейсхолдеров (`{var}`) между RU и EN.
-  - [ ] **Шаг 0.3.3:** Реализация двухформенных объектов плюрализации для английского языка (`one`, `other`) и сохранение в `locales/en.json`.
-- [ ] **Шаг 0.4: Автоматизированная валидация паритета и синтаксиса**
-  - [ ] **Шаг 0.4.1:** Проверка синтаксической валидности `locales/ru.json` и `locales/en.json` через `json.loads()`.
-  - [ ] **Шаг 0.4.2:** Проверка равенства множеств ключей (`set(ru_keys) ^ set(en_keys) == set()`).
-  - [ ] **Шаг 0.4.3:** Проверка консистентности наборов плейсхолдеров (`{var}`) для каждого ключа между языками.
+- [x] **Шаг 0.1: Глубокая инвентаризация UI-строк и шаблонов**
+  - [x] **Шаг 0.1.1:** Сканирование кодовой базы `ui/` и `modules/` на UI-вызовы отображения (`setText()`, `setToolTip()`, `setTitle()`, фабрики `_create_nav_button(...)`, карточки `SessionCardWidget`, тикер `NotificationMessage`, всплывающие подсказки).
+  - [x] **Шаг 0.1.2:** Сепарация контента: исключение логов `logger.*`, `print()`, исключений `raise ...`, строковых констант WinAPI и метаданных Pydantic `Field(description=...)`.
+  - [x] **Шаг 0.1.3:** Унификация шаблонов с динамической интерполяцией в именованные плейсхолдеры `{param}` (например, `{percent}`, `{name}`, `{page}`, `{count}`).
+- [x] **Шаг 0.2: Проектирование таксономии и генерация `locales/ru.json`**
+  - [x] **Шаг 0.2.1:** Иерархическая группировка по 8 пространствам имен: `common`, `sidebar`, `audio`, `deck`, `telemetry`, `media`, `settings`, `showcase`. Базовый каркас (`common`, `sidebar`, `settings`, `showcase`) наполняется сразу для запуска Фаз 1-3; секции модулей (`audio`, `deck`, `telemetry`, `media`) подготавливаются со стартовыми ключами и окончательно обогащаются в Фазе 4.
+  - [x] **Шаг 0.2.2:** Формирование трехформенных объектов плюрализации для русского языка (`one`, `few`, `many`).
+  - [x] **Шаг 0.2.3:** Сборка мастер-словаря в `locales/ru.json` в кодировке UTF-8 с валидацией JSON-структуры.
+- [x] **Шаг 0.3: Формирование зеркального словаря `locales/en.json` (100% паритет)**
+  - [x] **Шаг 0.3.1:** Синхронный английский перевод с лаконичными терминами под физические ограничения 1024×600 (сайдбар 80px, кнопки 64×64, ячейки колодки 160×110).
+  - [x] **Шаг 0.3.2:** Полное совпадение контрактов именованных плейсхолдеров (`{var}`) между RU и EN.
+  - [x] **Шаг 0.3.3:** Реализация двухформенных объектов плюрализации для английского языка (`one`, `other`) и сохранение в `locales/en.json`.
+- [x] **Шаг 0.4: Автоматизированная валидация паритета и синтаксиса**
+  - [x] **Шаг 0.4.1:** Проверка синтаксической валидности `locales/ru.json` и `locales/en.json` через `json.loads()`.
+  - [x] **Шаг 0.4.2:** Проверка равенства множеств ключей (`set(ru_keys) ^ set(en_keys) == set()`).
+  - [x] **Шаг 0.4.3:** Проверка консистентности наборов плейсхолдеров (`{var}`) для каждого ключа между языками.
 
 #### Маппинг пространств имен по модулям кодовой базы:
 
@@ -264,58 +264,58 @@ class TouchModuleView(QWidget):
 
 ### Фаза 1: Фундамент движка `core/i18n` и валидация
 
-- [ ] **Шаг 1.1: Процессор плюрализации (`core/i18n/plural.py`)**
-  - [ ] **Шаг 1.1.1:** Реализовать алгоритм русской плюрализации `get_plural_category_ru(count: int | float) -> str` с тремя категориями:
+- [x] **Шаг 1.1: Процессор плюрализации (`core/i18n/plural.py`)**
+  - [x] **Шаг 1.1.1:** Реализовать алгоритм русской плюрализации `get_plural_category_ru(count: int | float) -> str` с тремя категориями:
     - `one`: `n % 10 == 1 and n % 100 != 11` (1, 21, 31, 101 устройство);
     - `few`: `2 <= n % 10 <= 4 and not (12 <= n % 100 <= 14)` (2, 3, 4, 22, 104 устройства);
     - `many`: все остальные случаи (0, 5–20, 25–30, 111–114 устройств).
-  - [ ] **Шаг 1.1.2:** Реализовать алгоритм английской плюрализации `get_plural_category_en(count: int | float) -> str` с двумя категориями:
+  - [x] **Шаг 1.1.2:** Реализовать алгоритм английской плюрализации `get_plural_category_en(count: int | float) -> str` с двумя категориями:
     - `one`: `abs(int(count)) == 1` (1 device);
     - `other`: все остальные случаи (0, 2, 5 devices).
-  - [ ] **Шаг 1.1.3:** Реализовать единый фасад-диспетчер `resolve_plural_category(lang: str, count: int | float) -> str` с валидацией и приведением отрицательных/дробных чисел через `abs(int(count))`.
+  - [x] **Шаг 1.1.3:** Реализовать единый фасад-диспетчер `resolve_plural_category(lang: str, count: int | float) -> str` с валидацией и приведением отрицательных/дробных чисел через `abs(int(count))`.
 
-- [ ] **Шаг 1.2: Менеджер локализации (`core/i18n/manager.py`)**
-  - [ ] **Шаг 1.2.1: Архитектура Singleton и инициализация каталогов:**
+- [x] **Шаг 1.2: Менеджер локализации (`core/i18n/manager.py`)**
+  - [x] **Шаг 1.2.1: Архитектура Singleton и инициализация каталогов:**
     - Реализовать класс `I18nManager` (Singleton) с потокобезопасным созданием экземпляра.
     - Обеспечить настраиваемый путь к каталогу словарей `locales_dir: Optional[Path] = None` (по умолчанию `root/locales`) для изолированного модульного тестирования.
-  - [ ] **Шаг 1.2.2: Двусторонний предзагруженный кэш (_flatten_dict и In-Memory Preload):**
+  - [x] **Шаг 1.2.2: Двусторонний предзагруженный кэш (_flatten_dict и In-Memory Preload):**
     - Преобразование вложенных структур JSON в плоскую хэш-таблицу dot-notation при предзагрузке для достижения времени поиска $O(1)$ и старта $< 5$ мс.
     - Одновременная предзагрузка обоих словарей в память (`self._catalogs = {"ru": ..., "en": ...}`).
     - Конечные объекты плюрализации (`{"one": "...", "few": "...", "many": "..."}` для RU и `{"one": "...", "other": "..."}` для EN) сохраняются в плоском словаре как единый `dict` под составным ключом родителя.
-  - [ ] **Шаг 1.2.3: Безопасный форматтер (SafeFormatter):**
+  - [x] **Шаг 1.2.3: Безопасный форматтер (SafeFormatter):**
     - Реализовать `SafeFormatter(string.Formatter)`, предотвращающий фатальные падения (`KeyError`, `IndexError`) при вызове `t()` с неполным набором аргументов (непереданные плейсхолдеры остаются в виде `{param}`).
-  - [ ] **Шаг 1.2.4: Публичные функции перевода `t()` и `tp()`:**
+  - [x] **Шаг 1.2.4: Публичные функции перевода `t()` и `tp()`:**
     - `t(key: str, **kwargs) -> str`: поиск в активном словаре $\to$ симметричный fallback на резервный язык (ru $\leftrightarrow$ en) $\to$ возврат `raw_key` с `logger.warning` при отсутствии $\to$ безопасная интерполяция через `SafeFormatter`.
     - `tp(key: str, count: int, **kwargs) -> str`: вычисление категории числа через `resolve_plural_category(lang, count)` $\to$ выбор шаблона с универсальным каскадом (`cat` $\to$ `other` $\to$ `many` $\to$ `few` $\to$ `one`) $\to$ автоматическая подстановка `{count}`.
-  - [ ] **Шаг 1.2.5: Метод переключения языка `set_language()`:**
+  - [x] **Шаг 1.2.5: Метод переключения языка `set_language()`:**
     - Валидация входного кода локали (`lang_code in ("ru", "en")`, при ошибке `ValueError`).
     - Идемпотентность: пропуск повторного переключения, если язык уже активен.
     - Атомарная смена ссылки на активный словарь `self._active_catalog = self._catalogs[lang_code]` (время выполнения $O(1)$, потокобезопасно для воркеров без блокировок).
     - Эмиссия сигнала `core.event_bus.bus.language_changed.emit(lang_code)` при `emit_signal=True`.
 
-- [ ] **Шаг 1.3: Публичный фасад ядра (`core/i18n/__init__.py`)**
-  - [ ] **Шаг 1.3.1:** Экспорт `I18nManager`, функций быстрого доступа `t`, `tp` и вспомогательной функции `resolve_plural_category`.
-  - [ ] **Шаг 1.3.2:** Проверка чистоты импортов: `core.i18n` не содержит ссылок на `modules` или `ui` (строгое соблюдение The Dependency Rule).
+- [x] **Шаг 1.3: Публичный фасад ядра (`core/i18n/__init__.py`)**
+  - [x] **Шаг 1.3.1:** Экспорт `I18nManager`, функций быстрого доступа `t`, `tp` и вспомогательной функции `resolve_plural_category`.
+  - [x] **Шаг 1.3.2:** Проверка чистоты импортов: `core.i18n` не содержит ссылок на `modules` или `ui` (строгое соблюдение The Dependency Rule).
 
-- [ ] **Шаг 1.4: Регистрация сигнала в шине событий (`core/event_bus.py`)**
-  - [ ] **Шаг 1.4.1:** Добавить строго типизированный сигнал `language_changed = Signal(str)` в класс `EventBus`.
-  - [ ] **Шаг 1.4.2:** Проверить обратную совместимость: интерфейс шины не ломает существующие подписки.
+- [x] **Шаг 1.4: Регистрация сигнала в шине событий (`core/event_bus.py`)**
+  - [x] **Шаг 1.4.1:** Добавить строго типизированный сигнал `language_changed = Signal(str)` в класс `EventBus`.
+  - [x] **Шаг 1.4.2:** Проверить обратную совместимость: интерфейс шины не ломает существующие подписки.
 
-- [ ] **Шаг 1.5: Интеграция конфигурации (`modules/settings/config.py` и `config.json`)**
-  - [ ] **Шаг 1.5.1:** Добавить типизированное поле `language: Literal["ru", "en"] = Field(default="ru", description="Язык интерфейса ('ru' | 'en')")` в модель `AppConfig`.
-  - [ ] **Шаг 1.5.2:** Добавить значение `"language": "ru"` в корневой файл конфигурации `config.json`.
-  - [ ] **Шаг 1.5.3:** Обновить функцию `load_config()` для безопасной загрузки с дефолтным откатом при повреждении поля.
+- [x] **Шаг 1.5: Интеграция конфигурации (`modules/settings/config.py` и `config.json`)**
+  - [x] **Шаг 1.5.1:** Добавить типизированное поле `language: Literal["ru", "en"] = Field(default="ru", description="Язык интерфейса ('ru' | 'en')")` в модель `AppConfig`.
+  - [x] **Шаг 1.5.2:** Добавить значение `"language": "ru"` в корневой файл конфигурации `config.json`.
+  - [x] **Шаг 1.5.3:** Обновить функцию `load_config()` для безопасной загрузки с дефолтным откатом при повреждении поля.
 
-- [ ] **Шаг 1.6: Пакет модульных тестов ядра (`tests/unit/test_i18n.py`)**
-  - [ ] **Шаг 1.6.1:** `test_i18n_singleton`: валидация паттерна Singleton и состояния инстанса.
-  - [ ] **Шаг 1.6.2:** `test_i18n_flattening_and_lookup`: развертывание вложенных JSON и скорость $O(1)$.
-  - [ ] **Шаг 1.6.3:** `test_i18n_safe_formatter`: устойчивость к неполным аргументам форматирования без `KeyError`.
-  - [ ] **Шаг 1.6.4:** `test_i18n_pluralization_ru`: детальная проверка чисел 1, 2, 4, 5, 11-14, 21, 24, 112 на корректную форму (`one`/`few`/`many`).
-  - [ ] **Шаг 1.6.5:** `test_i18n_pluralization_en`: проверка чисел 1, 0, 2, 100 на формы `one` и `other`.
-  - [ ] **Шаг 1.6.6:** `test_i18n_fallback_cascade`: возврат английского перевода при пропуске ключа в русском словаре и возврат `raw_key` при отсутствии в обоих.
-  - [ ] **Шаг 1.6.7:** `test_i18n_set_language_signals`: валидация эмиссии `bus.language_changed` при смене языка.
-  - [ ] **Шаг 1.6.8:** `test_i18n_parity_guard`: проверка 100% паритета ключей между `locales/ru.json` и `locales/en.json` (`set(ru) ^ set(en) == set()`).
-  - [ ] **Шаг 1.6.9:** `test_app_config_language_validation`: отклонение невалидных локалей в Pydantic (`ValidationError`).
+- [x] **Шаг 1.6: Пакет модульных тестов ядра (`tests/unit/test_i18n.py`)**
+  - [x] **Шаг 1.6.1:** `test_i18n_singleton`: валидация паттерна Singleton и состояния инстанса.
+  - [x] **Шаг 1.6.2:** `test_i18n_flattening_and_lookup`: развертывание вложенных JSON и скорость $O(1)$.
+  - [x] **Шаг 1.6.3:** `test_i18n_safe_formatter`: устойчивость к неполным аргументам форматирования без `KeyError`.
+  - [x] **Шаг 1.6.4:** `test_i18n_pluralization_ru`: детальная проверка чисел 1, 2, 4, 5, 11-14, 21, 24, 112 на корректную форму (`one`/`few`/`many`).
+  - [x] **Шаг 1.6.5:** `test_i18n_pluralization_en`: проверка чисел 1, 0, 2, 100 на формы `one` и `other`.
+  - [x] **Шаг 1.6.6:** `test_i18n_fallback_cascade`: возврат английского перевода при пропуске ключа в русском словаре и возврат `raw_key` при отсутствии в обоих.
+  - [x] **Шаг 1.6.7:** `test_i18n_set_language_signals`: валидация эмиссии `bus.language_changed` при смене языка.
+  - [x] **Шаг 1.6.8:** `test_i18n_parity_guard`: проверка 100% паритета ключей между `locales/ru.json` и `locales/en.json` (`set(ru) ^ set(en) == set()`).
+  - [x] **Шаг 1.6.9:** `test_app_config_language_validation`: отклонение невалидных локалей в Pydantic (`ValidationError`).
 
 #### Запуск Фазы 1:
 ```text
@@ -342,35 +342,35 @@ class TouchModuleView(QWidget):
 
 ### Фаза 2: Интеграция в базовый UI-каркас и горячее переключение
 
-- [ ] **Шаг 2.1: Реактивный базовый класс `TouchModuleView` (`core/ui_base.py`)**
-  - [ ] **Шаг 2.1.1:** Добавить автоматическую подписку `bus.language_changed.connect(self._handle_language_changed)` в `TouchModuleView.__init__`.
-  - [ ] **Шаг 2.1.2:** Исключить вызов `self.retranslate_ui()` из конструктора `TouchModuleView.__init__` для предотвращения `AttributeError` у еще не созданных дочерних виджетов (Initialization Invariant). Закрепить стандарт: наследники создают виджеты в `_init_ui()` и в конце вызывают `self.retranslate_ui()`, делая его единственным источником правды для текстов.
-  - [ ] **Шаг 2.1.3:** Реализовать виртуальный метод `retranslate_ui(self) -> None`, переопределяемый дочерними модулями.
-  - [ ] **Шаг 2.1.4:** Предотвратить утечки памяти и сбои C++ объектов: реализовать отписку в методе `cleanup()` и вызов `cleanup()` в `closeEvent()`, с безопасным подавлением ошибок `try...except (RuntimeError, TypeError): pass` (исключая нестабильный хук на `self.destroyed`).
+- [x] **Шаг 2.1: Реактивный базовый класс `TouchModuleView` (`core/ui_base.py`)**
+  - [x] **Шаг 2.1.1:** Добавить автоматическую подписку `bus.language_changed.connect(self._handle_language_changed)` в `TouchModuleView.__init__`.
+  - [x] **Шаг 2.1.2:** Исключить вызов `self.retranslate_ui()` из конструктора `TouchModuleView.__init__` для предотвращения `AttributeError` у еще не созданных дочерних виджетов (Initialization Invariant). Закрепить стандарт: наследники создают виджеты в `_init_ui()` и в конце вызывают `self.retranslate_ui()`, делая его единственным источником правды для текстов.
+  - [x] **Шаг 2.1.3:** Реализовать виртуальный метод `retranslate_ui(self) -> None`, переопределяемый дочерними модулями.
+  - [x] **Шаг 2.1.4:** Предотвратить утечки памяти и сбои C++ объектов: реализовать отписку в методе `cleanup()` и вызов `cleanup()` в `closeEvent()`, с безопасным подавлением ошибок `try...except (RuntimeError, TypeError): pass` (исключая нестабильный хук на `self.destroyed`).
 
-- [ ] **Шаг 2.2: Локализация сайдбара и сквозных виджетов (`ui/sidebar.py`)**
-  - [ ] **Шаг 2.2.1:** Интегрировать подписку на `bus.language_changed` в `SidebarDock` и реализовать метод `retranslate_ui()`.
-  - [ ] **Шаг 2.2.2:** Обновить подсказки кнопок навигации без изменения геометрии сайдбара (фиксированная ширина 80px):
+- [x] **Шаг 2.2: Локализация сайдбара и сквозных виджетов (`ui/sidebar.py`)**
+  - [x] **Шаг 2.2.1:** Интегрировать подписку на `bus.language_changed` в `SidebarDock` и реализовать метод `retranslate_ui()`.
+  - [x] **Шаг 2.2.2:** Обновить подсказки кнопок навигации без изменения геометрии сайдбара (фиксированная ширина 80px):
     - `btn_yt.setToolTip(t("sidebar.tabs.media"))`
     - `btn_sensors.setToolTip(t("sidebar.tabs.sensors"))`
     - `btn_deck.setToolTip(t("sidebar.tabs.deck"))`
     - `btn_audio.setToolTip(t("sidebar.tabs.audio"))`
     - `btn_showcase.setToolTip(t("sidebar.tabs.showcase"))`
-  - [ ] **Шаг 2.2.3:** Реализовать динамическую подсказку кнопки блокировки ввода `btn_lock` в зависимости от состояния `self._input_locked` (`sidebar.lock.input_mode` / `sidebar.lock.stealth_mode`).
-  - [ ] **Шаг 2.2.4:** Интегрировать `retranslate_ui()` в `MiniMediaBar` (`modules/media/widgets/mini_media_bar.py`): локализация подсказок кнопок воспроизведения `btn_prev`, `btn_play`, `btn_next` и статуса отсутствия трека.
-  - [ ] **Шаг 2.2.5:** Обеспечить безопасную отписку от `bus.language_changed` при разрушении сайдбара в `_on_destroyed()`.
+  - [x] **Шаг 2.2.3:** Реализовать динамическую подсказку кнопки блокировки ввода `btn_lock` в зависимости от состояния `self._input_locked` (`sidebar.lock.input_mode` / `sidebar.lock.stealth_mode`).
+  - [x] **Шаг 2.2.4:** Интегрировать `retranslate_ui()` в `MiniMediaBar` (`modules/media/widgets/mini_media_bar.py`): локализация подсказок кнопок воспроизведения `btn_prev`, `btn_play`, `btn_next` и статуса отсутствия трека.
+  - [x] **Шаг 2.2.5:** Обеспечить безопасную отписку от `bus.language_changed` при разрушении сайдбара в `_on_destroyed()`.
 
-- [ ] **Шаг 2.3: Интеграция в главное окно приложения (`ui/main_window.py`)**
-  - [ ] **Шаг 2.3.1:** При холодном старте в `MainWindow.__init__` инициализировать язык интерфейса вызовом `I18nManager().set_language(self.config.language, emit_signal=False)` без паразитных сигналов перерисовки.
-  - [ ] **Шаг 2.3.2:** Выполнить первичный вызов `self.sidebar.retranslate_ui()` после построения дерева виджетов в `_init_ui()`.
-  - [ ] **Шаг 2.3.3:** Обеспечить обновление заголовка окна при смене языка через `setWindowTitle(f"DuckDock - {t('common.app_subtitle')}")`.
+- [x] **Шаг 2.3: Интеграция в главное окно приложения (`ui/main_window.py`)**
+  - [x] **Шаг 2.3.1:** При холодном старте в `MainWindow.__init__` инициализировать язык интерфейса вызовом `I18nManager().set_language(self.config.language, emit_signal=False)` без паразитных сигналов перерисовки.
+  - [x] **Шаг 2.3.2:** Выполнить первичный вызов `self.sidebar.retranslate_ui()` после построения дерева виджетов в `_init_ui()`.
+  - [x] **Шаг 2.3.3:** Обеспечить обновление заголовка окна при смене языка через `setWindowTitle(f"DuckDock - {t('common.app_subtitle')}")`.
 
-- [ ] **Шаг 2.4: Набор модульных тестов UI-реактивности (`tests/unit/test_i18n_ui.py`)**
-  - [ ] **Шаг 2.4.1:** `test_touch_module_view_auto_subscription`: валидация вызова `retranslate_ui()` у наследников при сигнале `language_changed`.
-  - [ ] **Шаг 2.4.2:** `test_touch_module_view_cleanup_prevents_leaks`: проверка гарантированного разрыва подписки при вызове `cleanup()` и разрушении виджета.
-  - [ ] **Шаг 2.4.3:** `test_sidebar_tooltips_retranslation`: проверка мгновенной смены подсказок кнопок сайдбара при переключении RU $\leftrightarrow$ EN без изменения размеров элементов.
-  - [ ] **Шаг 2.4.4:** `test_sidebar_lock_button_tooltip_states`: валидация подсказки кнопки блокировки ввода в обоих режимах на обоих языках.
-  - [ ] **Шаг 2.4.5:** `test_main_window_language_initialization`: проверка применения `config.language` при создании главного окна без паразитных сигналов.
+- [x] **Шаг 2.4: Набор модульных тестов UI-реактивности (`tests/unit/test_i18n_ui.py`)**
+  - [x] **Шаг 2.4.1:** `test_touch_module_view_auto_subscription`: валидация вызова `retranslate_ui()` у наследников при сигнале `language_changed`.
+  - [x] **Шаг 2.4.2:** `test_touch_module_view_cleanup_prevents_leaks`: проверка гарантированного разрыва подписки при вызове `cleanup()` и разрушении виджета.
+  - [x] **Шаг 2.4.3:** `test_sidebar_tooltips_retranslation`: проверка мгновенной смены подсказок кнопок сайдбара при переключении RU $\leftrightarrow$ EN без изменения размеров элементов.
+  - [x] **Шаг 2.4.4:** `test_sidebar_lock_button_tooltip_states`: валидация подсказки кнопки блокировки ввода в обоих режимах на обоих языках.
+  - [x] **Шаг 2.4.5:** `test_main_window_language_initialization`: проверка применения `config.language` при создании главного окна без паразитных сигналов.
 
 #### Запуск Фазы 2:
 ```text
@@ -396,36 +396,36 @@ class TouchModuleView(QWidget):
 
 ### Фаза 3: Сенсорный селектор языка в модуле настроек
 
-- [ ] **Шаг 3.1: Контракт сохранения конфигурации (`modules/settings/config.py`)**
-  - [ ] **Шаг 3.1.1:** Реализовать функцию безопасной атомарной записи `save_config(config: AppConfig, config_path: Optional[Path | str] = None) -> bool` с записью во временный `.tmp` файл и заменой (`replace`), предотвращая повреждение при сбоях.
-  - [ ] **Шаг 3.1.2:** Обеспечить разрешение пути сохранения с поддержкой скомпилированного режима `sys.frozen` / `_MEIPASS` и дефолтного `config.json` в корне проекта.
-  - [ ] **Шаг 3.1.3:** Экспортировать `save_config` в публичный интерфейс модуля `modules/settings/__init__.py`.
+- [x] **Шаг 3.1: Контракт сохранения конфигурации (`modules/settings/config.py`)**
+  - [x] **Шаг 3.1.1:** Реализовать функцию безопасной атомарной записи `save_config(config: AppConfig, config_path: Optional[Path | str] = None) -> bool` с записью во временный `.tmp` файл и заменой (`replace`), предотвращая повреждение при сбоях.
+  - [x] **Шаг 3.1.2:** Обеспечить разрешение пути сохранения с поддержкой скомпилированного режима `sys.frozen` / `_MEIPASS` и дефолтного `config.json` в корне проекта.
+  - [x] **Шаг 3.1.3:** Экспортировать `save_config` в публичный интерфейс модуля `modules/settings/__init__.py`.
 
-- [ ] **Шаг 3.2: Сенсорная карточка выбора языка (`modules/settings/view.py`)**
-  - [ ] **Шаг 3.2.1:** Создать карточку `_create_language_card()` со стилем `settings-card` и разместить в сетке `grid.addWidget(card_language, 2, 0, 1, 2)`.
-  - [ ] **Шаг 3.2.2:** Создать две сенсорные кнопки выбора: `btn_lang_ru` («Русский») и `btn_lang_en` («English») с классом `settings-lang-btn`.
-  - [ ] **Шаг 3.2.3:** Обеспечить инвариант Stealth Focus: принудительно задать `setFocusPolicy(Qt.NoFocus)` для обеих кнопок.
-  - [ ] **Шаг 3.2.4:** Задать сенсорные габариты кнопок (минимальная высота 44px, отступы под палец) и подсветку активного состояния `[active="true"]` цветом `#2563eb` в `SETTINGS_QSS`.
+- [x] **Шаг 3.2: Сенсорная карточка выбора языка (`modules/settings/view.py`)**
+  - [x] **Шаг 3.2.1:** Создать карточку `_create_language_card()` со стилем `settings-card` и разместить в сетке `grid.addWidget(card_language, 2, 0, 1, 2)`.
+  - [x] **Шаг 3.2.2:** Создать две сенсорные кнопки выбора: `btn_lang_ru` («Русский») и `btn_lang_en` («English») с классом `settings-lang-btn`.
+  - [x] **Шаг 3.2.3:** Обеспечить инвариант Stealth Focus: принудительно задать `setFocusPolicy(Qt.NoFocus)` для обеих кнопок.
+  - [x] **Шаг 3.2.4:** Задать сенсорные габариты кнопок (минимальная высота 44px, отступы под палец) и подсветку активного состояния `[active="true"]` цветом `#2563eb` в `SETTINGS_QSS`.
 
-- [ ] **Шаг 3.3: Обработчик клика и синхронизация состояния (`modules/settings/view.py`)**
-  - [ ] **Шаг 3.3.1:** Реализовать метод `_on_language_selected(lang_code: str)` с проверкой на идемпотентность (no-op при повторном клике).
-  - [ ] **Шаг 3.3.2:** Связать клик с сохранением `self.config.language = lang_code` на диск через `save_config(self.config, self.config_path)`.
-  - [ ] **Шаг 3.3.3:** Вызвать `I18nManager().set_language(lang_code, emit_signal=True)` для оповещения всех модулей через `bus.language_changed`.
-  - [ ] **Шаг 3.3.4:** Реализовать метод `_update_language_buttons()`, обновляющий свойства `active="true"/"false"` и вызывающий `unpolish`/`polish` стилей.
+- [x] **Шаг 3.3: Обработчик клика и синхронизация состояния (`modules/settings/view.py`)**
+  - [x] **Шаг 3.3.1:** Реализовать метод `_on_language_selected(lang_code: str)` с проверкой на идемпотентность (no-op при повторном клике).
+  - [x] **Шаг 3.3.2:** Связать клик с сохранением `self.config.language = lang_code` на диск через `save_config(self.config, self.config_path)`.
+  - [x] **Шаг 3.3.3:** Вызвать `I18nManager().set_language(lang_code, emit_signal=True)` для оповещения всех модулей через `bus.language_changed`.
+  - [x] **Шаг 3.3.4:** Реализовать метод `_update_language_buttons()`, обновляющий свойства `active="true"/"false"` и вызывающий `unpolish`/`polish` стилей.
 
-- [ ] **Шаг 3.4: Прямая трансляция и метод `retranslate_ui()` (`modules/settings/view.py`)**
-  - [ ] **Шаг 3.4.1:** Исключить промежуточные громоздкие реестры кортежей `(widget, key)` в пользу прямого, чистого метода `retranslate_ui()`.
-  - [ ] **Шаг 3.4.2:** Сохранить ссылки на ключевые метки заголовков и карточек в атрибутах класса (`self.lbl_title`, `self.lbl_display_header`, `self.lbl_stealth_header` и др.).
-  - [ ] **Шаг 3.4.3:** Реализовать метод `retranslate_ui()`: прямое обновление текстов заголовков через `t("settings.*")` и вызов `_update_ui_values()` для динамических значений.
-  - [ ] **Шаг 3.4.4:** Обновить метод `_update_ui_values()`: заменить строковые литералы статусов и единиц измерения на вызовы `t("common.state.enabled")`, `t("common.state.disabled")`, `t("common.units.*")`.
+- [x] **Шаг 3.4: Прямая трансляция и метод `retranslate_ui()` (`modules/settings/view.py`)**
+  - [x] **Шаг 3.4.1:** Исключить промежуточные громоздкие реестры кортежей `(widget, key)` в пользу прямого, чистого метода `retranslate_ui()`.
+  - [x] **Шаг 3.4.2:** Сохранить ссылки на ключевые метки заголовков и карточек в атрибутах класса (`self.lbl_title`, `self.lbl_display_header`, `self.lbl_stealth_header` и др.).
+  - [x] **Шаг 3.4.3:** Реализовать метод `retranslate_ui()`: прямое обновление текстов заголовков через `t("settings.*")` и вызов `_update_ui_values()` для динамических значений.
+  - [x] **Шаг 3.4.4:** Обновить метод `_update_ui_values()`: заменить строковые литералы статусов и единиц измерения на вызовы `t("common.state.enabled")`, `t("common.state.disabled")`, `t("common.units.*")`.
 
-- [ ] **Шаг 3.5: Модульные тесты селектора языка (`tests/unit/test_settings_language.py`)**
-  - [ ] **Шаг 3.5.1:** `test_settings_view_language_buttons_render_and_focus`: проверка отображения кнопок и наличия флага `Qt.NoFocus`.
-  - [ ] **Шаг 3.5.2:** `test_settings_view_initial_active_state`: проверка подсветки кнопки текущего языка из `AppConfig`.
-  - [ ] **Шаг 3.5.3:** `test_language_switch_saves_config`: проверка записи изменений в `config.json` на диске.
-  - [ ] **Шаг 3.5.4:** `test_language_switch_emits_eventbus_signal`: проверка эмиссии сигнала `bus.language_changed`.
-  - [ ] **Шаг 3.5.5:** `test_settings_view_retranslate_ui_full_update`: проверка обновления заголовков и параметров на обоих языках.
-  - [ ] **Шаг 3.5.6:** `test_language_switch_idempotency`: проверка отсутствия повторных записей на диск при клике по активной кнопке.
+- [x] **Шаг 3.5: Модульные тесты селектора языка (`tests/unit/test_settings_language.py`)**
+  - [x] **Шаг 3.5.1:** `test_settings_view_language_buttons_render_and_focus`: проверка отображения кнопок и наличия флага `Qt.NoFocus`.
+  - [x] **Шаг 3.5.2:** `test_settings_view_initial_active_state`: проверка подсветки кнопки текущего языка из `AppConfig`.
+  - [x] **Шаг 3.5.3:** `test_language_switch_saves_config`: проверка записи изменений в `config.json` на диске.
+  - [x] **Шаг 3.5.4:** `test_language_switch_emits_eventbus_signal`: проверка эмиссии сигнала `bus.language_changed`.
+  - [x] **Шаг 3.5.5:** `test_settings_view_retranslate_ui_full_update`: проверка обновления заголовков и параметров на обоих языках.
+  - [x] **Шаг 3.5.6:** `test_language_switch_idempotency`: проверка отсутствия повторных записей на диск при клике по активной кнопке.
 
 #### Запуск Фазы 3:
 ```text
@@ -452,84 +452,84 @@ class TouchModuleView(QWidget):
 ### Фаза 4: Помодульная миграция экранов и верификация (Batch Migration)
 
 #### Шаг 4.1: Модуль звука (`modules/audio`)
-- [ ] **Шаг 4.1.1: Вынос строк и контракты словарей (`locales/*.json`)**
+- [x] **Шаг 4.1.1: Вынос строк и контракты словарей (`locales/*.json`)**
   - Добавить ключи заголовков: `audio.header.title`, `audio.master.section_title`, `audio.sessions.section_title`.
   - Добавить ключи действий: `audio.actions.refresh`, `audio.device.default_output`, `audio.master.mute_active`, `audio.master.mute_inactive`.
   - Добавить блок плюрализации аудиосессий `audio.sessions.count`:
     - RU: `"one": "{count} активный процесс"`, `"few": "{count} активных процесса"`, `"many": "{count} активных процессов"`.
     - EN: `"one": "{count} active process"`, `"other": "{count} active processes"`.
-- [ ] **Шаг 4.1.2: Рефакторинг `AudioMixerView` (`modules/audio/view.py`)**
+- [x] **Шаг 4.1.2: Рефакторинг `AudioMixerView` (`modules/audio/view.py`)**
   - Заменить жестко закодированные строки в `_init_ui()`, `_refresh_master()`, `_format_device_button_text()`.
   - Реализовать метод `retranslate_ui()`:
     - Обновление текстовых меток `lbl_title`, `lbl_m_title`, `lbl_apps`, кнопки `btn_refresh`.
     - Переформатирование надписи кнопки аудиовыхода `btn_switch_device` через `_format_device_button_text()`.
     - Обновление текста и QSS-состояния мастер-кнопки `btn_master_mute`.
     - Каскадный вызов `card.retranslate_ui()` для всех существующих карточек сессий `_session_cards.values()`.
-- [ ] **Шаг 4.1.3: Модульные тесты аудио (`tests/unit/test_audio_i18n.py`)**
+- [x] **Шаг 4.1.3: Модульные тесты аудио (`tests/unit/test_audio_i18n.py`)**
   - `test_audio_view_retranslate_ui`: проверка смены текстов заголовков и кнопок без сброса позиции слайдеров.
   - `test_audio_sessions_pluralization`: валидация плюральных форм числа сессий (1, 2, 5, 21).
 
 #### Шаг 4.2: Модуль DuckDeck (`modules/deck`)
-- [ ] **Шаг 4.2.1: Вынос уведомлений диспетчера (`modules/deck/action_dispatcher.py`)**
+- [x] **Шаг 4.2.1: Вынос уведомлений диспетчера (`modules/deck/action_dispatcher.py`)**
   - Заменить строковые литералы на вызовы `t()` в фоновом воркере `ActionTask.run()`:
     - `deck.notify.hotkey_success` (`keys`), `deck.notify.hotkey_error`
     - `deck.notify.mic_muted`, `deck.notify.mic_unmuted`
     - `deck.notify.audio_muted`, `deck.notify.audio_unmuted`
     - `deck.notify.pc_locked`, `deck.notify.dimmer_toggled`
     - `deck.notify.page_navigated` (`page`), `deck.notify.unknown_cmd` (`cmd`), `deck.notify.generic_error` (`error`)
-- [ ] **Шаг 4.2.2: Локализация интерактивной панели (`modules/deck/widgets/interactive_panel.py`)**
+- [x] **Шаг 4.2.2: Локализация интерактивной панели (`modules/deck/widgets/interactive_panel.py`)**
   - В `DeckLeftSection`: локализовать статус ожидания плеера `deck.interactive.media_waiting`.
   - В `DeckRightSection`: локализовать статус тикера по умолчанию `deck.interactive.ready` и нотификацию шестеренки `deck.interactive.settings_in_dev`.
   - В `DeckCenterSection`: внедрить двуязычное форматирование даты (дни недели и месяцы) при тике часов с использованием `QLocale` или словарных массивов `common.calendar.*` (без небезопасного изменения глобальной C-локали `locale.setlocale`).
   - Реализовать метод `retranslate_ui()` в `DeckInteractivePanel` с каскадным обновлением всех трех секций.
-- [ ] **Шаг 4.2.3: Интеграция в `DeckView` (`modules/deck/view.py`)**
+- [x] **Шаг 4.2.3: Интеграция в `DeckView` (`modules/deck/view.py`)**
   - Реализовать `DeckView.retranslate_ui()`, вызывающий `interactive_panel.retranslate_ui()` и обновляющий тултипы/подписи навигации `header_bar`.
-- [ ] **Шаг 4.2.4: Модульные тесты колоды (`tests/unit/test_deck_i18n.py`)**
+- [x] **Шаг 4.2.4: Модульные тесты колоды (`tests/unit/test_deck_i18n.py`)**
   - `test_deck_interactive_panel_retranslate`: проверка смены подписей тикера и медиа-пульса.
   - `test_deck_action_dispatcher_localized_messages`: валидация возврата локализованных сообщений по шине сигналов.
 
 #### Шаг 4.3: NOC-дашборд телеметрии (`modules/telemetry`)
-- [ ] **Шаг 4.3.1: Вынос строк и контракты словарей (`locales/*.json`)**
+- [x] **Шаг 4.3.1: Вынос строк и контракты словарей (`locales/*.json`)**
   - Шапка: `telemetry.header.lhm_active`, `telemetry.header.lhm_fallback`, `telemetry.header.uac_admin`, `telemetry.header.uac_user`, `telemetry.header.uptime`.
   - Секции: `telemetry.cards.cpu_master`, `telemetry.cards.gpu_master`, `telemetry.cards.ram`, `telemetry.cards.network`, `telemetry.cards.storage`, `telemetry.cards.chassis`.
   - Метки чипов: `telemetry.labels.load`, `telemetry.labels.clock`, `telemetry.labels.cooler`, `telemetry.labels.pump`, `telemetry.labels.hotspot`, `telemetry.labels.vram`, `telemetry.labels.down`, `telemetry.labels.up`, `telemetry.labels.ping`.
-- [ ] **Шаг 4.3.2: Реализация `SensorsView.retranslate_ui()` (`modules/telemetry/view.py`)**
+- [x] **Шаг 4.3.2: Реализация `SensorsView.retranslate_ui()` (`modules/telemetry/view.py`)**
   - Обновить статические текстовые метки карточек и сетки чипов метрик.
   - Сохранить непрерывность работы `TelemetryWorker` и историю `TelemetryHistory` без перезапуска фонового потока.
-- [ ] **Шаг 4.3.3: Модульные тесты телеметрии (`tests/unit/test_telemetry_i18n.py`)**
+- [x] **Шаг 4.3.3: Модульные тесты телеметрии (`tests/unit/test_telemetry_i18n.py`)**
   - `test_sensors_view_retranslate_ui`: проверка обновления заголовков и чипов без прерывания потока спарклайнов.
 
 #### Шаг 4.4: Мультимедиа плеер (`modules/media`)
-- [ ] **Шаг 4.4.1: Вынос строк веб-контейнера и fallback-плеера**
+- [x] **Шаг 4.4.1: Вынос строк веб-контейнера и fallback-плеера**
   - Добавить ключи: `media.player.reload_tooltip`, `media.fallback.title`, `media.fallback.subtitle`, `media.fallback.volume_label`.
-- [ ] **Шаг 4.4.2: Реализация `YouTubeView.retranslate_ui()` (`modules/media/view.py`)**
+- [x] **Шаг 4.4.2: Реализация `YouTubeView.retranslate_ui()` (`modules/media/view.py`)**
   - Обновить подсказку кнопки перезагрузки `btn_reload.setToolTip(t("media.player.reload_tooltip"))`.
   - Обновить метки `lbl_fallback_title`, `sub_info`, `lbl_vol` в fallback-плеере.
-- [ ] **Шаг 4.4.3: Модульные тесты медиа (`tests/unit/test_media_i18n.py`)**
+- [x] **Шаг 4.4.3: Модульные тесты медиа (`tests/unit/test_media_i18n.py`)**
   - `test_youtube_view_retranslate_ui`: проверка смены тултипов и подписей fallback-плеера.
 
 #### Шаг 4.5: Рефакторинг и локализация витрины диагностики (`ui/showcase_view.py`)
-- [ ] **Шаг 4.5.1: Приведение к инварианту №4 (Переход на `TouchModuleView`)**
+- [x] **Шаг 4.5.1: Приведение к инварианту №4 (Переход на `TouchModuleView`)**
   - Изменить объявление класса: `class ShowcaseView(TouchModuleView):`.
   - Исключить ручную подписку на `bus.language_changed` (наследуется автоматически из базового класса).
-- [ ] **Шаг 4.5.2: Вынос строк и реестр карточек диагностики**
+- [x] **Шаг 4.5.2: Вынос строк и реестр карточек диагностики**
   - Добавить ключи: `showcase.title`, `showcase.cards.display`, `showcase.cards.stealth`, `showcase.cards.integration`.
   - Добавить ключи параметров: `showcase.display.*`, `showcase.stealth.*`, `showcase.integration.*`, `showcase.dimmer.*`.
   - Реализовать метод `retranslate_ui()`: циклическое обновление заголовков, меток диагностических параметров и динамической кнопки диммера (`btn_test_dimmer`).
-- [ ] **Шаг 4.5.3: Модульные тесты витрины (`tests/unit/test_showcase_i18n.py`)**
+- [x] **Шаг 4.5.3: Модульные тесты витрины (`tests/unit/test_showcase_i18n.py`)**
   - `test_showcase_view_stealth_focus_and_touch_module_view`: проверка наследования от `TouchModuleView` и `Qt.NoFocus`.
   - `test_showcase_view_retranslate_ui`: проверка обновления диагностических карточек при горячей смене языка.
 
 #### Шаг 4.6: Автоматизированный аудит чистоты строк и сквозная верификация
-- [ ] **Шаг 4.6.1: Тест линтера чистоты строк (`tests/unit/test_i18n_completeness.py`)**
+- [x] **Шаг 4.6.1: Тест линтера чистоты строк (`tests/unit/test_i18n_completeness.py`)**
   - Проверка 100% паритета ключей между `locales/ru.json` и `locales/en.json` (`diff == 0`).
   - Проверка консистентности именованных параметров интерполяции `{...}` между обоими словарями.
   - AST/Regex сканирование исходных кодов `ui/` и `modules/`: подтверждение отсутствия прямых кириллических строковых литералов в вызовах методов отображения (`setText`, `setToolTip`, `setTitle`) вне словарей `locales/`.
-- [ ] **Шаг 4.6.2: Интеграционный тест сквозного переключения (`tests/integration/test_i18n_hot_reload.py`)**
+- [x] **Шаг 4.6.2: Интеграционный тест сквозного переключения (`tests/integration/test_i18n_hot_reload.py`)**
   - Инициализация `MainWindow` $\to$ переключение языка `ru` $\to$ `en` $\to$ `ru`.
   - Проверка одновременного обновления текстов во всех вкладках (Audio, Deck, Sensors, YouTube, Settings, Showcase).
   - Проверка сохранения фокуса и отсутствия утечек памяти.
-- [ ] **Шаг 4.6.3: Полный регрессионный прогон**
+- [x] **Шаг 4.6.3: Полный регрессионный прогон**
   - Выполнение `pytest tests/` со 100% статусом `PASS` (все 181+ существующих тестов + новые тесты Фазы 4).
 
 ---
@@ -560,8 +560,8 @@ class TouchModuleView(QWidget):
 
 ## 7. Чек-лист Definition of Done для подсистемы локализации
 
-- [ ] Файлы `locales/ru.json` и `locales/en.json` содержат идентичный набор ключей (100% паритет, проверено тестом).
-- [ ] Движок `core/i18n` не имеет циклических зависимостей и изолирован в слое Foundation.
-- [ ] Горячая смена языка в настройках мгновенно переводит все вкладки без перезапуска приложения и без потери фокуса активного окна на основном мониторе.
-- [ ] Все тесты `pytest tests/` имеют статус `PASS` (181+ тестов).
-- [ ] Обновлены спецификации в `.md/backend.md` и сделана запись в `.md/changelog.md`.
+- [x] Файлы `locales/ru.json` и `locales/en.json` содержат идентичный набор ключей (100% паритет, проверено тестом).
+- [x] Движок `core/i18n` не имеет циклических зависимостей и изолирован в слое Foundation.
+- [x] Горячая смена языка в настройках мгновенно переводит все вкладки без перезапуска приложения и без потери фокуса активного окна на основном мониторе.
+- [x] Все тесты `pytest tests/` имеют статус `PASS` (181+ тестов).
+- [x] Обновлены спецификации в `.md/backend.md` и сделана запись в `.md/changelog.md`.

@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
 )
 
 from core.event_bus import bus
+from core.i18n import t
 from core.ui_base import TouchModuleView
 from modules.telemetry.history import TelemetryHistory
 from modules.telemetry.models import TelemetrySnapshot
@@ -201,9 +202,9 @@ QProgressBar.noc-progress-ram::chunk {
 
 
 def _format_uptime(seconds: int) -> str:
-    """Форматирует секунды аптайма в читаемый вид (Xd Xh Xm Xs)."""
+    """Форматирует секунды аптайма в читаемый вид (Xd Xh Xm Xs / Хд Хч Хм Хс)."""
     if seconds <= 0:
-        return "0s"
+        return t("telemetry.labels.uptime_seconds", seconds="0")
     days = seconds // 86400
     hours = (seconds % 86400) // 3600
     minutes = (seconds % 3600) // 60
@@ -211,20 +212,20 @@ def _format_uptime(seconds: int) -> str:
 
     parts = []
     if days > 0:
-        parts.append(f"{days}d")
+        parts.append(t("telemetry.labels.uptime_days", days=days))
     if hours > 0 or days > 0:
-        parts.append(f"{hours:02d}h")
+        parts.append(t("telemetry.labels.uptime_hours", hours=f"{hours:02d}"))
     if minutes > 0 or hours > 0 or days > 0:
-        parts.append(f"{minutes:02d}m")
-    parts.append(f"{secs:02d}s")
+        parts.append(t("telemetry.labels.uptime_minutes", minutes=f"{minutes:02d}"))
+    parts.append(t("telemetry.labels.uptime_seconds", seconds=f"{secs:02d}"))
     return " ".join(parts)
 
 
 def _format_net_speed(kbps: float) -> str:
-    """Форматирует скорость сети в KB/s или MB/s."""
+    """Форматирует скорость сети в КБ/с или МБ/с (KB/s / MB/s)."""
     if kbps >= 1024.0:
-        return f"{kbps / 1024.0:.1f} MB/s"
-    return f"{kbps:.0f} KB/s"
+        return t("telemetry.labels.speed_mbs", speed=f"{kbps / 1024.0:.1f}")
+    return t("telemetry.labels.speed_kbs", speed=f"{kbps:.0f}")
 
 
 def _temp_color_hex(temp: float) -> str:
@@ -259,6 +260,7 @@ class SensorsView(TouchModuleView):
         self._worker = worker
         self._owns_worker = False
         self._auto_start = auto_start
+        self._last_snapshot: Optional[TelemetrySnapshot] = None
 
         self.setStyleSheet(SENSORS_QSS)
         self._init_ui()
@@ -333,6 +335,8 @@ class SensorsView(TouchModuleView):
         grid_layout.addWidget(self.chassis_card, 1)
         root_layout.addLayout(grid_layout, 9)
 
+        self.retranslate_ui()
+
     # --------------------------------------------------------------------------
     # 1. Header Bar (36px)
     # --------------------------------------------------------------------------
@@ -348,13 +352,13 @@ class SensorsView(TouchModuleView):
         layout.setSpacing(10)
 
         # LHM статус
-        self.lbl_lhm_status = QLabel("● LibreHardwareMonitor (Direct Ring0)", frame)
+        self.lbl_lhm_status = QLabel(t("telemetry.header.lhm_active"), frame)
         self.lbl_lhm_status.setProperty("class", "header-badge badge-lhm-active")
         self.lbl_lhm_status.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         layout.addWidget(self.lbl_lhm_status)
 
         # UAC статус
-        self.lbl_uac_status = QLabel("[UAC: ADMIN]", frame)
+        self.lbl_uac_status = QLabel(t("telemetry.header.uac_admin"), frame)
         self.lbl_uac_status.setProperty("class", "header-badge badge-uac-admin")
         self.lbl_uac_status.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         layout.addWidget(self.lbl_uac_status)
@@ -363,17 +367,17 @@ class SensorsView(TouchModuleView):
         layout.addStretch()
 
         # Системный аптайм
-        self.lbl_uptime = QLabel("UPTIME: --", frame)
+        self.lbl_uptime = QLabel(t("telemetry.header.uptime", uptime="--"), frame)
         self.lbl_uptime.setProperty("class", "header-uptime")
         self.lbl_uptime.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         layout.addWidget(self.lbl_uptime)
 
         # Индикатор NOC Stream
-        lbl_stream = QLabel("STREAM: 1000ms", frame)
-        lbl_stream.setProperty("class", "header-uptime")
-        lbl_stream.setStyleSheet("color: #64748b;")
-        lbl_stream.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        layout.addWidget(lbl_stream)
+        self.lbl_stream = QLabel(t("telemetry.header.stream", interval=1000), frame)
+        self.lbl_stream.setProperty("class", "header-uptime")
+        self.lbl_stream.setStyleSheet("color: #64748b;")
+        self.lbl_stream.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        layout.addWidget(self.lbl_stream)
 
         return frame
 
@@ -392,10 +396,10 @@ class SensorsView(TouchModuleView):
 
         # Верхняя плашка: Tag + Название процессора + Ватты
         top_row = QHBoxLayout()
-        lbl_tag = QLabel("CPU MASTER", card)
-        lbl_tag.setProperty("class", "hero-tag")
-        lbl_tag.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        top_row.addWidget(lbl_tag)
+        self.lbl_cpu_tag = QLabel(t("telemetry.cards.cpu_master"), card)
+        self.lbl_cpu_tag.setProperty("class", "hero-tag")
+        self.lbl_cpu_tag.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        top_row.addWidget(self.lbl_cpu_tag)
 
         self.lbl_cpu_name = QLabel("AMD Ryzen 7 7700", card)
         self.lbl_cpu_name.setProperty("class", "hero-title")
@@ -403,7 +407,7 @@ class SensorsView(TouchModuleView):
         top_row.addWidget(self.lbl_cpu_name)
         top_row.addStretch()
 
-        self.lbl_cpu_power_badge = QLabel("-- W", card)
+        self.lbl_cpu_power_badge = QLabel(f"-- {t('telemetry.labels.unit_w')}", card)
         self.lbl_cpu_power_badge.setStyleSheet(
             "color: #f59e0b; font-weight: 700; font-size: 11px; font-family: monospace;"
         )
@@ -424,10 +428,10 @@ class SensorsView(TouchModuleView):
         self.lbl_cpu_temp.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         temp_col.addWidget(self.lbl_cpu_temp)
 
-        lbl_t_sub = QLabel("Tctl / Tdie Core", card)
-        lbl_t_sub.setProperty("class", "hero-temp-sub")
-        lbl_t_sub.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        temp_col.addWidget(lbl_t_sub)
+        self.lbl_cpu_t_sub = QLabel(t("telemetry.labels.tctl_tdie"), card)
+        self.lbl_cpu_t_sub.setProperty("class", "hero-temp-sub")
+        self.lbl_cpu_t_sub.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        temp_col.addWidget(self.lbl_cpu_t_sub)
 
         # Load Bar
         self.bar_cpu_load = QProgressBar(card)
@@ -447,38 +451,38 @@ class SensorsView(TouchModuleView):
         chips_grid.setVerticalSpacing(4)
 
         # 1. Load %
-        k1 = QLabel("LOAD", card)
-        k1.setProperty("class", "hero-chip-key")
+        self.lbl_k_cpu_load = QLabel(t("telemetry.labels.load"), card)
+        self.lbl_k_cpu_load.setProperty("class", "hero-chip-key")
         self.val_cpu_load = QLabel("0.0%", card)
         self.val_cpu_load.setProperty("class", "hero-chip-val")
-        chips_grid.addWidget(k1, 0, 0)
+        chips_grid.addWidget(self.lbl_k_cpu_load, 0, 0)
         chips_grid.addWidget(self.val_cpu_load, 0, 1)
 
         # 2. Clock
-        k2 = QLabel("CLOCK", card)
-        k2.setProperty("class", "hero-chip-key")
-        self.val_cpu_clock = QLabel("-- GHz", card)
+        self.lbl_k_cpu_clock = QLabel(t("telemetry.labels.clock"), card)
+        self.lbl_k_cpu_clock.setProperty("class", "hero-chip-key")
+        self.val_cpu_clock = QLabel(f"-- {t('telemetry.labels.unit_ghz')}", card)
         self.val_cpu_clock.setProperty("class", "hero-chip-val")
-        chips_grid.addWidget(k2, 0, 2)
+        chips_grid.addWidget(self.lbl_k_cpu_clock, 0, 2)
         chips_grid.addWidget(self.val_cpu_clock, 0, 3)
 
         # 3. CPU Fan
-        k3 = QLabel("COOLER", card)
-        k3.setProperty("class", "hero-chip-key")
-        self.val_cpu_fan = QLabel("-- RPM", card)
+        self.lbl_k_cpu_fan = QLabel(t("telemetry.labels.cooler"), card)
+        self.lbl_k_cpu_fan.setProperty("class", "hero-chip-key")
+        self.val_cpu_fan = QLabel(f"-- {t('telemetry.labels.unit_rpm')}", card)
         self.val_cpu_fan.setProperty("class", "hero-chip-val")
-        chips_grid.addWidget(k3, 1, 0)
+        chips_grid.addWidget(self.lbl_k_cpu_fan, 1, 0)
         chips_grid.addWidget(self.val_cpu_fan, 1, 1)
 
         # 4. Pump
-        k4 = QLabel("PUMP", card)
-        k4.setProperty("class", "hero-chip-key")
-        self.val_cpu_pump = QLabel("-- RPM", card)
+        self.lbl_k_cpu_pump = QLabel(t("telemetry.labels.pump"), card)
+        self.lbl_k_cpu_pump.setProperty("class", "hero-chip-key")
+        self.val_cpu_pump = QLabel(f"-- {t('telemetry.labels.unit_rpm')}", card)
         self.val_cpu_pump.setProperty("class", "hero-chip-val")
-        chips_grid.addWidget(k4, 1, 2)
+        chips_grid.addWidget(self.lbl_k_cpu_pump, 1, 2)
         chips_grid.addWidget(self.val_cpu_pump, 1, 3)
 
-        for w in (k1, self.val_cpu_load, k2, self.val_cpu_clock, k3, self.val_cpu_fan, k4, self.val_cpu_pump):
+        for w in (self.lbl_k_cpu_load, self.val_cpu_load, self.lbl_k_cpu_clock, self.val_cpu_clock, self.lbl_k_cpu_fan, self.val_cpu_fan, self.lbl_k_cpu_pump, self.val_cpu_pump):
             w.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
         mid_row.addLayout(chips_grid, 6)
@@ -498,6 +502,7 @@ class SensorsView(TouchModuleView):
             show_grid=True,
             auto_scale=False,
         )
+        self.spark_cpu.setToolTip(t("telemetry.tooltips.sparkline"))
         self.spark_cpu.setMinimumHeight(64)
         layout.addWidget(self.spark_cpu)
 
@@ -518,19 +523,19 @@ class SensorsView(TouchModuleView):
 
         # Верхняя плашка
         top_row = QHBoxLayout()
-        lbl_tag = QLabel("GPU MASTER", card)
-        lbl_tag.setProperty("class", "hero-tag")
-        lbl_tag.setStyleSheet("color: #a855f7;")
-        lbl_tag.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        top_row.addWidget(lbl_tag)
+        self.lbl_gpu_tag = QLabel(t("telemetry.cards.gpu_master"), card)
+        self.lbl_gpu_tag.setProperty("class", "hero-tag")
+        self.lbl_gpu_tag.setStyleSheet("color: #a855f7;")
+        self.lbl_gpu_tag.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        top_row.addWidget(self.lbl_gpu_tag)
 
-        self.lbl_gpu_name = QLabel("Discrete GPU", card)
+        self.lbl_gpu_name = QLabel(t("telemetry.labels.discrete_gpu"), card)
         self.lbl_gpu_name.setProperty("class", "hero-title")
         self.lbl_gpu_name.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         top_row.addWidget(self.lbl_gpu_name)
         top_row.addStretch()
 
-        self.lbl_gpu_power_badge = QLabel("-- W", card)
+        self.lbl_gpu_power_badge = QLabel(f"-- {t('telemetry.labels.unit_w')}", card)
         self.lbl_gpu_power_badge.setStyleSheet(
             "color: #f59e0b; font-weight: 700; font-size: 11px; font-family: monospace;"
         )
@@ -551,7 +556,7 @@ class SensorsView(TouchModuleView):
         self.lbl_gpu_temp.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         temp_col.addWidget(self.lbl_gpu_temp)
 
-        self.lbl_gpu_hotspot = QLabel("HOTSPOT: --.-°C", card)
+        self.lbl_gpu_hotspot = QLabel(t("telemetry.labels.hotspot", temp="--.-"), card)
         self.lbl_gpu_hotspot.setProperty("class", "hero-temp-sub")
         self.lbl_gpu_hotspot.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         temp_col.addWidget(self.lbl_gpu_hotspot)
@@ -573,35 +578,35 @@ class SensorsView(TouchModuleView):
         chips_grid.setHorizontalSpacing(10)
         chips_grid.setVerticalSpacing(4)
 
-        k1 = QLabel("LOAD", card)
-        k1.setProperty("class", "hero-chip-key")
+        self.lbl_k_gpu_load = QLabel(t("telemetry.labels.load"), card)
+        self.lbl_k_gpu_load.setProperty("class", "hero-chip-key")
         self.val_gpu_load = QLabel("0.0%", card)
         self.val_gpu_load.setProperty("class", "hero-chip-val")
-        chips_grid.addWidget(k1, 0, 0)
+        chips_grid.addWidget(self.lbl_k_gpu_load, 0, 0)
         chips_grid.addWidget(self.val_gpu_load, 0, 1)
 
-        k2 = QLabel("VRAM", card)
-        k2.setProperty("class", "hero-chip-key")
-        self.val_gpu_vram = QLabel("-- / -- GB", card)
+        self.lbl_k_gpu_vram = QLabel(t("telemetry.labels.vram"), card)
+        self.lbl_k_gpu_vram.setProperty("class", "hero-chip-key")
+        self.val_gpu_vram = QLabel(f"-- / -- {t('telemetry.labels.unit_gb')}", card)
         self.val_gpu_vram.setProperty("class", "hero-chip-val")
-        chips_grid.addWidget(k2, 0, 2)
+        chips_grid.addWidget(self.lbl_k_gpu_vram, 0, 2)
         chips_grid.addWidget(self.val_gpu_vram, 0, 3)
 
-        k3 = QLabel("FANS", card)
-        k3.setProperty("class", "hero-chip-key")
-        self.val_gpu_fan = QLabel("-- RPM", card)
+        self.lbl_k_gpu_fan = QLabel(t("telemetry.labels.cooler"), card)
+        self.lbl_k_gpu_fan.setProperty("class", "hero-chip-key")
+        self.val_gpu_fan = QLabel(f"-- {t('telemetry.labels.unit_rpm')}", card)
         self.val_gpu_fan.setProperty("class", "hero-chip-val")
-        chips_grid.addWidget(k3, 1, 0)
+        chips_grid.addWidget(self.lbl_k_gpu_fan, 1, 0)
         chips_grid.addWidget(self.val_gpu_fan, 1, 1)
 
-        k4 = QLabel("POWER", card)
-        k4.setProperty("class", "hero-chip-key")
-        self.val_gpu_power = QLabel("-- W", card)
+        self.lbl_k_gpu_power = QLabel(t("telemetry.labels.power"), card)
+        self.lbl_k_gpu_power.setProperty("class", "hero-chip-key")
+        self.val_gpu_power = QLabel(f"-- {t('telemetry.labels.unit_w')}", card)
         self.val_gpu_power.setProperty("class", "hero-chip-val")
-        chips_grid.addWidget(k4, 1, 2)
+        chips_grid.addWidget(self.lbl_k_gpu_power, 1, 2)
         chips_grid.addWidget(self.val_gpu_power, 1, 3)
 
-        for w in (k1, self.val_gpu_load, k2, self.val_gpu_vram, k3, self.val_gpu_fan, k4, self.val_gpu_power):
+        for w in (self.lbl_k_gpu_load, self.val_gpu_load, self.lbl_k_gpu_vram, self.val_gpu_vram, self.lbl_k_gpu_fan, self.val_gpu_fan, self.lbl_k_gpu_power, self.val_gpu_power):
             w.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
         mid_row.addLayout(chips_grid, 6)
@@ -621,6 +626,7 @@ class SensorsView(TouchModuleView):
             show_grid=True,
             auto_scale=False,
         )
+        self.spark_gpu.setToolTip(t("telemetry.tooltips.sparkline"))
         self.spark_gpu.setMinimumHeight(64)
         layout.addWidget(self.spark_gpu)
 
@@ -640,10 +646,10 @@ class SensorsView(TouchModuleView):
         layout.setSpacing(4)
 
         t_row = QHBoxLayout()
-        lbl_title = QLabel("RAM DDR5", card)
-        lbl_title.setProperty("class", "noc-card-title")
-        lbl_title.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        t_row.addWidget(lbl_title)
+        self.lbl_ram_title = QLabel(t("telemetry.cards.ram"), card)
+        self.lbl_ram_title.setProperty("class", "noc-card-title")
+        self.lbl_ram_title.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        t_row.addWidget(self.lbl_ram_title)
         t_row.addStretch()
 
         self.lbl_ram_pct = QLabel("0%", card)
@@ -652,7 +658,7 @@ class SensorsView(TouchModuleView):
         t_row.addWidget(self.lbl_ram_pct)
         layout.addLayout(t_row)
 
-        self.val_ram_gb = QLabel("-- / -- GB", card)
+        self.val_ram_gb = QLabel(f"-- / -- {t('telemetry.labels.unit_gb')}", card)
         self.val_ram_gb.setProperty("class", "noc-card-val-big")
         self.val_ram_gb.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         layout.addWidget(self.val_ram_gb)
@@ -681,10 +687,10 @@ class SensorsView(TouchModuleView):
         self.spark_ram.setMinimumHeight(38)
         layout.addWidget(self.spark_ram)
 
-        lbl_sub = QLabel("High-Speed Channel", card)
-        lbl_sub.setProperty("class", "noc-card-subtext")
-        lbl_sub.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        layout.addWidget(lbl_sub)
+        self.lbl_ram_sub = QLabel(t("telemetry.labels.high_speed_channel"), card)
+        self.lbl_ram_sub.setProperty("class", "noc-card-subtext")
+        self.lbl_ram_sub.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        layout.addWidget(self.lbl_ram_sub)
 
         return card
 
@@ -702,25 +708,25 @@ class SensorsView(TouchModuleView):
         layout.setSpacing(4)
 
         t_row = QHBoxLayout()
-        lbl_title = QLabel("NETWORK & PING", card)
-        lbl_title.setProperty("class", "noc-card-title")
-        lbl_title.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        t_row.addWidget(lbl_title)
+        self.lbl_net_title = QLabel(t("telemetry.cards.network"), card)
+        self.lbl_net_title.setProperty("class", "noc-card-title")
+        self.lbl_net_title.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        t_row.addWidget(self.lbl_net_title)
         t_row.addStretch()
 
-        self.lbl_net_ping = QLabel("● -- ms", card)
+        self.lbl_net_ping = QLabel(t("telemetry.labels.ping_ms", ping="--"), card)
         self.lbl_net_ping.setStyleSheet("color: #22c55e; font-weight: 700; font-size: 11px;")
         self.lbl_net_ping.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         t_row.addWidget(self.lbl_net_ping)
         layout.addLayout(t_row)
 
-        self.val_net_rx = QLabel("↓ 0.0 KB/s", card)
+        self.val_net_rx = QLabel(f"↓ {_format_net_speed(0.0)}", card)
         self.val_net_rx.setProperty("class", "noc-card-val-big")
         self.val_net_rx.setStyleSheet("color: #38bdf8;")
         self.val_net_rx.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         layout.addWidget(self.val_net_rx)
 
-        self.val_net_tx = QLabel("↑ 0.0 KB/s", card)
+        self.val_net_tx = QLabel(f"↑ {_format_net_speed(0.0)}", card)
         self.val_net_tx.setStyleSheet("color: #94a3b8; font-size: 11px; font-weight: 600; font-family: monospace;")
         self.val_net_tx.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         layout.addWidget(self.val_net_tx)
@@ -738,10 +744,10 @@ class SensorsView(TouchModuleView):
         self.spark_net.setMinimumHeight(38)
         layout.addWidget(self.spark_net)
 
-        lbl_sub = QLabel("DNS 1.1.1.1 Gateway", card)
-        lbl_sub.setProperty("class", "noc-card-subtext")
-        lbl_sub.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        layout.addWidget(lbl_sub)
+        self.lbl_net_sub = QLabel(t("telemetry.labels.dns_gateway"), card)
+        self.lbl_net_sub.setProperty("class", "noc-card-subtext")
+        self.lbl_net_sub.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        layout.addWidget(self.lbl_net_sub)
 
         return card
 
@@ -759,10 +765,10 @@ class SensorsView(TouchModuleView):
         layout.setSpacing(4)
 
         t_row = QHBoxLayout()
-        lbl_title = QLabel("NVME STORAGE", card)
-        lbl_title.setProperty("class", "noc-card-title")
-        lbl_title.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        t_row.addWidget(lbl_title)
+        self.lbl_storage_title = QLabel(t("telemetry.cards.storage"), card)
+        self.lbl_storage_title.setProperty("class", "noc-card-title")
+        self.lbl_storage_title.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        t_row.addWidget(self.lbl_storage_title)
         t_row.addStretch()
 
         self.lbl_storage_temp = QLabel("--°C", card)
@@ -778,11 +784,11 @@ class SensorsView(TouchModuleView):
         layout.addWidget(self.val_storage_name)
 
         act_row = QHBoxLayout()
-        lbl_act = QLabel("ACTIVITY", card)
-        lbl_act.setProperty("class", "hero-chip-key")
+        self.lbl_storage_act_key = QLabel(t("telemetry.labels.activity"), card)
+        self.lbl_storage_act_key.setProperty("class", "hero-chip-key")
         self.val_storage_act = QLabel("0%", card)
         self.val_storage_act.setProperty("class", "hero-chip-val")
-        act_row.addWidget(lbl_act)
+        act_row.addWidget(self.lbl_storage_act_key)
         act_row.addStretch()
         act_row.addWidget(self.val_storage_act)
         layout.addLayout(act_row)
@@ -811,10 +817,10 @@ class SensorsView(TouchModuleView):
         self.spark_storage.setMinimumHeight(38)
         layout.addWidget(self.spark_storage)
 
-        lbl_sub = QLabel("PCIe Gen4 Direct IO", card)
-        lbl_sub.setProperty("class", "noc-card-subtext")
-        lbl_sub.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        layout.addWidget(lbl_sub)
+        self.lbl_storage_sub = QLabel(t("telemetry.labels.pcie_direct_io"), card)
+        self.lbl_storage_sub.setProperty("class", "noc-card-subtext")
+        self.lbl_storage_sub.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        layout.addWidget(self.lbl_storage_sub)
 
         return card
 
@@ -832,42 +838,42 @@ class SensorsView(TouchModuleView):
         layout.setSpacing(4)
 
         t_row = QHBoxLayout()
-        lbl_title = QLabel("CHASSIS & MB", card)
-        lbl_title.setProperty("class", "noc-card-title")
-        lbl_title.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        t_row.addWidget(lbl_title)
+        self.lbl_chassis_title = QLabel(t("telemetry.cards.chassis"), card)
+        self.lbl_chassis_title.setProperty("class", "noc-card-title")
+        self.lbl_chassis_title.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        t_row.addWidget(self.lbl_chassis_title)
         t_row.addStretch()
 
-        self.lbl_vrm_temp = QLabel("VRM: --°C", card)
+        self.lbl_vrm_temp = QLabel(t("telemetry.labels.vrm_temp", temp="--"), card)
         self.lbl_vrm_temp.setStyleSheet("color: #94a3b8; font-weight: 700; font-size: 11px;")
         self.lbl_vrm_temp.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         t_row.addWidget(self.lbl_vrm_temp)
         layout.addLayout(t_row)
 
-        self.val_chassis_fans = QLabel("FAN: -- RPM", card)
+        self.val_chassis_fans = QLabel(t("telemetry.labels.fan_rpm", rpm="--"), card)
         self.val_chassis_fans.setProperty("class", "noc-card-val-big")
         self.val_chassis_fans.setStyleSheet("font-size: 15px; color: #f8fafc;")
         self.val_chassis_fans.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         layout.addWidget(self.val_chassis_fans)
 
-        self.val_chassis_subfans = QLabel("Chassis Coolers Active", card)
+        self.val_chassis_subfans = QLabel(t("telemetry.labels.fans_active"), card)
         self.val_chassis_subfans.setStyleSheet("color: #64748b; font-size: 11px; font-weight: 600;")
         self.val_chassis_subfans.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         layout.addWidget(self.val_chassis_subfans)
 
         layout.addStretch()
 
-        self.lbl_cooling_status = QLabel("● OPTIMAL AIRFLOW", card)
+        self.lbl_cooling_status = QLabel(t("telemetry.labels.optimal_airflow"), card)
         self.lbl_cooling_status.setStyleSheet(
             "color: #10b981; font-weight: 800; font-size: 10px; letter-spacing: 0.5px;"
         )
         self.lbl_cooling_status.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         layout.addWidget(self.lbl_cooling_status)
 
-        lbl_sub = QLabel("Super I/O Hardware Bus", card)
-        lbl_sub.setProperty("class", "noc-card-subtext")
-        lbl_sub.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        layout.addWidget(lbl_sub)
+        self.lbl_chassis_sub = QLabel(t("telemetry.labels.super_io_bus"), card)
+        self.lbl_chassis_sub.setProperty("class", "noc-card-subtext")
+        self.lbl_chassis_sub.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        layout.addWidget(self.lbl_chassis_sub)
 
         return card
 
@@ -884,37 +890,39 @@ class SensorsView(TouchModuleView):
         if not isinstance(snapshot, TelemetrySnapshot):
             return
 
+        self._last_snapshot = snapshot
+
         # Запись в кольцевой буфер истории
         self._history.add_snapshot(snapshot)
 
         # 1. Header Bar
         if snapshot.is_lhm_active:
-            self.lbl_lhm_status.setText("● LibreHardwareMonitor (Direct Ring0)")
+            self.lbl_lhm_status.setText(t("telemetry.header.lhm_active"))
             self.lbl_lhm_status.setProperty("class", "header-badge badge-lhm-active")
         else:
-            self.lbl_lhm_status.setText("● Hardware Telemetry (OS Fallback)")
+            self.lbl_lhm_status.setText(t("telemetry.header.lhm_fallback"))
             self.lbl_lhm_status.setProperty("class", "header-badge badge-lhm-fallback")
         self.lbl_lhm_status.style().unpolish(self.lbl_lhm_status)
         self.lbl_lhm_status.style().polish(self.lbl_lhm_status)
 
         if snapshot.is_admin:
-            self.lbl_uac_status.setText("[UAC: ADMIN]")
+            self.lbl_uac_status.setText(t("telemetry.header.uac_admin"))
             self.lbl_uac_status.setProperty("class", "header-badge badge-uac-admin")
         else:
-            self.lbl_uac_status.setText("[UAC: USER]")
+            self.lbl_uac_status.setText(t("telemetry.header.uac_user"))
             self.lbl_uac_status.setProperty("class", "header-badge badge-uac-user")
         self.lbl_uac_status.style().unpolish(self.lbl_uac_status)
         self.lbl_uac_status.style().polish(self.lbl_uac_status)
 
-        self.lbl_uptime.setText(f"UPTIME: {_format_uptime(snapshot.uptime_seconds)}")
+        self.lbl_uptime.setText(t("telemetry.header.uptime", uptime=_format_uptime(snapshot.uptime_seconds)))
 
         # 2. CPU Master
         if snapshot.cpu_name:
             self.lbl_cpu_name.setText(snapshot.cpu_name)
         if snapshot.cpu_power > 0:
-            self.lbl_cpu_power_badge.setText(f"{snapshot.cpu_power:.1f} W")
+            self.lbl_cpu_power_badge.setText(t("telemetry.labels.power_val", power=f"{snapshot.cpu_power:.1f}"))
         else:
-            self.lbl_cpu_power_badge.setText("-- W")
+            self.lbl_cpu_power_badge.setText(f"-- {t('telemetry.labels.unit_w')}")
 
         cpu_temp = snapshot.cpu_temp
         if cpu_temp > 0:
@@ -929,31 +937,31 @@ class SensorsView(TouchModuleView):
 
         if snapshot.cpu_clock > 0:
             if snapshot.cpu_clock >= 1000.0:
-                self.val_cpu_clock.setText(f"{snapshot.cpu_clock / 1000.0:.2f} GHz")
+                self.val_cpu_clock.setText(t("telemetry.labels.clock_ghz", clock=f"{snapshot.cpu_clock / 1000.0:.2f}"))
             else:
-                self.val_cpu_clock.setText(f"{snapshot.cpu_clock:.0f} MHz")
+                self.val_cpu_clock.setText(t("telemetry.labels.clock_mhz", clock=f"{snapshot.cpu_clock:.0f}"))
         else:
-            self.val_cpu_clock.setText("-- GHz")
+            self.val_cpu_clock.setText(f"-- {t('telemetry.labels.unit_ghz')}")
 
         if snapshot.cpu_fan_rpm > 0:
-            self.val_cpu_fan.setText(f"{snapshot.cpu_fan_rpm} RPM")
+            self.val_cpu_fan.setText(t("telemetry.labels.fan_rpm_val", rpm=snapshot.cpu_fan_rpm))
         else:
-            self.val_cpu_fan.setText("-- RPM")
+            self.val_cpu_fan.setText(f"-- {t('telemetry.labels.unit_rpm')}")
 
         if snapshot.pump_rpm > 0:
-            self.val_cpu_pump.setText(f"{snapshot.pump_rpm} RPM")
+            self.val_cpu_pump.setText(t("telemetry.labels.pump_rpm_val", rpm=snapshot.pump_rpm))
         else:
-            self.val_cpu_pump.setText("-- RPM")
+            self.val_cpu_pump.setText(f"-- {t('telemetry.labels.unit_rpm')}")
 
         # 3. GPU Master
         if snapshot.gpu_name:
             self.lbl_gpu_name.setText(snapshot.gpu_name)
         if snapshot.gpu_power > 0:
-            self.lbl_gpu_power_badge.setText(f"{snapshot.gpu_power:.1f} W")
-            self.val_gpu_power.setText(f"{snapshot.gpu_power:.0f} W")
+            self.lbl_gpu_power_badge.setText(t("telemetry.labels.power_val", power=f"{snapshot.gpu_power:.1f}"))
+            self.val_gpu_power.setText(t("telemetry.labels.power_val", power=f"{snapshot.gpu_power:.0f}"))
         else:
-            self.lbl_gpu_power_badge.setText("-- W")
-            self.val_gpu_power.setText("-- W")
+            self.lbl_gpu_power_badge.setText(f"-- {t('telemetry.labels.unit_w')}")
+            self.val_gpu_power.setText(f"-- {t('telemetry.labels.unit_w')}")
 
         gpu_temp = snapshot.gpu_temp
         if gpu_temp > 0:
@@ -964,7 +972,7 @@ class SensorsView(TouchModuleView):
             self.lbl_gpu_temp.setText("--.-°C")
 
         if snapshot.gpu_hotspot > 0:
-            self.lbl_gpu_hotspot.setText(f"HOTSPOT: {snapshot.gpu_hotspot:.1f}°C")
+            self.lbl_gpu_hotspot.setText(t("telemetry.labels.hotspot", temp=f"{snapshot.gpu_hotspot:.1f}"))
             if snapshot.gpu_hotspot >= 85.0:
                 self.lbl_gpu_hotspot.setStyleSheet("color: #ef4444; font-weight: 700;")
             elif snapshot.gpu_hotspot >= 75.0:
@@ -972,7 +980,7 @@ class SensorsView(TouchModuleView):
             else:
                 self.lbl_gpu_hotspot.setStyleSheet("color: #64748b; font-weight: 600;")
         else:
-            self.lbl_gpu_hotspot.setText("HOTSPOT: --.-°C")
+            self.lbl_gpu_hotspot.setText(t("telemetry.labels.hotspot", temp="--.-"))
 
         self.val_gpu_load.setText(f"{snapshot.gpu_load:.1f}%")
 
@@ -980,22 +988,22 @@ class SensorsView(TouchModuleView):
             used_gb = snapshot.gpu_vram_used / 1024.0
             tot_gb = snapshot.gpu_vram_total / 1024.0
             pct = snapshot.vram_percent
-            self.val_gpu_vram.setText(f"{used_gb:.1f} / {tot_gb:.1f} GB")
+            self.val_gpu_vram.setText(t("telemetry.labels.vram_gb", used=f"{used_gb:.1f}", total=f"{tot_gb:.1f}"))
             self.bar_gpu_vram.setValue(int(min(100.0, max(0.0, pct))))
         else:
-            self.val_gpu_vram.setText("-- / -- GB")
+            self.val_gpu_vram.setText(f"-- / -- {t('telemetry.labels.unit_gb')}")
             self.bar_gpu_vram.setValue(0)
 
         if snapshot.gpu_fan_rpm > 0:
-            self.val_gpu_fan.setText(f"{snapshot.gpu_fan_rpm} RPM")
+            self.val_gpu_fan.setText(t("telemetry.labels.fan_rpm_val", rpm=snapshot.gpu_fan_rpm))
         else:
-            self.val_gpu_fan.setText("-- RPM")
+            self.val_gpu_fan.setText(f"-- {t('telemetry.labels.unit_rpm')}")
 
         # 4. RAM
         if snapshot.ram_total_gb > 0:
-            self.val_ram_gb.setText(f"{snapshot.ram_used_gb:.1f} / {snapshot.ram_total_gb:.1f} GB")
+            self.val_ram_gb.setText(t("telemetry.labels.ram_gb", used=f"{snapshot.ram_used_gb:.1f}", total=f"{snapshot.ram_total_gb:.1f}"))
         else:
-            self.val_ram_gb.setText("-- / -- GB")
+            self.val_ram_gb.setText(f"-- / -- {t('telemetry.labels.unit_gb')}")
         ram_pct = int(min(100.0, max(0.0, snapshot.ram_load_pct)))
         self.lbl_ram_pct.setText(f"{ram_pct}%")
         self.bar_ram.setValue(ram_pct)
@@ -1003,7 +1011,7 @@ class SensorsView(TouchModuleView):
 
         # 5. Network & Ping
         if snapshot.ping_ms >= 0:
-            self.lbl_net_ping.setText(f"● {snapshot.ping_ms:.0f} ms")
+            self.lbl_net_ping.setText(t("telemetry.labels.ping_ms", ping=f"{snapshot.ping_ms:.0f}"))
             if snapshot.ping_ms < 50:
                 self.lbl_net_ping.setStyleSheet("color: #22c55e; font-weight: 700; font-size: 11px;")
             elif snapshot.ping_ms < 100:
@@ -1011,7 +1019,7 @@ class SensorsView(TouchModuleView):
             else:
                 self.lbl_net_ping.setStyleSheet("color: #ef4444; font-weight: 700; font-size: 11px;")
         else:
-            self.lbl_net_ping.setText("● DISCONNECTED")
+            self.lbl_net_ping.setText(t("telemetry.labels.disconnected"))
             self.lbl_net_ping.setStyleSheet("color: #ef4444; font-weight: 700; font-size: 11px;")
 
         self.val_net_rx.setText(f"↓ {_format_net_speed(snapshot.net_rx_kbps)}")
@@ -1033,21 +1041,21 @@ class SensorsView(TouchModuleView):
 
         # 7. Chassis & Motherboard
         if snapshot.vrm_temp > 0:
-            self.lbl_vrm_temp.setText(f"VRM: {snapshot.vrm_temp:.0f}°C")
+            self.lbl_vrm_temp.setText(t("telemetry.labels.vrm_temp", temp=f"{snapshot.vrm_temp:.0f}"))
         else:
-            self.lbl_vrm_temp.setText("VRM: --°C")
+            self.lbl_vrm_temp.setText(t("telemetry.labels.vrm_temp", temp="--"))
 
         if snapshot.chassis_fans_rpm:
             max_fan = max(snapshot.chassis_fans_rpm)
-            self.val_chassis_fans.setText(f"FAN: {max_fan} RPM")
+            self.val_chassis_fans.setText(t("telemetry.labels.fan_rpm", rpm=max_fan))
             fan_chips = ", ".join(f"{rpm}" for rpm in snapshot.chassis_fans_rpm[:3])
-            self.val_chassis_subfans.setText(f"Fans: {fan_chips} RPM")
+            self.val_chassis_subfans.setText(t("telemetry.labels.fans_list", fans=fan_chips))
         elif snapshot.cpu_fan_rpm > 0:
-            self.val_chassis_fans.setText(f"FAN: {snapshot.cpu_fan_rpm} RPM")
-            self.val_chassis_subfans.setText("CPU Fan Active")
+            self.val_chassis_fans.setText(t("telemetry.labels.fan_rpm", rpm=snapshot.cpu_fan_rpm))
+            self.val_chassis_subfans.setText(t("telemetry.labels.cpu_fan_active"))
         else:
-            self.val_chassis_fans.setText("FAN: -- RPM")
-            self.val_chassis_subfans.setText("Passive Cooling")
+            self.val_chassis_fans.setText(t("telemetry.labels.fan_rpm", rpm="--"))
+            self.val_chassis_subfans.setText(t("telemetry.labels.passive_cooling"))
 
     @Slot(dict)
     def _on_bus_sensors_updated(self, data: dict) -> None:
@@ -1063,6 +1071,110 @@ class SensorsView(TouchModuleView):
         """
         if self._worker and self._worker.last_snapshot:
             self.update_snapshot(self._worker.last_snapshot)
+
+    def retranslate_ui(self) -> None:
+        """Обновление локализованных надписей дашборда телеметрии без прерывания воркера."""
+        # 1. Header
+        if hasattr(self, "lbl_stream"):
+            self.lbl_stream.setText(t("telemetry.header.stream", interval=1000))
+        # 2. CPU
+        if hasattr(self, "lbl_cpu_tag"):
+            self.lbl_cpu_tag.setText(t("telemetry.cards.cpu_master"))
+        if hasattr(self, "lbl_cpu_t_sub"):
+            self.lbl_cpu_t_sub.setText(t("telemetry.labels.tctl_tdie"))
+        if hasattr(self, "lbl_k_cpu_load"):
+            self.lbl_k_cpu_load.setText(t("telemetry.labels.load"))
+        if hasattr(self, "lbl_k_cpu_clock"):
+            self.lbl_k_cpu_clock.setText(t("telemetry.labels.clock"))
+        if hasattr(self, "lbl_k_cpu_fan"):
+            self.lbl_k_cpu_fan.setText(t("telemetry.labels.cooler"))
+        if hasattr(self, "lbl_k_cpu_pump"):
+            self.lbl_k_cpu_pump.setText(t("telemetry.labels.pump"))
+        # 3. GPU
+        if hasattr(self, "lbl_gpu_tag"):
+            self.lbl_gpu_tag.setText(t("telemetry.cards.gpu_master"))
+        if hasattr(self, "lbl_k_gpu_load"):
+            self.lbl_k_gpu_load.setText(t("telemetry.labels.load"))
+        if hasattr(self, "lbl_k_gpu_vram"):
+            self.lbl_k_gpu_vram.setText(t("telemetry.labels.vram"))
+        if hasattr(self, "lbl_k_gpu_fan"):
+            self.lbl_k_gpu_fan.setText(t("telemetry.labels.cooler"))
+        if hasattr(self, "lbl_k_gpu_power"):
+            self.lbl_k_gpu_power.setText(t("telemetry.labels.power"))
+        # 4. RAM
+        if hasattr(self, "lbl_ram_title"):
+            self.lbl_ram_title.setText(t("telemetry.cards.ram"))
+        if hasattr(self, "lbl_ram_sub"):
+            self.lbl_ram_sub.setText(t("telemetry.labels.high_speed_channel"))
+        # 5. Network
+        if hasattr(self, "lbl_net_title"):
+            self.lbl_net_title.setText(t("telemetry.cards.network"))
+        if hasattr(self, "lbl_net_sub"):
+            self.lbl_net_sub.setText(t("telemetry.labels.dns_gateway"))
+        # 6. Storage
+        if hasattr(self, "lbl_storage_title"):
+            self.lbl_storage_title.setText(t("telemetry.cards.storage"))
+        if hasattr(self, "lbl_storage_act_key"):
+            self.lbl_storage_act_key.setText(t("telemetry.labels.activity"))
+        if hasattr(self, "lbl_storage_sub"):
+            self.lbl_storage_sub.setText(t("telemetry.labels.pcie_direct_io"))
+        # 7. Chassis
+        if hasattr(self, "lbl_chassis_title"):
+            self.lbl_chassis_title.setText(t("telemetry.cards.chassis"))
+        if hasattr(self, "lbl_cooling_status"):
+            self.lbl_cooling_status.setText(t("telemetry.labels.optimal_airflow"))
+        if hasattr(self, "lbl_chassis_sub"):
+            self.lbl_chassis_sub.setText(t("telemetry.labels.super_io_bus"))
+        # Tooltips
+        if hasattr(self, "spark_cpu"):
+            self.spark_cpu.setToolTip(t("telemetry.tooltips.sparkline"))
+        if hasattr(self, "spark_gpu"):
+            self.spark_gpu.setToolTip(t("telemetry.tooltips.sparkline"))
+
+        # Если есть сохраненный снимок, обновляем динамические статусы
+        if getattr(self, "_last_snapshot", None):
+            self.update_snapshot(self._last_snapshot)
+        else:
+            if hasattr(self, "lbl_lhm_status"):
+                self.lbl_lhm_status.setText(t("telemetry.header.lhm_active"))
+            if hasattr(self, "lbl_uac_status"):
+                self.lbl_uac_status.setText(t("telemetry.header.uac_admin"))
+            if hasattr(self, "lbl_uptime"):
+                self.lbl_uptime.setText(t("telemetry.header.uptime", uptime=_format_uptime(0)))
+            if hasattr(self, "lbl_gpu_hotspot"):
+                self.lbl_gpu_hotspot.setText(t("telemetry.labels.hotspot", temp="--.-"))
+            if hasattr(self, "lbl_gpu_name"):
+                self.lbl_gpu_name.setText(t("telemetry.labels.discrete_gpu"))
+            if hasattr(self, "val_chassis_fans"):
+                self.val_chassis_fans.setText(t("telemetry.labels.fan_rpm", rpm="--"))
+            if hasattr(self, "val_chassis_subfans"):
+                self.val_chassis_subfans.setText(t("telemetry.labels.passive_cooling"))
+            if hasattr(self, "lbl_vrm_temp"):
+                self.lbl_vrm_temp.setText(t("telemetry.labels.vrm_temp", temp="--"))
+            if hasattr(self, "lbl_net_ping"):
+                self.lbl_net_ping.setText(t("telemetry.labels.disconnected"))
+            if hasattr(self, "lbl_cpu_power_badge"):
+                self.lbl_cpu_power_badge.setText(f"-- {t('telemetry.labels.unit_w')}")
+            if hasattr(self, "val_cpu_clock"):
+                self.val_cpu_clock.setText(f"-- {t('telemetry.labels.unit_ghz')}")
+            if hasattr(self, "val_cpu_fan"):
+                self.val_cpu_fan.setText(f"-- {t('telemetry.labels.unit_rpm')}")
+            if hasattr(self, "val_cpu_pump"):
+                self.val_cpu_pump.setText(f"-- {t('telemetry.labels.unit_rpm')}")
+            if hasattr(self, "lbl_gpu_power_badge"):
+                self.lbl_gpu_power_badge.setText(f"-- {t('telemetry.labels.unit_w')}")
+            if hasattr(self, "val_gpu_power"):
+                self.val_gpu_power.setText(f"-- {t('telemetry.labels.unit_w')}")
+            if hasattr(self, "val_gpu_vram"):
+                self.val_gpu_vram.setText(f"-- / -- {t('telemetry.labels.unit_gb')}")
+            if hasattr(self, "val_gpu_fan"):
+                self.val_gpu_fan.setText(f"-- {t('telemetry.labels.unit_rpm')}")
+            if hasattr(self, "val_ram_gb"):
+                self.val_ram_gb.setText(f"-- / -- {t('telemetry.labels.unit_gb')}")
+            if hasattr(self, "val_net_rx"):
+                self.val_net_rx.setText(f"↓ {_format_net_speed(0.0)}")
+            if hasattr(self, "val_net_tx"):
+                self.val_net_tx.setText(f"↑ {_format_net_speed(0.0)}")
 
     def cleanup(self) -> None:
         """

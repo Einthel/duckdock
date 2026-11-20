@@ -14,8 +14,8 @@ from PySide6.QtCore import QThreadPool
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QApplication
 
-from core.deck.action_dispatcher import ActionRunnable, DeckActionDispatcher, WorkerSignals
-from core.deck.actions.hotkey_sender import (
+from modules.deck.action_dispatcher import ActionRunnable, DeckActionDispatcher, WorkerSignals
+from modules.deck.actions.hotkey_sender import (
     EXTENDED_KEYS,
     KEYEVENTF_EXTENDEDKEY,
     KEYEVENTF_KEYUP,
@@ -24,10 +24,10 @@ from core.deck.actions.hotkey_sender import (
     resolve_vk,
     send_hotkey,
 )
-from core.deck.actions.http_client import execute_http_request
-from core.deck.actions.process_launcher import CREATE_NO_WINDOW, DETACHED_PROCESS, launch_process
-from core.deck.actions.screen_capture import capture_screen, copy_pixmap_to_clipboard, get_primary_screen
-from core.deck.models import (
+from modules.deck.actions.http_client import execute_http_request
+from modules.deck.actions.process_launcher import CREATE_NO_WINDOW, DETACHED_PROCESS, launch_process
+from modules.deck.actions.screen_capture import capture_screen, copy_pixmap_to_clipboard, get_primary_screen
+from modules.deck.models import (
     ActionCategory,
     AudioDeviceParams,
     DeckActionConfig,
@@ -220,7 +220,7 @@ def test_send_hotkey_lifo_and_scancodes(mock_sleep, mock_send_key):
 
 def test_send_key_event_internals():
     """Тест вызова WinAPI MapVirtualKeyW и SendInput внутри _send_key_event."""
-    from core.deck.actions.hotkey_sender import _send_key_event
+    from modules.deck.actions.hotkey_sender import _send_key_event
     user32_mock = MagicMock()
     user32_mock.MapVirtualKeyW.return_value = 72
 
@@ -231,8 +231,8 @@ def test_send_key_event_internals():
     assert user32_mock.SendInput.call_args[0][0] == 1
 
 
-@patch("core.deck.actions.hotkey_sender.win32gui")
-@patch("core.deck.actions.hotkey_sender.FocusGuardian")
+@patch("modules.deck.actions.hotkey_sender.win32gui")
+@patch("modules.deck.actions.hotkey_sender.FocusGuardian")
 @patch("core.deck.actions.hotkey_sender.time.sleep")
 @patch("core.deck.actions.hotkey_sender._send_key_event")
 def test_send_hotkey_focus_restoration(mock_send_key, mock_sleep, mock_fg_cls, mock_gui):
@@ -632,7 +632,7 @@ def test_deck_view_simulation_mode_integration(qapp):
     - Сообщение транслируется в тикер и статус.
     """
     from core.event_bus import bus
-    from ui.modules.deck_view import DeckView
+    from modules.deck.view import DeckView
 
     notifs = []
     def on_notif(msg: str):
@@ -676,7 +676,7 @@ def test_deck_simulation_mode_and_audio_feedback_integration(qapp):
     """
     from core.event_bus import bus
     from modules.deck.sound_engine import DeckSoundEngine
-    from ui.modules.deck_view import DeckView
+    from modules.deck.view import DeckView
 
     mock_sound_engine = MagicMock(spec=DeckSoundEngine)
     notifs = []
@@ -768,10 +768,10 @@ def test_action_runnable_combat_handlers_integrity(qapp):
     - Все боевые функции модулей modules/deck/actions/ импортируются и работоспособны.
     - При выключенном simulation_mode диспетчер запускает боевую задачу через QThreadPool.
     """
-    from core.deck.actions.hotkey_sender import send_hotkey
-    from core.deck.actions.process_launcher import launch_process
-    from core.deck.actions.http_client import execute_http_request
-    from core.deck.actions.screen_capture import capture_screen
+    from modules.deck.actions.hotkey_sender import send_hotkey
+    from modules.deck.actions.process_launcher import launch_process
+    from modules.deck.actions.http_client import execute_http_request
+    from modules.deck.actions.screen_capture import capture_screen
 
     # Проверка доступности боевых функций модулей
     assert callable(send_hotkey)

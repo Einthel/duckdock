@@ -1,9 +1,9 @@
 """
-Тесты для модуля core.audio_manager (Windows Core Audio API & PyCaw Facade).
+Тесты для модуля modules.audio (Windows Core Audio API & PyCaw Facade).
 """
 import pytest
 from unittest.mock import MagicMock, patch
-from core.audio_manager import AudioManager, AudioSessionInfo, APP_FRIENDLY_NAMES
+from modules.audio import AudioManager, AudioSessionInfo, APP_FRIENDLY_NAMES
 
 
 @pytest.mark.unit

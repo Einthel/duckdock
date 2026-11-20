@@ -6,9 +6,10 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 
-from core.audio_manager import AudioManager
-from core.deck.actions import audio_device_switcher
-from core.deck.actions.audio_device_switcher import (
+from modules.audio.service import AudioManager
+from modules.audio.models import AudioDeviceInfo
+from modules.audio.platform import device_switcher
+from modules.audio.platform.device_switcher import (
     ROLE_COMMUNICATIONS,
     ROLE_CONSOLE,
     ROLE_MULTIMEDIA,
@@ -16,7 +17,6 @@ from core.deck.actions.audio_device_switcher import (
     switch_default_device,
     toggle_audio_device,
 )
-from core.deck.models import AudioDeviceInfo
 from core.event_bus import bus
 
 
@@ -38,9 +38,9 @@ class DummyAudioDevice:
 # -------------------------------------------------------------
 # 1. Тесты switch_default_device через IPolicyConfig
 # -------------------------------------------------------------
-@patch("core.deck.actions.audio_device_switcher.comtypes.CoUninitialize")
-@patch("core.deck.actions.audio_device_switcher.comtypes.CoInitialize")
-@patch("core.deck.actions.audio_device_switcher.comtypes.CoCreateInstance")
+@patch("modules.audio.platform.device_switcher.comtypes.CoUninitialize")
+@patch("modules.audio.platform.device_switcher.comtypes.CoInitialize")
+@patch("modules.audio.platform.device_switcher.comtypes.CoCreateInstance")
 def test_switch_default_device_success(mock_co_create, mock_co_init, mock_co_uninit):
     """
     Тест успешного вызова SetDefaultEndpoint для всех трех ролей:
@@ -65,7 +65,7 @@ def test_switch_default_device_success(mock_co_create, mock_co_init, mock_co_uni
     mock_co_uninit.assert_called_once()
 
 
-@patch("core.deck.actions.audio_device_switcher.comtypes.CoCreateInstance")
+@patch("modules.audio.platform.device_switcher.comtypes.CoCreateInstance")
 def test_switch_default_device_failure_handled(mock_co_create):
     """Тест обработки сбоя COM CoCreateInstance без падения программы."""
     mock_co_create.side_effect = Exception("COM Access Denied")
@@ -77,8 +77,8 @@ def test_switch_default_device_failure_handled(mock_co_create):
 # -------------------------------------------------------------
 # 2. Тесты get_playback_devices
 # -------------------------------------------------------------
-@patch("core.deck.actions.audio_device_switcher.get_default_playback_device_id")
-@patch("core.deck.actions.audio_device_switcher.AudioUtilities.GetAllDevices")
+@patch("modules.audio.platform.device_switcher.get_default_playback_device_id")
+@patch("modules.audio.platform.device_switcher.AudioUtilities.GetAllDevices")
 def test_get_playback_devices_filtering(mock_get_all, mock_get_default_id):
     """
     Тест фильтрации устройств: возвращаются только активные (state=1)
@@ -104,8 +104,8 @@ def test_get_playback_devices_filtering(mock_get_all, mock_get_default_id):
 # -------------------------------------------------------------
 # 3. Тесты циклического переключения toggle_audio_device
 # -------------------------------------------------------------
-@patch("core.deck.actions.audio_device_switcher.switch_default_device")
-@patch("core.deck.actions.audio_device_switcher.get_playback_devices")
+@patch("modules.audio.platform.device_switcher.switch_default_device")
+@patch("modules.audio.platform.device_switcher.get_playback_devices")
 def test_toggle_audio_device_cycles_between_targets(mock_get_devices, mock_switch):
     """Тест циклического переключения между списком ключевых слов target."""
     dev_head = AudioDeviceInfo(id="{0.0.0.00000000}.{head}", name="Headset G435", is_default=True)
@@ -137,7 +137,7 @@ def test_audio_manager_playback_device_switching():
     """Тест вызова смены устройства через AudioManager и эмиссии сигналов EventBus."""
     mgr = AudioManager()
 
-    with patch("core.deck.actions.audio_device_switcher.switch_default_device", return_value=True) as mock_switch:
+    with patch("modules.audio.platform.device_switcher.switch_default_device", return_value=True) as mock_switch:
         with patch.object(mgr, "get_master_device_name", return_value="Наушники Sennheiser"):
             with patch.object(mgr, "get_master_volume", return_value=0.75):
                 with patch.object(mgr, "is_master_muted", return_value=False):

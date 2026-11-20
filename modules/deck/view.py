@@ -19,6 +19,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QWidget
 
 from core.event_bus import bus
+from core.i18n import t
 from core.ui_base import TouchModuleView
 from modules.deck.action_dispatcher import DeckActionDispatcher
 from modules.deck.sound_engine import DeckSoundEngine
@@ -478,7 +479,7 @@ class DeckView(TouchModuleView):
     def _on_mic_mute_changed(self, is_muted: bool) -> None:
         """Обновление тайлов с источником статуса 'mic_mute'."""
         icon = "🔇" if is_muted else "🎙"
-        status_text = "Выключен" if is_muted else "Включен"
+        status_text = t("deck.status.mic_muted") if is_muted else t("deck.status.mic_unmuted")
 
         for btn in self.grid.get_buttons().values():
             if btn.button_config.status_source == "mic_mute":
@@ -486,10 +487,16 @@ class DeckView(TouchModuleView):
 
     def _on_dimmer_opacity_changed(self, opacity: float) -> None:
         """Обновление тайлов с источником статуса 'dimmer'."""
-        status_text = f"{int(opacity * 100)}%" if opacity > 0.0 else "Выкл"
+        status_text = f"{int(opacity * 100)}%" if opacity > 0.0 else t("common.state.off")
         for btn in self.grid.get_buttons().values():
             if btn.button_config.status_source == "dimmer":
                 btn.update_status(status_text=status_text)
+
+    def retranslate_ui(self) -> None:
+        """Обновление локализованных надписей DeckView и дочерних панелей."""
+        if hasattr(self, "interactive_panel"):
+            self.interactive_panel.retranslate_ui()
+        self._sync_live_tiles()
 
     # ---------------------------------------------------------
     # Жизненный цикл и гарантированное освобождение ресурсов

@@ -6,7 +6,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPixmap
 from PySide6.QtWidgets import QApplication
 
-from core.telemetry_history import RingBuffer
+from modules.telemetry.history import RingBuffer
 from ui.widgets.sparkline import SparklineWidget
 
 

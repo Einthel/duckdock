@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 
 from core.event_bus import bus
 from core.focus_guardian import FocusGuardian
+from core.i18n import I18nManager, t
 from core.mouse_barrier import MouseBarrier
 from core.touch_filter import TouchCursorFilter
 from core.window_manager import ProcessWatcher, WindowManager
@@ -52,6 +53,7 @@ class MainWindow(QMainWindow):
     def __init__(self, config: AppConfig):
         super().__init__()
         self.config = config
+        I18nManager().set_language(self.config.language, emit_signal=False)
         self.mouse_barrier = MouseBarrier(
             primary_rect=(0, 0, 1920, 1080)
         )
@@ -114,6 +116,7 @@ class MainWindow(QMainWindow):
 
     def _init_window_flags(self):
         self.setObjectName("duckdock_root")
+        self.setWindowTitle(f"DuckDock - {t('common.app_subtitle')}")
         self.setWindowFlags(
             Qt.Window
             | Qt.FramelessWindowHint
@@ -174,10 +177,14 @@ class MainWindow(QMainWindow):
         self.dimmer.setGeometry(0, 0, self.config.display.width, self.config.display.height)
         self.dimmer.raise_()
 
+        # 4. Первичная инициализация локализации для сайдбара
+        self.sidebar.retranslate_ui()
+
     def _connect_signals(self):
         bus.tab_changed.connect(self._on_tab_changed)
         bus.dimmer_toggle_requested.connect(self._on_dimmer_toggle)
         bus.input_lock_toggled.connect(self._on_input_lock_toggled)
+        bus.language_changed.connect(self._on_language_changed)
 
     def switch_tab_by_offset(self, offset: int):
         """Переключение активной вкладки со смещением (+1: следующая, -1: предыдущая)."""
@@ -251,6 +258,9 @@ class MainWindow(QMainWindow):
 
     def _on_input_lock_toggled(self, locked: bool):
         self.focus_guardian.input_lock_mode = locked
+
+    def _on_language_changed(self, lang_code: str):
+        self.setWindowTitle(f"DuckDock - {t('common.app_subtitle')}")
 
     def _on_barrier_tick(self):
         """Периодическое обновление барьера мыши и трекера координат."""
@@ -400,6 +410,10 @@ class MainWindow(QMainWindow):
                 pass
             try:
                 bus.input_lock_toggled.disconnect(self._on_input_lock_toggled)
+            except Exception:
+                pass
+            try:
+                bus.language_changed.disconnect(self._on_language_changed)
             except Exception:
                 pass
 

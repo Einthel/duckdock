@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2] - 2026-11-20
+
+### Added
+- **Подсистема интернационализации (I18n) и сквозная локализация интерфейса (Фазы 1–4)**:
+  - **Ядро `core/i18n` (Foundation Layer)**:
+    - `I18nManager` (Singleton) с потокобезопасным кэшем, развертыванием словарей в плоскую структуру dot-notation ($O(1)$ поиск) и предзагрузкой `locales/ru.json` и `locales/en.json`.
+    - Безопасный форматтер `SafeFormatter` (отсутствие `KeyError`/`IndexError` при неполных аргументах).
+    - Симметричный каскад fallback: активный язык $\to$ резервный язык $\to$ raw_key с `logger.warning`.
+    - Плюрализация `tp()`: поддержка 3 грамматических форм в русском (`one`, `few`, `many`) и 2 форм в английском (`one`, `other`).
+    - Публичный интерфейс ядра: экспорт функций `t()`, `tp()`, `resolve_plural_category()`.
+  - **Реактивность UI-каркаса (`core.ui_base.TouchModuleView`)**:
+    - Базовый класс экранов автоматически подписывается на сигнал `bus.language_changed`.
+    - Виртуальный метод `retranslate_ui()` вызывается при смене языка и в конце сборки виджетов.
+    - Гарантированная отписка в `cleanup()` без утечек памяти C++ объектов.
+  - **Сквозная миграция всех модулей и экранов интерфейса**:
+    - **Audio (`modules/audio`)**: локализация `AudioMixerView` и `SessionCardWidget`, плюрализация количества активных сессий процесса (`audio.sessions.count`), переключение аудиовыхода и Mute.
+    - **Deck (`modules/deck`)**: локализация фоновых нотификаций `DeckActionDispatcher`, трех секций интерактивной панели `DeckInteractivePanel` (медиа-пульт, часы/календарь с двуязычным форматированием даты, тикер), `header_bar` и реактивных динамических тайлов (микрофон, аудиовыход, ночной режим).
+    - **Telemetry (`modules/telemetry`)**: локализация NOC-дашборда `SensorsView` (шапка, Hero-карточки CPU/GPU, сетка чипов RAM/Net/SSD/Chassis, тултипы спарклайнов) с сохранением непрерывной работы `TelemetryWorker` без перезапуска потока.
+    - **Media (`modules/media`)**: локализация навигации `YouTubeView` и элементов управления fallback-плеера.
+    - **Showcase (`ui/showcase_view.py`)**: рефакторинг с переходом на наследование от `TouchModuleView`, регистрация карточек диагностики, полная локализация параметров и интеграция сенсорной карточки выбора языка интерфейса (`_create_language_card()`) с кнопками `[ 🇷🇺 Русский ]` и `[ 🇬🇧 English ]`, подсветкой активного состояния, сохранением в `config.json` и мгновенным хот-релоадом локали на вкладке шестеренки `⚙`.
+    - **Settings (`modules/settings`)**: кнопки мгновенного переключения языка (`RU` / `EN`), атомарное сохранение в `config.json` и эмиссия сигнала `bus.language_changed`.
+    - **Sidebar & Shell (`ui/sidebar.py`, `ui/widgets/mini_media_bar.py`)**: локализация тултипов вкладок сайдбара и кнопки блокировки экрана.
+  - **Автоматизированная верификация и тестирование (227 тестов, 100% PASS)**:
+    - Модульные тесты `tests/unit/test_i18n.py` (9 тестов).
+    - Модульные тесты `tests/unit/test_audio_i18n.py` (3 теста), `tests/unit/test_deck_i18n.py` (3 теста), `tests/unit/test_telemetry_i18n.py` (1 тест), `tests/unit/test_media_i18n.py` (1 тест), `tests/unit/test_showcase_i18n.py` (2 теста), `tests/unit/test_settings_language.py` (7 тестов), `tests/unit/test_i18n_ui.py` (6 тестов), `tests/unit/test_locale_validation.py` (5 тестов).
+    - Тест-линтер чистоты строк `tests/unit/test_i18n_completeness.py` (3 теста: 100% паритет ключей, консистентность плейсхолдеров интерполяции, AST-сканер отсутствия сырого кириллического хардкода в UI коде).
+    - Сквозной интеграционный тест `tests/integration/test_i18n_hot_reload.py` (проверка полной смены языков RU -> EN -> RU во всех вкладках без перезапуска).
+    - Общий тест-сьют увеличен со 181 до **227 тестов (100% PASS)**.
+
 ## [0.4.1] - 2026-11-19
 
 ### Added
