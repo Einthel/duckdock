@@ -14,8 +14,9 @@ def test_window_manager_instantiation():
 @pytest.mark.unit
 def test_find_window_nonexistent_process():
     wm = WindowManager()
-    hwnd = wm.find_window_by_process_name("non_existent_fake_app_12345.exe")
-    assert hwnd is None
+    with patch("psutil.process_iter", return_value=[]):
+        hwnd = wm.find_window_by_process_name("non_existent_fake_app_12345.exe")
+        assert hwnd is None
 
 @pytest.mark.unit
 def test_tile_window_invalid_hwnd():
@@ -39,20 +40,22 @@ def test_window_manager_cache_management():
 @pytest.mark.unit
 def test_process_watcher_initialization():
     wm = WindowManager()
-    watcher = ProcessWatcher(wm, tracked_apps=["happ.exe"], poll_interval_ms=1000)
-    assert watcher.tracked_apps == ["happ.exe"]
-    assert watcher.poll_interval_ms == 1000
+    with patch.object(wm, "find_window_by_process_name", return_value=None):
+        watcher = ProcessWatcher(wm, tracked_apps=["happ.exe"], poll_interval_ms=1000)
+        assert watcher.tracked_apps == ["happ.exe"]
+        assert watcher.poll_interval_ms == 1000
 
-    watcher.add_tracked_app("aida64.exe")
-    assert "aida64.exe" in watcher.tracked_apps
+        watcher.add_tracked_app("aida64.exe")
+        assert "aida64.exe" in watcher.tracked_apps
 
-    watcher.remove_tracked_app("happ.exe")
-    assert "happ.exe" not in watcher.tracked_apps
+        watcher.remove_tracked_app("happ.exe")
+        assert "happ.exe" not in watcher.tracked_apps
 
 @pytest.mark.unit
 def test_process_watcher_scan_discovery_and_loss():
     wm = WindowManager()
-    watcher = ProcessWatcher(wm, tracked_apps=["happ.exe"], poll_interval_ms=1000)
+    with patch.object(wm, "find_window_by_process_name", return_value=None):
+        watcher = ProcessWatcher(wm, tracked_apps=["happ.exe"], poll_interval_ms=1000)
 
     discovered_events = []
     lost_events = []
@@ -70,7 +73,8 @@ def test_process_watcher_scan_discovery_and_loss():
 
     # 2. Симулируем потерю окна (процесс закрыт)
     wm._cached_hwnds["happ.exe"] = 54321
-    with patch.object(wm, "is_window_valid", return_value=False):
+    with patch.object(wm, "is_window_valid", return_value=False), \
+         patch.object(wm, "find_window_by_process_name", return_value=None):
         watcher.scan()
         assert len(lost_events) == 1
         assert lost_events[0] == ("happ.exe", 54321)

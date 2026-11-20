@@ -7,8 +7,8 @@ from PySide6.QtCore import QCoreApplication
 import pytest
 
 from core.event_bus import bus
-from core.telemetry_model import TelemetrySnapshot
-from core.telemetry_worker import TelemetryWorker, measure_network_latency
+from modules.telemetry.models import TelemetrySnapshot
+from modules.telemetry.worker import TelemetryWorker, measure_network_latency
 
 
 def test_measure_network_latency():
@@ -48,8 +48,8 @@ def test_telemetry_worker_lifecycle(qapp):
         gpu_temp=60.0,
     )
 
-    with patch("core.telemetry_worker.HardwareMonitor") as MockHM, \
-         patch("core.telemetry_worker.measure_network_latency", return_value=12.5):
+    with patch("modules.telemetry.worker.HardwareMonitor") as MockHM, \
+         patch("modules.telemetry.worker.measure_network_latency", return_value=12.5):
         mock_instance = MagicMock()
         mock_instance.sample.return_value = fake_snap
         MockHM.return_value = mock_instance

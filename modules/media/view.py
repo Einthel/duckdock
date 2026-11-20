@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QUrl, QTimer
 
 from core.event_bus import bus
+from core.i18n import t
 from core.ui_base import TouchModuleView
 from modules.media.web_profile import WebProfileManager
 from modules.media.interceptor import DESKTOP_CHROME_UA, FIREFOX_UA
@@ -143,46 +144,46 @@ class YouTubeView(TouchModuleView):
         quick_bar = QHBoxLayout()
         quick_bar.setSpacing(8)
 
-        lbl_header = QLabel("▶ MEDIA & YOUTUBE")
-        lbl_header.setStyleSheet("color: #f1f5f9; font-size: 14px; font-weight: bold;")
-        quick_bar.addWidget(lbl_header)
+        self.lbl_header = QLabel(t("media.header.title"))
+        self.lbl_header.setStyleSheet("color: #f1f5f9; font-size: 14px; font-weight: bold;")
+        quick_bar.addWidget(self.lbl_header)
         quick_bar.addStretch()
 
-        btn_ytm = QPushButton("YouTube Music")
-        btn_ytm.setProperty("class", "quick-btn")
-        btn_ytm.setFocusPolicy(Qt.NoFocus)
-        btn_ytm.clicked.connect(lambda: self.navigate("https://music.youtube.com"))
-        quick_bar.addWidget(btn_ytm)
+        self.btn_ytm = QPushButton(t("media.nav.youtube_music"))
+        self.btn_ytm.setProperty("class", "quick-btn")
+        self.btn_ytm.setFocusPolicy(Qt.NoFocus)
+        self.btn_ytm.clicked.connect(lambda: self.navigate("https://music.youtube.com"))
+        quick_bar.addWidget(self.btn_ytm)
 
-        btn_yt = QPushButton("YouTube")
-        btn_yt.setProperty("class", "quick-btn")
-        btn_yt.setFocusPolicy(Qt.NoFocus)
-        btn_yt.clicked.connect(lambda: self.navigate("https://www.youtube.com"))
-        quick_bar.addWidget(btn_yt)
+        self.btn_yt = QPushButton(t("media.nav.youtube"))
+        self.btn_yt.setProperty("class", "quick-btn")
+        self.btn_yt.setFocusPolicy(Qt.NoFocus)
+        self.btn_yt.clicked.connect(lambda: self.navigate("https://www.youtube.com"))
+        quick_bar.addWidget(self.btn_yt)
 
-        btn_twitch = QPushButton("Twitch")
-        btn_twitch.setProperty("class", "quick-btn")
-        btn_twitch.setFocusPolicy(Qt.NoFocus)
-        btn_twitch.clicked.connect(lambda: self.navigate("https://www.twitch.tv"))
-        quick_bar.addWidget(btn_twitch)
+        self.btn_twitch = QPushButton(t("media.nav.twitch"))
+        self.btn_twitch.setProperty("class", "quick-btn")
+        self.btn_twitch.setFocusPolicy(Qt.NoFocus)
+        self.btn_twitch.clicked.connect(lambda: self.navigate("https://www.twitch.tv"))
+        quick_bar.addWidget(self.btn_twitch)
 
-        btn_login = QPushButton("🔑 Войти")
-        btn_login.setProperty("class", "quick-btn")
-        btn_login.setFocusPolicy(Qt.NoFocus)
-        btn_login.setToolTip("Авторизация в аккаунте Google / YouTube Music")
-        btn_login.clicked.connect(
+        self.btn_login = QPushButton(t("media.nav.login"))
+        self.btn_login.setProperty("class", "quick-btn")
+        self.btn_login.setFocusPolicy(Qt.NoFocus)
+        self.btn_login.setToolTip(t("media.nav.login_tooltip"))
+        self.btn_login.clicked.connect(
             lambda: self.navigate(
                 "https://accounts.google.com/AccountChooser?continue=https%3A%2F%2Fmusic.youtube.com"
             )
         )
-        quick_bar.addWidget(btn_login)
+        quick_bar.addWidget(self.btn_login)
 
-        btn_reload = QPushButton("🔄")
-        btn_reload.setProperty("class", "reload-btn")
-        btn_reload.setFocusPolicy(Qt.NoFocus)
-        btn_reload.setToolTip("Перезагрузить страницу")
-        btn_reload.clicked.connect(self.reload_page)
-        quick_bar.addWidget(btn_reload)
+        self.btn_reload = QPushButton("🔄")
+        self.btn_reload.setProperty("class", "reload-btn")
+        self.btn_reload.setFocusPolicy(Qt.NoFocus)
+        self.btn_reload.setToolTip(t("media.player.reload_tooltip"))
+        self.btn_reload.clicked.connect(self.reload_page)
+        quick_bar.addWidget(self.btn_reload)
 
         layout.addLayout(quick_bar)
 
@@ -203,6 +204,8 @@ class YouTubeView(TouchModuleView):
         else:
             self._create_fallback_player(layout)
 
+        self.retranslate_ui()
+
     def _create_fallback_player(self, parent_layout: QVBoxLayout):
         """Fallback плеер для окружений без установленного QtWebEngine."""
         card = QFrame()
@@ -210,13 +213,13 @@ class YouTubeView(TouchModuleView):
         card_layout = QVBoxLayout(card)
         card_layout.setSpacing(16)
 
-        self.lbl_fallback_title = QLabel("System Media Player (iGPU Low-Power Mode)")
+        self.lbl_fallback_title = QLabel(t("media.fallback.title"))
         self.lbl_fallback_title.setStyleSheet("color: #e2e8f0; font-size: 18px; font-weight: bold;")
         card_layout.addWidget(self.lbl_fallback_title)
 
-        sub_info = QLabel("Оптимизировано для сенсорного экрана 944x600. Stealth Focus активен.")
-        sub_info.setStyleSheet("color: #64748b; font-size: 13px;")
-        card_layout.addWidget(sub_info)
+        self.lbl_fallback_subtitle = QLabel(t("media.fallback.subtitle"))
+        self.lbl_fallback_subtitle.setStyleSheet("color: #64748b; font-size: 13px;")
+        card_layout.addWidget(self.lbl_fallback_subtitle)
 
         card_layout.addStretch()
 
@@ -224,32 +227,35 @@ class YouTubeView(TouchModuleView):
         ctrl_layout = QHBoxLayout()
         ctrl_layout.addStretch()
 
-        btn_prev = QPushButton("⏮")
-        btn_prev.setProperty("class", "media-ctrl-btn")
-        btn_prev.setFocusPolicy(Qt.NoFocus)
-        btn_prev.clicked.connect(lambda: self._handle_media_action("prev"))
-        ctrl_layout.addWidget(btn_prev)
+        self.btn_prev = QPushButton("⏮")
+        self.btn_prev.setProperty("class", "media-ctrl-btn")
+        self.btn_prev.setFocusPolicy(Qt.NoFocus)
+        self.btn_prev.setToolTip(t("media.player.prev"))
+        self.btn_prev.clicked.connect(lambda: self._handle_media_action("prev"))
+        ctrl_layout.addWidget(self.btn_prev)
 
         self.btn_play_fallback = QPushButton("▶")
         self.btn_play_fallback.setProperty("class", "media-ctrl-btn")
         self.btn_play_fallback.setFocusPolicy(Qt.NoFocus)
+        self.btn_play_fallback.setToolTip(t("media.player.play"))
         self.btn_play_fallback.clicked.connect(lambda: self._handle_media_action("toggle_play"))
         ctrl_layout.addWidget(self.btn_play_fallback)
 
-        btn_next = QPushButton("⏭")
-        btn_next.setProperty("class", "media-ctrl-btn")
-        btn_next.setFocusPolicy(Qt.NoFocus)
-        btn_next.clicked.connect(lambda: self._handle_media_action("next"))
-        ctrl_layout.addWidget(btn_next)
+        self.btn_next = QPushButton("⏭")
+        self.btn_next.setProperty("class", "media-ctrl-btn")
+        self.btn_next.setFocusPolicy(Qt.NoFocus)
+        self.btn_next.setToolTip(t("media.player.next"))
+        self.btn_next.clicked.connect(lambda: self._handle_media_action("next"))
+        ctrl_layout.addWidget(self.btn_next)
 
         ctrl_layout.addStretch()
         card_layout.addLayout(ctrl_layout)
 
         # Слайдер громкости
         vol_layout = QHBoxLayout()
-        lbl_vol = QLabel("Громкость:")
-        lbl_vol.setStyleSheet("color: #94a3b8; font-size: 13px;")
-        vol_layout.addWidget(lbl_vol)
+        self.lbl_vol = QLabel(t("media.fallback.volume_label"))
+        self.lbl_vol.setStyleSheet("color: #94a3b8; font-size: 13px;")
+        vol_layout.addWidget(self.lbl_vol)
 
         vol_slider = QSlider(Qt.Horizontal)
         vol_slider.setRange(0, 100)
@@ -259,6 +265,35 @@ class YouTubeView(TouchModuleView):
 
         card_layout.addLayout(vol_layout)
         parent_layout.addWidget(card)
+
+    def retranslate_ui(self) -> None:
+        """Обновление всех текстовых элементов интерфейса при смене языка."""
+        if hasattr(self, "lbl_header"):
+            self.lbl_header.setText(t("media.header.title"))
+        if hasattr(self, "btn_ytm"):
+            self.btn_ytm.setText(t("media.nav.youtube_music"))
+        if hasattr(self, "btn_yt"):
+            self.btn_yt.setText(t("media.nav.youtube"))
+        if hasattr(self, "btn_twitch"):
+            self.btn_twitch.setText(t("media.nav.twitch"))
+        if hasattr(self, "btn_login"):
+            self.btn_login.setText(t("media.nav.login"))
+            self.btn_login.setToolTip(t("media.nav.login_tooltip"))
+        if hasattr(self, "btn_reload"):
+            self.btn_reload.setToolTip(t("media.player.reload_tooltip"))
+        if hasattr(self, "lbl_fallback_title"):
+            self.lbl_fallback_title.setText(t("media.fallback.title"))
+        if hasattr(self, "lbl_fallback_subtitle"):
+            self.lbl_fallback_subtitle.setText(t("media.fallback.subtitle"))
+        if hasattr(self, "lbl_vol"):
+            self.lbl_vol.setText(t("media.fallback.volume_label"))
+        if hasattr(self, "btn_prev"):
+            self.btn_prev.setToolTip(t("media.player.prev"))
+        if hasattr(self, "btn_next"):
+            self.btn_next.setToolTip(t("media.player.next"))
+        if hasattr(self, "btn_play_fallback"):
+            is_playing = self._current_media_state.get("is_playing", False)
+            self.btn_play_fallback.setToolTip(t("media.player.pause") if is_playing else t("media.player.play"))
 
     def navigate(self, url: str):
         """Переход по URL."""

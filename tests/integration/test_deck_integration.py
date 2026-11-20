@@ -14,14 +14,14 @@ import pytest
 from PySide6.QtCore import Qt, QThreadPool
 from PySide6.QtWidgets import QApplication
 
-from core.audio_manager import AudioDeviceInfo, AudioSessionInfo
 from core.config import AppConfig, load_config
-from core.deck.action_dispatcher import ActionRunnable, DeckActionDispatcher, WorkerSignals
-from core.deck.models import DeckActionConfig
 from core.event_bus import bus
+from modules.audio.models import AudioDeviceInfo, AudioSessionInfo
+from modules.audio.view import AudioMixerView
+from modules.deck.action_dispatcher import ActionRunnable, DeckActionDispatcher, WorkerSignals
+from modules.deck.models import DeckActionConfig
+from modules.deck.view import DeckView
 from ui.main_window import MainWindow
-from ui.modules.audio_view import AudioMixerView
-from ui.modules.deck_view import DeckView
 
 
 @pytest.mark.integration
@@ -34,7 +34,8 @@ def test_main_window_deck_view_tab_initialization(qapp):
     - При закрытии окна вызывается cleanup() страницы колоды.
     """
     config = AppConfig()
-    win = MainWindow(config)
+    with patch("core.window_manager.WindowManager.find_window_by_process_name", return_value=None):
+        win = MainWindow(config)
 
     try:
         # 1. Проверка наличия и типа страницы колоды
@@ -84,7 +85,7 @@ def test_audio_view_device_switch_button_and_eventbus_sync(qapp):
     mock_audio_mgr.is_master_muted.return_value = False
     mock_audio_mgr.get_sessions.return_value = []
 
-    with patch("ui.modules.audio_view.AudioManager", return_value=mock_audio_mgr):
+    with patch("modules.audio.view.AudioManager", return_value=mock_audio_mgr):
         view = AudioMixerView()
         try:
             # 1. Проверка наличия кнопки и ее базовых свойств

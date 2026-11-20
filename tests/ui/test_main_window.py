@@ -10,7 +10,8 @@ from ui.main_window import MainWindow
 @pytest.mark.unit
 def test_main_window_initialization(qapp):
     config = AppConfig()
-    win = MainWindow(config)
+    with patch("core.window_manager.WindowManager.find_window_by_process_name", return_value=None):
+        win = MainWindow(config)
     assert win is not None
     assert win.focus_guardian is not None
     assert win.mouse_barrier is not None
@@ -21,7 +22,8 @@ def test_main_window_initialization(qapp):
 @pytest.mark.unit
 def test_main_window_reposition_to_subscreen(qapp):
     config = AppConfig()
-    win = MainWindow(config)
+    with patch("core.window_manager.WindowManager.find_window_by_process_name", return_value=None):
+        win = MainWindow(config)
     win.reposition_to_subscreen()
     
     # Должен установить ширину окна равной ширине экрана
@@ -37,7 +39,8 @@ def test_main_window_tab_switching_external_app(qapp):
             TrackedAppConfig(name="happ", process_name="happ.exe", tab_index=2, auto_tile=True)
         ]
     )
-    win = MainWindow(config)
+    with patch("core.window_manager.WindowManager.find_window_by_process_name", return_value=None):
+        win = MainWindow(config)
 
     with patch.object(win, "_tile_and_show_app") as mock_show, \
          patch.object(win, "_hide_app") as mock_hide:

@@ -4,7 +4,7 @@
 """
 import sys
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Literal, Tuple
 from pydantic import BaseModel, Field
 
 
@@ -49,6 +49,10 @@ class TrackedAppConfig(BaseModel):
 
 
 class AppConfig(BaseModel):
+    language: Literal["ru", "en"] = Field(
+        default="ru",
+        description="Язык интерфейса ('ru' | 'en')"
+    )
     display: DisplayConfig = Field(default_factory=DisplayConfig)
     layout: LayoutConfig = Field(default_factory=LayoutConfig)
     stealth: StealthConfig = Field(default_factory=StealthConfig)
@@ -56,32 +60,57 @@ class AppConfig(BaseModel):
     tracked_apps: List[TrackedAppConfig] = Field(default_factory=list)
 
 
+def _resolve_config_path(config_path: Path | str | None = None) -> Path:
+    """Разрешить путь к файлу конфигурации с учетом скомпилированного режима."""
+    if config_path is not None:
+        return Path(config_path)
+    if getattr(sys, "frozen", False):
+        exe_dir = Path(sys.executable).resolve().parent
+        if (exe_dir / "config.json").exists():
+            return exe_dir / "config.json"
+        elif hasattr(sys, "_MEIPASS") and (Path(sys._MEIPASS) / "config.json").exists():
+            return Path(sys._MEIPASS) / "config.json"
+        return Path(__file__).resolve().parents[2] / "config.json"
+    return Path(__file__).resolve().parents[2] / "config.json"
+
+
 def load_config(config_path: Path | str | None = None) -> AppConfig:
     """Загрузить конфигурацию из файла config.json или вернуть дефолтную."""
-    if config_path is None:
-        if getattr(sys, "frozen", False):
-            exe_dir = Path(sys.executable).resolve().parent
-            if (exe_dir / "config.json").exists():
-                config_path = exe_dir / "config.json"
-            elif hasattr(sys, "_MEIPASS") and (Path(sys._MEIPASS) / "config.json").exists():
-                config_path = Path(sys._MEIPASS) / "config.json"
-            else:
-                config_path = Path(__file__).resolve().parents[2] / "config.json"
-        else:
-            config_path = Path(__file__).resolve().parents[2] / "config.json"
-    else:
-        config_path = Path(config_path)
+    resolved_path = _resolve_config_path(config_path)
 
-    if not config_path.exists():
+    if not resolved_path.exists():
         return AppConfig()
 
     try:
-        with open(config_path, "r", encoding="utf-8") as f:
+        with open(resolved_path, "r", encoding="utf-8") as f:
             content = f.read()
             return AppConfig.model_validate_json(content)
     except Exception as e:
-        print(f"[!] Ошибка загрузки {config_path}: {e}. Используются значения по умолчанию.")
+        print(f"[!] Ошибка загрузки {resolved_path}: {e}. Используются значения по умолчанию.")
         return AppConfig()
+
+
+def save_config(config: AppConfig, config_path: Path | str | None = None) -> bool:
+    """
+    Безопасное атомарное сохранение конфигурации в JSON-файл.
+    Записывает во временный файл .tmp и атомарно заменяет целевой файл.
+    """
+    target_path = _resolve_config_path(config_path)
+    tmp_path = target_path.parent / f"{target_path.name}.tmp"
+    try:
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        json_data = config.model_dump_json(indent=2)
+        tmp_path.write_text(json_data, encoding="utf-8")
+        tmp_path.replace(target_path)
+        return True
+    except Exception as e:
+        print(f"[!] Ошибка сохранения {target_path}: {e}")
+        try:
+            if tmp_path.exists():
+                tmp_path.unlink()
+        except OSError:
+            pass
+        return False
 
 
 __all__ = [
@@ -92,4 +121,5 @@ __all__ = [
     "TrackedAppConfig",
     "AppConfig",
     "load_config",
+    "save_config",
 ]

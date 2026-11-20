@@ -4,10 +4,12 @@
 Управление треками ⏮ ⏯ ⏭ и бегущая строка MarqueeLabel.
 Обеспечивает сквозное управление воспроизведением и навигацию к вкладке плеера.
 """
+import warnings
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QPushButton
 
 from core.event_bus import bus
+from core.i18n import t
 from ui.widgets.marquee_label import MarqueeLabel
 
 
@@ -25,17 +27,48 @@ class MiniMediaBar(QFrame):
         self.setFocusPolicy(Qt.NoFocus)
 
         self._is_playing = False
+        self._current_track = ""
         self._init_ui()
 
-        # Подписка на изменение состояния медиаплеера
+        # Подписка на изменение состояния медиаплеера и смену языка
+        self._is_i18n_connected = True
         bus.media_state_changed.connect(self._on_media_state_changed)
+        bus.language_changed.connect(self._on_language_changed)
         self.destroyed.connect(self._on_destroyed)
 
     def _on_destroyed(self, *args):
-        try:
-            bus.media_state_changed.disconnect(self._on_media_state_changed)
-        except Exception:
-            pass
+        self.cleanup()
+
+    def cleanup(self):
+        """Безопасная отписка от шины EventBus."""
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            try:
+                bus.media_state_changed.disconnect(self._on_media_state_changed)
+            except Exception:
+                pass
+            if getattr(self, "_is_i18n_connected", False):
+                self._is_i18n_connected = False
+                try:
+                    bus.language_changed.disconnect(self._on_language_changed)
+                except Exception:
+                    pass
+
+    def _on_language_changed(self, lang_code: str):
+        self.retranslate_ui()
+
+    def retranslate_ui(self):
+        """Локализация подсказок кнопок воспроизведения и статуса плеера."""
+        self.setToolTip(t("sidebar.media.open_player"))
+        self.btn_prev.setToolTip(t("media.player.prev"))
+        self.btn_play.setToolTip(
+            t("media.player.pause") if self._is_playing else t("media.player.play")
+        )
+        self.btn_next.setToolTip(t("media.player.next"))
+
+        default_title = t("sidebar.media.default_title")
+        if not self._current_track:
+            self.lbl_title.set_track_text(default_title)
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
@@ -43,7 +76,8 @@ class MiniMediaBar(QFrame):
         layout.setSpacing(2)
 
         # Название трека бегущей строкой
-        self.lbl_title = MarqueeLabel("YouTube", self)
+        default_title = t("sidebar.media.default_title")
+        self.lbl_title = MarqueeLabel(default_title, self)
         layout.addWidget(self.lbl_title)
 
         # Кнопки ⏮ ⏯ ⏭
@@ -73,17 +107,23 @@ class MiniMediaBar(QFrame):
         btn_layout.addWidget(self.btn_next)
 
         layout.addLayout(btn_layout)
+        self.retranslate_ui()
 
     def _on_media_state_changed(self, state: dict):
         title = state.get("title", "")
         artist = state.get("artist", "")
         is_playing = state.get("is_playing", False)
+        default_title = t("sidebar.media.default_title")
 
-        display_text = f"{title} - {artist}" if artist and title else (title or "YouTube")
+        display_text = f"{title} - {artist}" if artist and title else (title or default_title)
+        self._current_track = f"{title} - {artist}" if artist and title else (title or "")
         self.lbl_title.set_track_text(display_text)
 
         self._is_playing = is_playing
         self.btn_play.setText("⏸" if is_playing else "▶")
+        self.btn_play.setToolTip(
+            t("media.player.pause") if is_playing else t("media.player.play")
+        )
 
     def mousePressEvent(self, event):
         """Быстрый переход на вкладку YouTube по касанию панели мини-бара."""

@@ -7,6 +7,7 @@ from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QWidget
 
 from modules.deck.models import DeckPageConfig
+from core.i18n import t
 
 
 class HeaderBar(QFrame):
@@ -62,9 +63,14 @@ class HeaderBar(QFrame):
         self.btn_reload.setFocusPolicy(Qt.NoFocus)
         self.btn_reload.setFixedSize(36, 36)
         self.btn_reload.setProperty("class", "deck-reload-btn")
-        self.btn_reload.setToolTip("Перезагрузить deck_config.json")
+        self.btn_reload.setToolTip(t("deck.header.reload_tooltip"))
         self.btn_reload.clicked.connect(self.reload_requested.emit)
         layout.addWidget(self.btn_reload, 0, Qt.AlignRight)
+
+    def retranslate_ui(self) -> None:
+        """Обновление тултипов панели."""
+        if hasattr(self, "btn_reload"):
+            self.btn_reload.setToolTip(t("deck.header.reload_tooltip"))
 
     def set_pages(self, pages: List[DeckPageConfig], active_page_id: str) -> None:
         """Формирует кнопки страниц-профилей."""

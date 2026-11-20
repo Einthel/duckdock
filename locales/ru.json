@@ -1,0 +1,359 @@
+{
+  "common": {
+    "app_title": "DuckDock",
+    "app_subtitle": "Сенсорная панель управления",
+    "actions": {
+      "save": "Сохранить",
+      "cancel": "Отмена",
+      "refresh": "Обновить",
+      "reload": "Перезагрузить",
+      "apply": "Применить",
+      "close": "Закрыть"
+    },
+    "status": {
+      "loading": "Загрузка...",
+      "ready": "Готов к работе",
+      "error": "Ошибка",
+      "success": "Успешно",
+      "active": "Активен",
+      "inactive": "Неактивен"
+    },
+    "state": {
+      "enabled": "Включен",
+      "disabled": "Отключен",
+      "on": "Вкл",
+      "off": "Выкл",
+      "active": "Активен",
+      "inactive": "Неактивен"
+    },
+    "units": {
+      "ms": "мс",
+      "px": "px",
+      "percent": "%",
+      "fps": "fps",
+      "w": "W",
+      "celsius": "°C",
+      "rpm": "RPM",
+      "kb_s": "KB/s",
+      "mb_s": "MB/s",
+      "gb": "GB"
+    },
+    "calendar": {
+      "months": [
+        "Янв",
+        "Фев",
+        "Мар",
+        "Апр",
+        "Май",
+        "Июн",
+        "Июл",
+        "Авг",
+        "Сен",
+        "Окт",
+        "Ноя",
+        "Дек"
+      ],
+      "days": [
+        "Пн",
+        "Вт",
+        "Ср",
+        "Чт",
+        "Пт",
+        "Сб",
+        "Вс"
+      ]
+    }
+  },
+  "sidebar": {
+    "tabs": {
+      "media": "YouTube и медиа",
+      "sensors": "Датчики AIDA64",
+      "deck": "DuckDeck (Макро-панель и управление)",
+      "audio": "Аудиомикшер",
+      "showcase": "Диагностика системы",
+      "settings": "Настройки"
+    },
+    "lock": {
+      "stealth_tooltip": "Режим Stealth Focus (нажмите для ввода с клавиатуры)",
+      "interactive_tooltip": "Интерактивный ввод (нажмите для возврата Stealth)",
+      "enabled": "Включен",
+      "disabled": "Отключен"
+    },
+    "media": {
+      "open_player": "Открыть плеер",
+      "default_title": "YouTube"
+    }
+  },
+  "audio": {
+    "header": {
+      "title": "WINDOWS CORE AUDIO MIXER"
+    },
+    "master_volume": "Общая громкость",
+    "master": {
+      "section_title": "ОБЩАЯ ГРОМКОСТЬ (MASTER VOLUME)",
+      "title": "Общая громкость",
+      "mute_btn": "ЗВУК",
+      "mute_active": "MUTE",
+      "mute_inactive": "ЗВУК"
+    },
+    "sessions": {
+      "section_title": "ПРИЛОЖЕНИЯ И ПРОЦЕССЫ",
+      "system_sounds": "Системные звуки",
+      "output_empty": "Нет активных аудиосессий",
+      "count": {
+        "one": "{count} активный процесс",
+        "few": "{count} активных процесса",
+        "many": "{count} активных процессов"
+      }
+    },
+    "devices_count": {
+      "one": "{count} активное устройство",
+      "few": "{count} активных устройства",
+      "many": "{count} активных устройств"
+    },
+    "device": {
+      "default_output": "Аудиовыход",
+      "headphones": "Наушники",
+      "speakers": "Динамики",
+      "switch_btn": "Переключить вывод",
+      "mute": "Заглушить",
+      "unmute": "Включить звук"
+    },
+    "actions": {
+      "refresh": "🔄 Обновить"
+    }
+  },
+  "deck": {
+    "header": {
+      "reload_tooltip": "Перезагрузить deck_config.json",
+      "status_ready": "Готов к работе"
+    },
+    "status": {
+      "mic_muted": "Выключен",
+      "mic_unmuted": "Включен"
+    },
+    "grid": {
+      "page_indicator": "Страница {current} из {total}"
+    },
+    "actions": {
+      "hotkey": "Хоткей",
+      "hotkey_info": "Хоткей: {keys}"
+    },
+    "touchbar": {
+      "clock": "Часы",
+      "sensors": "Датчики"
+    },
+    "interactive": {
+      "media_waiting": "Ожидание медиа...",
+      "media_default": "YouTube Music",
+      "ready": "Готов к работе",
+      "settings_in_dev": "Настройки Deck (в разработке v0.5.0)"
+    },
+    "notify": {
+      "hotkey_success": "Хоткей {keys}",
+      "hotkey_error": "Ошибка симуляции хоткея",
+      "mic_muted": "Микрофон выключен",
+      "mic_unmuted": "Микрофон включен",
+      "audio_muted": "Звук выключен",
+      "audio_unmuted": "Звук включен",
+      "audio_switched": "Аудио: {name}",
+      "audio_switch_error": "Ошибка переключения аудио",
+      "device_set": "Устройство установлено",
+      "device_set_error": "Ошибка переключения",
+      "pc_locked": "ПК заблокирован",
+      "pc_lock_error": "Ошибка блокировки: {error}",
+      "dimmer_toggled": "Ночной режим",
+      "dimmer_error": "Ошибка диммера: {error}",
+      "page_navigated": "Переход на страницу: {page}",
+      "unknown_cmd": "Неизвестная команда: {cmd}",
+      "unsupported_action": "Неподдерживаемый тип действия: {action}",
+      "generic_error": "Ошибка: {error}"
+    },
+    "feedback": {
+      "switched": "Переключено"
+    }
+  },
+  "telemetry": {
+    "header": {
+      "title": "NOC ДАШБОРД ТЕЛЕМЕТРИИ",
+      "lhm_active": "● LibreHardwareMonitor (Direct Ring0)",
+      "lhm_fallback": "● Аппаратная телеметрия (OS Fallback)",
+      "uac_admin": "[UAC: АДМИН]",
+      "uac_user": "[UAC: ПОЛЬЗОВАТЕЛЬ]",
+      "uptime": "ВРЕМЯ РАБОТЫ: {uptime}",
+      "stream": "ПОТОК: {interval}мс"
+    },
+    "cards": {
+      "cpu_master": "CPU MASTER",
+      "gpu_master": "GPU MASTER",
+      "ram": "ОЗУ DDR5",
+      "network": "СЕТЬ И ПИНГ",
+      "storage": "ДИСК NVME",
+      "chassis": "КОРПУС И ПЛАТА"
+    },
+    "labels": {
+      "load": "НАГРУЗКА",
+      "clock": "ЧАСТОТА",
+      "cooler": "КУЛЕР",
+      "pump": "ПОМПА",
+      "hotspot": "ГОРЯЧАЯ ТОЧКА: {temp}°C",
+      "vram": "VRAM",
+      "down": "ВХОД",
+      "up": "ИСХОД",
+      "ping": "ПИНГ",
+      "power": "МОЩНОСТЬ",
+      "activity": "АКТИВНОСТЬ",
+      "tctl_tdie": "Tctl / Tdie Ядро",
+      "discrete_gpu": "Дискретная видеокарта",
+      "high_speed_channel": "Высокоскоростной канал",
+      "dns_gateway": "Шлюз DNS 1.1.1.1",
+      "disconnected": "● ОТКЛЮЧЕНО",
+      "pcie_direct_io": "Прямой ввод-вывод PCIe",
+      "optimal_airflow": "● ОБДУВ В НОРМЕ",
+      "super_io_bus": "Аппаратная шина Super I/O",
+      "cpu_fan_active": "Вентилятор CPU активен",
+      "passive_cooling": "Пассивное охлаждение",
+      "fans_active": "Вентиляторы шасси активны",
+      "fan_rpm": "ВЕНТИЛЯТОР: {rpm} ОБ/МИН",
+      "fans_list": "Вентиляторы: {fans} об/мин",
+      "vrm_temp": "VRM: {temp}°C",
+      "fan_rpm_val": "{rpm} об/мин",
+      "pump_rpm_val": "{rpm} об/мин",
+      "power_val": "{power} Вт",
+      "clock_ghz": "{clock} ГГц",
+      "clock_mhz": "{clock} МГц",
+      "vram_gb": "{used} / {total} ГБ",
+      "ram_gb": "{used} / {total} ГБ",
+      "speed_kbs": "{speed} КБ/с",
+      "speed_mbs": "{speed} МБ/с",
+      "ping_ms": "● {ping} мс",
+      "uptime_days": "{days}д",
+      "uptime_hours": "{hours}ч",
+      "uptime_minutes": "{minutes}м",
+      "uptime_seconds": "{seconds}с",
+      "unit_w": "Вт",
+      "unit_rpm": "об/мин",
+      "unit_ghz": "ГГц",
+      "unit_mhz": "МГц",
+      "unit_gb": "ГБ"
+    },
+    "tooltips": {
+      "sparkline": "История за 60 секунд"
+    }
+  },
+  "media": {
+    "header": {
+      "title": "▶ MEDIA & YOUTUBE"
+    },
+    "nav": {
+      "youtube_music": "YouTube Music",
+      "youtube": "YouTube",
+      "twitch": "Twitch",
+      "login": "🔑 Войти",
+      "login_tooltip": "Авторизация в аккаунте Google / YouTube Music"
+    },
+    "player": {
+      "reload_tooltip": "Перезагрузить страницу",
+      "prev": "Предыдущий трек",
+      "play": "Воспроизведение",
+      "pause": "Пауза",
+      "next": "Следующий трек",
+      "volume": "Громкость"
+    },
+    "fallback": {
+      "title": "Системный медиаплеер (iGPU Low-Power Mode)",
+      "subtitle": "Оптимизировано для сенсорного экрана 944x600. Stealth Focus активен.",
+      "volume_label": "Громкость:"
+    },
+    "status": {
+      "not_playing": "Не воспроизводится",
+      "waiting": "Ожидание медиа..."
+    }
+  },
+  "settings": {
+    "title": "Настройки DuckDock",
+    "subtitle": "Параметры дополнительного сенсорного экрана, диммера и защиты фокуса",
+    "actions": {
+      "reload_json": "Перезагрузить JSON"
+    },
+    "language": {
+      "title": "Язык интерфейса",
+      "description": "Выбор языка отображения UI элементов",
+      "ru": "Русский",
+      "en": "English"
+    },
+    "display": {
+      "title": "Экран и геометрия",
+      "screen_index": "Индекс экрана:",
+      "resolution": "Разрешение:",
+      "target_fps": "Целевой FPS:",
+      "fallback_geometry": "Fallback окно:"
+    },
+    "dimmer": {
+      "title": "Диммер и ночной режим",
+      "default_opacity": "Начальная яркость:",
+      "night_mode_opacity": "Ночной режим:",
+      "step": "Шаг изменения:"
+    },
+    "stealth": {
+      "title": "Защита фокуса (Stealth)",
+      "ws_noactivate": "WS_EX_NOACTIVATE:",
+      "anti_cursor_warp": "Anti-Cursor Warp:",
+      "focus_delay": "Задержка фокуса:",
+      "cursor_delay": "Задержка курсора:"
+    },
+    "layout": {
+      "title": "Макет и элементы",
+      "sidebar_width": "Ширина сайдбара:",
+      "workspace_width": "Рабочая область:",
+      "button_size": "Размер тач-кнопок:",
+      "corner_radius": "Радиус скругления:"
+    }
+  },
+  "showcase": {
+    "title": "⚙ ДИАГНОСТИКА ПОДСИСТЕМ И ИНВАРИАНТОВ DUCKDOCK",
+    "cards": {
+      "display": "ПАРАМЕТРЫ ДИСПЛЕЯ",
+      "stealth": "STEALTH TOUCH GUARDIAN",
+      "tiling": "BORDERLESS TILING (720x600)",
+      "services": "СЕРВИСНЫЕ ФУНКЦИИ (QoL)"
+    },
+    "display": {
+      "resolution": "Разрешение:",
+      "resolution_val": "800 x 600 px (4:3)",
+      "dpi_awareness": "DPI Awareness:",
+      "dpi_val": "Per-Monitor V2 (Active)",
+      "rendering": "Рендеринг:",
+      "rendering_val": "iGPU (AMD Radeon Graphics)"
+    },
+    "stealth": {
+      "ws_noactivate": "WS_EX_NOACTIVATE:",
+      "ws_noactivate_val": "Включен (0x08000000)",
+      "anti_cursor_warp": "Anti-Cursor Warp:",
+      "anti_cursor_warp_val": "Активен (Задержка 25 мс)",
+      "focus_restore": "Primary Focus Restore:",
+      "focus_restore_val": "80 мс"
+    },
+    "tiling": {
+      "tiling_zone": "Зона тайлинга:",
+      "tiling_zone_val": "X: +80px, W: 720, H: 600",
+      "frame_cutting": "Обрезка рамок:",
+      "frame_cutting_val": "WS_CAPTION | WS_THICKFRAME",
+      "target_process": "Целевой процесс:",
+      "target_process_val": "happ.exe (Proxy UI)"
+    },
+    "services": {
+      "dimmer": "Software Dimmer:",
+      "mouse_barrier": "Mouse Barrier:",
+      "mouse_barrier_val": "Alt Key Bypass",
+      "hotplug": "Display Hotplug:",
+      "hotplug_val": "WM_DISPLAYCHANGE Listener"
+    },
+    "dimmer": {
+      "enable_btn": "🌙 Включить ночной режим (Диммер)",
+      "disable_btn": "☀️ Выключить затемнение ({percent}%)",
+      "active_status": "Активен ({percent}%)",
+      "inactive_status": "Выключен (0%)"
+    }
+  }
+}

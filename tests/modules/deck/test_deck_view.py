@@ -16,27 +16,19 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PySide6.QtCore import QPointF, Qt, QTimer
 from PySide6.QtGui import QMouseEvent
-from PySide6.QtWidgets import QApplication
 
-from core.deck.action_dispatcher import DeckActionDispatcher
-from core.deck.models import (
+from core.event_bus import bus
+from core.i18n import I18nManager
+from modules.deck.action_dispatcher import ActionRunnable, DeckActionDispatcher, WorkerSignals
+from modules.deck.models import (
     DeckActionConfig,
     DeckButtonConfig,
     DeckConfigLoader,
     DeckPageConfig,
     DeckRootConfig,
 )
-from core.event_bus import bus
-from ui.modules.deck_view import DeckButtonWidget, DeckGrid, DeckView
-
-
-@pytest.fixture(scope="session")
-def qapp():
-    """Гарантирует существование экземпляра QApplication для тестов UI."""
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication([])
-    return app
+from modules.deck.view import DeckButtonWidget, DeckGrid, DeckView
+from modules.deck.widgets.interactive_panel import DeckInteractivePanel
 
 
 @pytest.fixture
@@ -440,3 +432,105 @@ def test_deck_view_cleanup_eventbus_unsubscription(qapp):
     bus.playback_device_changed.emit("Новое Устройство", "{id}")
     # Проверяем, что флаг подключения сброшен
     assert not view._eventbus_connected
+
+
+# -------------------------------------------------------------
+# 10. Локализация и интернационализация (i18n / retranslate_ui)
+# -------------------------------------------------------------
+def test_deck_action_dispatcher_localized_messages(qapp):
+    """Валидация формирования локализованных сообщений диспетчера действий."""
+    mgr = I18nManager()
+
+    # 1. Hotkey в русском
+    mgr.set_language("ru", emit_signal=False)
+    signals = WorkerSignals()
+    results = []
+    signals.finished.connect(lambda b_id, ok, msg: results.append((ok, msg)))
+
+    action_cfg = DeckActionConfig(action_type="hotkey", params={"keys": ["Ctrl", "Shift", "Esc"]})
+    runnable = ActionRunnable("btn_test", action_cfg, signals)
+
+    with patch("modules.deck.action_dispatcher.send_hotkey", return_value=True):
+        runnable.run()
+
+    assert len(results) == 1
+    assert results[0][0] is True
+    assert results[0][1] == "Хоткей Ctrl+Shift+Esc"
+
+    # 2. Hotkey в английском
+    mgr.set_language("en", emit_signal=False)
+    results.clear()
+    with patch("modules.deck.action_dispatcher.send_hotkey", return_value=True):
+        runnable.run()
+
+    assert len(results) == 1
+    assert results[0][0] is True
+    assert results[0][1] == "Hotkey Ctrl+Shift+Esc"
+
+    # 3. System command (toggle_mic_mute) в EN
+    results.clear()
+    sys_action = DeckActionConfig(action_type="system", params={"command": "toggle_mic_mute"})
+    mock_audio = MagicMock()
+    mock_audio.toggle_mic_mute.return_value = True  # now muted
+    runnable_sys = ActionRunnable("btn_mic", sys_action, signals, audio_manager=mock_audio)
+    runnable_sys.run()
+
+    assert results[0][1] == "Microphone muted"
+
+    # 4. System command в RU
+    mgr.set_language("ru", emit_signal=False)
+    results.clear()
+    mock_audio.toggle_mic_mute.return_value = False  # unmuted
+    runnable_sys.run()
+    assert results[0][1] == "Микрофон включен"
+
+
+def test_deck_interactive_panel_retranslate(qapp):
+    """Проверка обновления текстов секций интерактивной панели при смене языка."""
+    mgr = I18nManager()
+    mgr.set_language("ru", emit_signal=False)
+
+    panel = DeckInteractivePanel()
+    try:
+        # Проверка русских текстов по умолчанию
+        assert panel.left_section.lbl_artist.text() == "Ожидание медиа..."
+        assert panel.right_section.lbl_ticker.text() == "Готов к работе"
+
+        # Переключение на английский
+        mgr.set_language("en")
+        panel.retranslate_ui()
+
+        assert panel.left_section.lbl_artist.text() == "Waiting for media..."
+        assert panel.right_section.lbl_ticker.text() == "Ready"
+
+        # Переключение обратно на русский
+        mgr.set_language("ru")
+        panel.retranslate_ui()
+
+        assert panel.left_section.lbl_artist.text() == "Ожидание медиа..."
+        assert panel.right_section.lbl_ticker.text() == "Готов к работе"
+    finally:
+        mgr.set_language("ru", emit_signal=False)
+        panel.cleanup()
+        panel.deleteLater()
+
+
+def test_deck_view_retranslate_ui(qapp):
+    """Проверка каскадного вызова retranslate_ui в DeckView."""
+    mgr = I18nManager()
+    mgr.set_language("ru", emit_signal=False)
+
+    view = DeckView()
+    try:
+        assert view.interactive_panel.right_section.lbl_ticker.text() == "Готов к работе"
+
+        # Смена языка через шину событий
+        mgr.set_language("en")
+        assert view.interactive_panel.right_section.lbl_ticker.text() == "Ready"
+
+        mgr.set_language("ru")
+        assert view.interactive_panel.right_section.lbl_ticker.text() == "Готов к работе"
+    finally:
+        mgr.set_language("ru", emit_signal=False)
+        view.cleanup()
+        view.deleteLater()

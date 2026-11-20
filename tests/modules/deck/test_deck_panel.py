@@ -95,6 +95,7 @@ def test_swipe_left_recognition_dt_dx_thresholds(qapp):
     ev_mouse = QMouseEvent(
         QEvent.Type.MouseButtonRelease,
         QPointF(130, 100),
+        QPointF(130, 100),
         Qt.MouseButton.LeftButton,
         Qt.MouseButton.NoButton,
         Qt.KeyboardModifier.NoModifier,
@@ -357,6 +358,7 @@ def test_dot_paging_widget_navigation(qapp):
 
     ev_click = QMouseEvent(
         QEvent.Type.MouseButtonRelease,
+        QPointF(dot_1_x, 12),
         QPointF(dot_1_x, 12),
         Qt.MouseButton.LeftButton,
         Qt.MouseButton.NoButton,

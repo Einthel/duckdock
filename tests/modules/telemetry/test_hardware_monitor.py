@@ -4,8 +4,8 @@
 from unittest.mock import MagicMock, PropertyMock, patch
 import pytest
 
-from core.hardware_monitor import HardwareMonitor, is_admin
-from core.telemetry_model import TelemetrySnapshot
+from modules.telemetry.hardware_monitor import HardwareMonitor, is_admin
+from modules.telemetry.models import TelemetrySnapshot
 
 
 def test_is_admin():
@@ -16,17 +16,23 @@ def test_is_admin():
 
 def test_hardware_monitor_lifecycle():
     """Проверка жизненного цикла open / close и контекстного менеджера."""
-    monitor = HardwareMonitor()
-    assert not monitor.is_open
+    mock_computer = MagicMock()
+    mock_computer.Hardware = []
 
-    with monitor:
-        assert monitor.is_open
-        snapshot = monitor.sample(ping_ms=10.0)
-        assert isinstance(snapshot, TelemetrySnapshot)
-        assert snapshot.ping_ms == 10.0
-        assert snapshot.uptime_seconds >= 0
+    with patch("modules.telemetry.hardware_monitor._ComputerClass", return_value=mock_computer):
+        monitor = HardwareMonitor()
+        assert not monitor.is_open
 
-    assert not monitor.is_open
+        with monitor:
+            assert monitor.is_open
+            snapshot = monitor.sample(ping_ms=10.0)
+            assert isinstance(snapshot, TelemetrySnapshot)
+            assert snapshot.ping_ms == 10.0
+            assert snapshot.uptime_seconds >= 0
+
+        assert not monitor.is_open
+        mock_computer.Open.assert_called_once()
+        mock_computer.Close.assert_called_once()
 
 
 def test_hardware_monitor_network_rate_calculation():
@@ -156,7 +162,7 @@ def test_hardware_monitor_mocked_lhm_sensors():
 
 def test_hardware_monitor_update_visitor_execution():
     """Проверка логики IVisitor (UpdateVisitor): вызов Update и рекурсивный обход SubHardware."""
-    from core.hardware_monitor import UpdateVisitor
+    from modules.telemetry.hardware_monitor import UpdateVisitor
 
     visitor = UpdateVisitor()
 
@@ -202,12 +208,12 @@ def test_hardware_monitor_visitor_exception_fallback():
 
 def test_hardware_monitor_fallback_when_not_admin():
     """Проверка поведения при отсутствии прав Администратора (non-admin fallback)."""
-    with patch("core.hardware_monitor.is_admin", return_value=False):
+    with patch("modules.telemetry.hardware_monitor.is_admin", return_value=False):
         monitor = HardwareMonitor()
         assert monitor._is_admin is False
 
         # Имитируем сбой открытия Ring0 драйвера из-за отсутствия UAC
-        with patch("core.hardware_monitor._ComputerClass", side_effect=PermissionError("Ring 0 driver requires UAC")):
+        with patch("modules.telemetry.hardware_monitor._ComputerClass", side_effect=PermissionError("Ring 0 driver requires UAC")):
             with patch.object(HardwareMonitor, "is_available", new_callable=PropertyMock, return_value=True):
                 opened = monitor.open()
                 assert opened is False

@@ -1,13 +1,15 @@
 """
 Unit-тесты для YouTubeView, MiniMediaBar и MarqueeLabel (Спринт 4).
 """
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 from PySide6.QtCore import Qt, QUrl
 
 from core.event_bus import bus
-from ui.sidebar import MiniMediaBar, MarqueeLabel, SidebarDock
-from ui.modules.youtube_view import YouTubeView, HAS_WEBENGINE
+from core.i18n import I18nManager
+from modules.media.view import HAS_WEBENGINE, YouTubeView
+from ui.sidebar import MarqueeLabel, MiniMediaBar, SidebarDock
 
 
 @pytest.mark.unit
@@ -22,7 +24,7 @@ def test_marquee_label_ticker(qapp):
     label.set_track_text("Daft Punk - Around the World")
     assert label._timer.isActive()
     initial_text = label.text()
-    
+
     # Такт анимации сдвигает текст
     label._on_tick()
     assert label.text() != initial_text
@@ -71,8 +73,8 @@ def test_mini_media_bar_stealth_focus_and_actions(qapp):
 @pytest.mark.unit
 def test_mini_media_bar_click_navigates_to_youtube_tab(qapp):
     """Проверка перехода на вкладку YouTube (индекс 0) при тапе по мини-бару."""
+    from PySide6.QtCore import QEvent, QPointF
     from PySide6.QtGui import QMouseEvent
-    from PySide6.QtCore import QPointF, QEvent
 
     bar = MiniMediaBar()
     tabs_switched = []
@@ -81,6 +83,7 @@ def test_mini_media_bar_click_navigates_to_youtube_tab(qapp):
     # Имитация клика мыши/тача по виджету через реальный QMouseEvent
     event = QMouseEvent(
         QEvent.Type.MouseButtonPress,
+        QPointF(5.0, 5.0),
         QPointF(5.0, 5.0),
         Qt.MouseButton.LeftButton,
         Qt.MouseButton.LeftButton,
@@ -132,8 +135,8 @@ def test_youtube_view_initialization(qapp):
     assert media_states[-1]["title"] == "One More Time"
 
     if HAS_WEBENGINE:
+        from core.web_interceptor import DESKTOP_CHROME_UA, FIREFOX_UA
         from core.web_profile import WebProfileManager
-        from core.web_interceptor import FIREFOX_UA, DESKTOP_CHROME_UA
         profile = WebProfileManager.get_instance().get_profile()
 
         # Редирект на Google Accounts -> переключение на Firefox UA
@@ -148,3 +151,53 @@ def test_youtube_view_initialization(qapp):
         assert view.web_view.page().createWindow(0) is view.web_view.page()
 
     view.close()
+
+
+@pytest.mark.unit
+def test_youtube_view_retranslate_ui(qapp):
+    """Проверка смены локализации в заголовках, тултипах и fallback-плеере YouTubeView."""
+    mgr = I18nManager()
+    mgr.set_language("ru", emit_signal=False)
+
+    # Принудительно тестируем fallback-плеер (без WebEngine)
+    with patch("modules.media.view.HAS_WEBENGINE", False):
+        view = YouTubeView()
+        try:
+            # 1. Русский язык
+            assert view.lbl_header.text() == "▶ MEDIA & YOUTUBE"
+            assert view.btn_ytm.text() == "YouTube Music"
+            assert view.btn_login.text() == "🔑 Войти"
+            assert view.btn_login.toolTip() == "Авторизация в аккаунте Google / YouTube Music"
+            assert view.btn_reload.toolTip() == "Перезагрузить страницу"
+
+            # Fallback плеер
+            assert view.lbl_fallback_title.text() == "Системный медиаплеер (iGPU Low-Power Mode)"
+            assert "944x600" in view.lbl_fallback_subtitle.text()
+            assert view.lbl_vol.text() == "Громкость:"
+            assert view.btn_prev.toolTip() == "Предыдущий трек"
+            assert view.btn_next.toolTip() == "Следующий трек"
+            assert view.btn_play_fallback.toolTip() == "Воспроизведение"
+
+            # 2. Горячая смена на английский
+            mgr.set_language("en")
+            # TouchModuleView автоматически вызывает retranslate_ui()
+
+            assert view.btn_login.text() == "🔑 Sign In"
+            assert view.btn_login.toolTip() == "Sign in with Google / YouTube Music account"
+            assert view.btn_reload.toolTip() == "Reload page"
+
+            assert view.lbl_fallback_title.text() == "System Media Player (iGPU Low-Power Mode)"
+            assert "touchscreen" in view.lbl_fallback_subtitle.text()
+            assert view.lbl_vol.text() == "Volume:"
+            assert view.btn_prev.toolTip() == "Previous track"
+            assert view.btn_next.toolTip() == "Next track"
+            assert view.btn_play_fallback.toolTip() == "Play"
+
+            # 3. Возврат на русский
+            mgr.set_language("ru")
+            assert view.btn_login.text() == "🔑 Войти"
+            assert view.lbl_vol.text() == "Громкость:"
+        finally:
+            mgr.set_language("ru", emit_signal=False)
+            view.cleanup()
+            view.deleteLater()

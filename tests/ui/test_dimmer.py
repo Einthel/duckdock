@@ -11,6 +11,15 @@ from ui.main_window import MainWindow
 from ui.showcase_view import ShowcaseView
 
 
+def _wait_for_anim(dimmer: DimmerOverlay, wait_ms: int = 20, max_ms: int = 150):
+    """Ожидает завершения анимации диммера с минимальной задержкой."""
+    QTest.qWait(wait_ms)
+    elapsed = wait_ms
+    while dimmer.is_animating and elapsed < max_ms:
+        QTest.qWait(10)
+        elapsed += 10
+
+
 @pytest.mark.unit
 def test_dimmer_opacity_clamping(qapp):
     dimmer = DimmerOverlay()
@@ -27,21 +36,22 @@ def test_dimmer_opacity_clamping(qapp):
 @pytest.mark.unit
 def test_dimmer_toggle(qapp):
     dimmer = DimmerOverlay()
+    dimmer._anim.setDuration(10)
     assert dimmer.opacity == 0.0
 
-    # Включение затемнения (анимация 200 мс)
+    # Включение затемнения (анимация 10 мс)
     dimmer.toggle(0.50)
     assert dimmer.target_opacity == 0.50
     assert dimmer.is_animating is True
-    QTest.qWait(350)
+    _wait_for_anim(dimmer, 20)
     assert pytest.approx(dimmer.opacity, abs=0.02) == 0.50
     assert dimmer.is_animating is False
 
-    # Выключение затемнения (анимация 200 мс)
+    # Выключение затемнения (анимация 10 мс)
     dimmer.toggle()
     assert dimmer.target_opacity == 0.0
     assert dimmer.is_animating is True
-    QTest.qWait(350)
+    _wait_for_anim(dimmer, 20)
     assert pytest.approx(dimmer.opacity, abs=0.02) == 0.0
     assert dimmer.is_animating is False
 
@@ -73,6 +83,7 @@ def test_dimmer_animation_configuration(qapp):
 def test_dimmer_animation_reversal_mid_flight(qapp):
     """Проверка смены направления анимации на лету без рывков."""
     dimmer = DimmerOverlay()
+    dimmer._anim.setDuration(100)
     assert dimmer.opacity == 0.0
 
     # Запуск включения (цель 0.50)
@@ -80,8 +91,8 @@ def test_dimmer_animation_reversal_mid_flight(qapp):
     assert dimmer.target_opacity == 0.50
     assert dimmer.is_animating is True
 
-    # Ждем 60 мс (промежуточная фаза анимации)
-    QTest.qWait(60)
+    # Ждем 30 мс (промежуточная фаза анимации)
+    QTest.qWait(30)
     mid_opacity = dimmer.opacity
     assert 0.0 < mid_opacity < 0.50
 
@@ -91,7 +102,7 @@ def test_dimmer_animation_reversal_mid_flight(qapp):
     assert dimmer.is_animating is True
 
     # Дожидаемся завершения обратной анимации
-    QTest.qWait(250)
+    _wait_for_anim(dimmer, 20)
     assert pytest.approx(dimmer.opacity, abs=0.02) == 0.0
     assert dimmer.is_animating is False
 
@@ -100,6 +111,7 @@ def test_dimmer_animation_reversal_mid_flight(qapp):
 def test_dimmer_rapid_toggle_calls(qapp):
     """Проверка устойчивости при многократном быстром нажатии (bounce / rapid taps)."""
     dimmer = DimmerOverlay()
+    dimmer._anim.setDuration(10)
 
     # Быстрые последовательные клики
     dimmer.toggle(0.50)
@@ -108,7 +120,7 @@ def test_dimmer_rapid_toggle_calls(qapp):
 
     # После нечетного числа переключений цель должна быть 0.50
     assert dimmer.target_opacity == 0.50
-    QTest.qWait(250)
+    _wait_for_anim(dimmer, 20)
     assert pytest.approx(dimmer.opacity, abs=0.02) == 0.50
     assert dimmer.is_animating is False
 
@@ -117,12 +129,13 @@ def test_dimmer_rapid_toggle_calls(qapp):
 def test_dimmer_set_level_animated_vs_immediate(qapp):
     """Проверка раздельного поведения set_dimmer_level: с анимацией и мгновенно."""
     dimmer = DimmerOverlay()
+    dimmer._anim.setDuration(10)
 
     # С анимацией
     dimmer.set_dimmer_level(0.40, animated=True)
     assert dimmer.target_opacity == 0.40
     assert dimmer.is_animating is True
-    QTest.qWait(250)
+    _wait_for_anim(dimmer, 20)
     assert pytest.approx(dimmer.opacity, abs=0.02) == 0.40
 
     # Мгновенно прерывает и устанавливает уровень
@@ -150,6 +163,7 @@ def test_dimmer_stealth_focus_and_transparency_invariants(qapp):
 def test_dimmer_event_bus_emission_during_animation(qapp):
     """Проверка регулярной эмиссии сигнала dimmer_opacity_changed во время анимации."""
     dimmer = DimmerOverlay()
+    dimmer._anim.setDuration(10)
     emitted_values = []
 
     def on_change(val):
@@ -158,7 +172,7 @@ def test_dimmer_event_bus_emission_during_animation(qapp):
     bus.dimmer_opacity_changed.connect(on_change)
     try:
         dimmer.toggle(0.50)
-        QTest.qWait(250)
+        _wait_for_anim(dimmer, 20)
         assert len(emitted_values) > 1
         assert pytest.approx(emitted_values[-1], abs=0.02) == 0.50
     finally:
@@ -185,25 +199,20 @@ def test_dimmer_paint_event_render(qapp):
 def test_main_window_dimmer_integration(qapp):
     config = AppConfig()
     win = MainWindow(config)
+    win.dimmer._anim.setDuration(10)
     assert hasattr(win, "dimmer")
     assert win.dimmer.opacity == 0.0
 
     # Запрос на переключение диммера через EventBus
     bus.dimmer_toggle_requested.emit()
     assert win.dimmer.target_opacity == config.dimmer.night_mode_opacity
-    for _ in range(20):
-        if not win.dimmer.is_animating:
-            break
-        QTest.qWait(50)
+    _wait_for_anim(win.dimmer, 20)
     assert pytest.approx(win.dimmer.opacity, abs=0.02) == config.dimmer.night_mode_opacity
 
     # Повторный запрос — отключение
     bus.dimmer_toggle_requested.emit()
     assert win.dimmer.target_opacity == 0.0
-    for _ in range(20):
-        if not win.dimmer.is_animating:
-            break
-        QTest.qWait(50)
+    _wait_for_anim(win.dimmer, 20)
     assert pytest.approx(win.dimmer.opacity, abs=0.02) == 0.0
 
     win.close()

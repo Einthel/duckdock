@@ -187,7 +187,7 @@ def test_deck_view_sound_engine_integration(qapp):
     - Ошибка выполнения действия воспроизводит play_error().
     - cleanup() DeckView вызывает cleanup() у DeckSoundEngine.
     """
-    from ui.modules.deck_view import DeckView
+    from modules.deck.view import DeckView
 
     mock_sound_engine = MagicMock(spec=DeckSoundEngine)
     view = DeckView(

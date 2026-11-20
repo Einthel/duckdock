@@ -19,11 +19,13 @@ flowchart TD
 
     subgraph CoreFoundation ["Слой фундамента (core/ - Foundation Layer)"]
         Bus["core.event_bus.bus (Central EventBus)"]
+        I18N["core.i18n.I18nManager (t, tp, plural)"]
         FG["core.focus_guardian.FocusGuardian"]
         WM["core.window_manager.WindowManager & ProcessWatcher"]
         MB["core.mouse_barrier.MouseBarrier"]
         TF["core.touch_filter.TouchCursorFilter (Swipe Engine)"]
         UIB["core.ui_base.TouchModuleView (Qt.NoFocus & cleanup)"]
+        Bus -.->|Signal: language_changed| UIB
     end
 
     subgraph FeatureModules ["Слой функциональных модулей (modules/ - Feature Layer)"]
@@ -130,10 +132,12 @@ flowchart TD
    - Драйвер переключения Windows Core Audio вынесен в `modules/audio/platform/device_switcher.py`.
    - Модель `AudioDeviceInfo` размещена в `modules/audio/models.py`.
    - Диспетчер DuckDeck вызывает переключение через шину событий или внедренный экземпляр (DI).
-4. **Stealth Focus Invariant (`TouchModuleView`):**  
-   Все экраны модулей наследуются от `core.ui_base.TouchModuleView`, где принудительно задается `self.setFocusPolicy(Qt.NoFocus)` и метод `cleanup()`.
+4. **Stealth Focus & Reactive i18n Invariant (`TouchModuleView`):**  
+   Все экраны модулей наследуются от `core.ui_base.TouchModuleView`, где принудительно задается `self.setFocusPolicy(Qt.NoFocus)`, автоматическая подписка на `bus.language_changed`, реализация `retranslate_ui()` и метод `cleanup()`.
 5. **Re-export Shims & Backward Compatibility:**  
    Для сохранения обратной совместимости файлов старых версий настроены легковесные фасады в `core/` и `ui/modules/` с алиасингом `sys.modules`.
+6. **Bilingual & Localization-First (i18n Law):**  
+   Любые новые окна, панели, карточки, виджеты и кнопки обязаны с самого начала создаваться на двух языках (RU/EN) с выносом строк в `locales/*.json` (100% паритет ключей) и запретом хардкода строк в UI коде.
 
 ---
 
@@ -192,20 +196,28 @@ flowchart TD
 
 ### `modules.settings` — Управление конфигурацией приложения
 
-- `config.py`: Валидация и загрузка настроек приложения (`load_config()`), модели `DisplayConfig`, `StealthConfig`, `AppConfig`.
-- `view.SettingsView(TouchModuleView)`: Каркас экрана настроек разрешения экрана, диммера и горячих клавиш.
+- `config.py`: Валидация и загрузка настроек приложения (`load_config()`), модели `DisplayConfig`, `StealthConfig`, `AppConfig`, атомарное сохранение `save_config()`.
+- `view.SettingsView(TouchModuleView)`: Каркас экрана настроек разрешения экрана, диммера, горячих клавиш и селектора языка.
+
+### `ui.showcase_view` — Экран диагностики подсистем и быстрых настроек
+
+- `showcase_view.py` (`ShowcaseView(TouchModuleView)`): Экран витрины диагностики подсистем и инвариантов DuckDock (DPI, Stealth Touch Guardian, Borderless Tiling, QoL Services, ночной режим/диммер) с интегрированной сенсорной карточкой выбора языка интерфейса (`btn_lang_ru` / `btn_lang_en`), визуальной подсветкой активного языка (`active="true"`), атомарным сохранением в `config.json` и мгновенной сменой локали всего приложения через `bus.language_changed`.
 
 ---
 
 ## 4. Слой фундамента ядра (`core/`)
 
 - `dpi.py`: Инициализация Per-Monitor DPI Awareness V2 (`SetProcessDpiAwarenessContext(-4)`).
-- `event_bus.py`: Централизованная шина сигналов Qt `bus` (навигация, громкость, телеметрия, медиа, DuckDeck: `deck_notification`, `deck_page_changed`).
+- `i18n/`: Полнофункциональный движок интернационализации и локализации (I18n):
+  - `manager.py` (`I18nManager`): Потокобезопасный синглтон с предзагрузкой словарей `locales/*.json` в плоскую хэш-таблицу dot-notation ($O(1)$ поиск), симметричным fallback-каскадом (RU <-> EN -> raw_key) и защищенным форматтером `SafeFormatter`.
+  - `plural.py`: Вычисление грамматических форм множественных чисел для RU (`one`, `few`, `many`) и EN (`one`, `other`).
+  - Экспорт функций быстрого доступа `t(key, **kwargs)` и `tp(key, count, **kwargs)`.
+- `event_bus.py`: Централизованная шина сигналов Qt `bus` (навигация, громкость, телеметрия, медиа, язык: `language_changed`, DuckDeck: `deck_notification`, `deck_page_changed`).
 - `focus_guardian.py`: Защита от перехвата фокуса и восстановление курсора мыши (`WS_EX_NOACTIVATE`, `SetWinEventHook`).
 - `mouse_barrier.py`: Аппаратный барьер курсора мыши (`ClipCursor`) для предотвращения случайного вылета на второй экран.
 - `touch_filter.py`: Перехват сенсорных касаний и движок двухпальцевого вертикального свайпа (Swipe Engine).
 - `window_manager.py`: WinAPI фасад управления внешними окнами, удаление рамок и тайлинг на 944×600.
-- `ui_base.py`: Базовый класс экранов `TouchModuleView(QWidget)`.
+- `ui_base.py`: Базовый класс экранов `TouchModuleView(QWidget)` с `Qt.NoFocus`, автоматической подпиской на `bus.language_changed`, виртуальным методом `retranslate_ui()` и гарантированной отпиской в `cleanup()`.
 
 ---
 
