@@ -169,6 +169,118 @@
     },
     "feedback": {
       "switched": "Switched"
+    },
+    "editor": {
+      "window": {
+        "title": "DuckDeck Button & Touchbar Editor"
+      },
+      "header": {
+        "devices": {
+          "touch_2x5_strip": "DuckDeck Touch (2x5 + Strip)",
+          "classic_3x5": "Classic Stream Deck (3x5)"
+        },
+        "profiles": {
+          "default": "Default Profile",
+          "gaming": "Gaming",
+          "streaming": "Streaming",
+          "new_profile": "+ New Profile..."
+        },
+        "tooltips": {
+          "notifications": "Notifications & Macro Log",
+          "store": "Extensions & Icons Store",
+          "settings": "DuckDeck Editor Settings",
+          "account": "User Profile"
+        }
+      },
+      "canvas": {
+        "pagination": {
+          "home_tooltip": "Home Page",
+          "add_tooltip": "Create New Page"
+        },
+        "touchbar": {
+          "media_title": "Media Player",
+          "clock_title": "Clock & Navigation",
+          "telemetry_title": "Telemetry"
+        }
+      },
+      "inspector": {
+        "placeholder": "Select a key to configure its action.",
+        "tooltips": {
+          "delete_action": "Clear button action",
+          "load_image": "Upload image",
+          "icon_options": "Icon options",
+          "reset_settings": "Reset section settings"
+        },
+        "fields": {
+          "title": "Title:",
+          "actions": "Actions:",
+          "hotkey": "Hotkey:"
+        },
+        "hotkey": {
+          "click_to_assign": "Click to assign",
+          "press_shortcut": "Press shortcut..."
+        },
+        "actions_presets": {
+          "preset_actions": "Preset Actions",
+          "hotkey": "Hotkey",
+          "open_application": "Open Application",
+          "media_control": "Media Control",
+          "text_macro": "Text Macro"
+        },
+        "touchbar": {
+          "media_header": "Touchbar: Media Player",
+          "clock_header": "Touchbar: Clock & Navigation",
+          "telemetry_header": "Touchbar: System Sensors",
+          "player_label": "Player:",
+          "marquee_enabled": "Marquee scrolling title",
+          "marquee_speed": "Scroll speed:",
+          "time_format_24h": "24-hour format",
+          "show_date": "Show date",
+          "swipe_sensitivity": "Swipe sensitivity:",
+          "show_cpu": "Monitor CPU",
+          "show_gpu": "Monitor GPU",
+          "refresh_interval": "Refresh interval:",
+          "refresh_1s": "1 sec",
+          "refresh_2s": "2 sec",
+          "refresh_5s": "5 sec",
+          "overheat_alerts": "Overheat alert notifications"
+        }
+      },
+      "drawer": {
+        "search_placeholder": "Search...",
+        "view_options_tooltip": "Action display options",
+        "no_results": "No actions found matching \"{query}\"",
+        "categories": {
+          "multi_action": "Multi Action",
+          "navigation": "Navigation",
+          "soundboard": "Soundboard",
+          "stream_deck": "Stream Deck",
+          "system": "System",
+          "volume_controller": "Volume Controller"
+        },
+        "actions": {
+          "multi_action": "Multi Action",
+          "multi_action_switch": "Multi Action Switch",
+          "create_folder": "Create Folder",
+          "switch_profile": "Switch Profile",
+          "prev_page": "Previous Page",
+          "next_page": "Next Page",
+          "goto_page": "Go to Page",
+          "page_indicator": "Page Indicator",
+          "play_audio": "Play Audio",
+          "stop_audio": "Stop Audio",
+          "brightness": "Brightness",
+          "sleep_display": "Sleep Display",
+          "hotkey": "Hotkey",
+          "open_app": "Open Application",
+          "open_website": "Open Website",
+          "text_macro": "Text Macro",
+          "mute_audio": "Mute Audio",
+          "volume_up": "Volume Up",
+          "volume_down": "Volume Down",
+          "toggle_device": "Toggle Device"
+        }
+      }
     }
   },
   "telemetry": {

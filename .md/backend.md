@@ -1,6 +1,6 @@
 # DuckDock / TouchWM: Архитектурная спецификация модулей
 
-> **Статус:** v0.4.1 (Спринт 6: DuckDeck v0.4.1 — Stubs Mode, Zero-Latency Audio и кинематика свайпа)  
+> **Статус:** v0.5.0 (Спринт 8: DuckDeck Editor — Визуальный WYSIWYG конфигуратор кнопок и тачбара, 326 тестов 100% PASS)  
 > **Целевая среда:** Windows 10/11 x64, 27" Primary (dGPU) + 7" 1024×600 JRP7813S Touchscreen (iGPU AMD Radeon Graphics).
 
 ---
@@ -15,6 +15,7 @@ flowchart TD
         Main -->|3. Load Config| Cfg["modules.settings.config.load_config()"]
         Main -->|4. Launch Qt| App["QApplication"]
         App --> Win["ui.main_window.MainWindow (1024x600)"]
+        Main -->|CLI: --editor / --deck-editor| EditorWin["modules.deck.editor.DeckEditorWindow"]
     end
 
     subgraph CoreFoundation ["Слой фундамента (core/ - Foundation Layer)"]
@@ -77,6 +78,24 @@ flowchart TD
             DeckPanel --> DeckSwipe
         end
 
+        subgraph ModDeckEditor ["modules.deck.editor (WYSIWYG Configurator)"]
+            EditorWin["DeckEditorWindow (QMainWindow, 1080x740)"]
+            EditorHBar["widgets.header_bar.EditorHeaderBar (52px)"]
+            EditorCanvas["widgets.deck_canvas.DeckCanvasWidget (2x5 Grid + 3-Section Touchbar)"]
+            EditorPaging["widgets.pagination_bar.PageNavigationBar (36px)"]
+            EditorInsp["widgets.property_inspector.KeyPropertyInspector (Stacked 0..4)"]
+            EditorDrawer["widgets.action_drawer.ActionLibraryDrawer (Search + Accordion)"]
+            EditorDTO["dto.* (ButtonSlotDTO, Touchbar*DTO, ActionItemDTO)"]
+            EditorDemo["demo_data & demo_launcher"]
+            EditorWin --> EditorHBar
+            EditorWin --> EditorCanvas
+            EditorWin --> EditorPaging
+            EditorWin --> EditorInsp
+            EditorWin --> EditorDrawer
+            EditorWin -.-> EditorDTO
+            EditorDemo -.-> EditorWin
+        end
+
         subgraph ModSettings ["modules.settings"]
             SConfig["config.AppConfig & load_config"]
             SView["view.SettingsView (TouchModuleView)"]
@@ -113,6 +132,7 @@ flowchart TD
     DeckDisp -.->|Request device toggle| Bus
     Bus -.->|playback_device_changed| AView
     Bus -.->|playback_device_changed| DeckView
+    Bus -.->|Signal: language_changed| EditorWin
     MBar -.->|Signal: media_action_requested| Bus
     MView -.->|Signal: media_state_changed| Bus
     Bus -.->|Dispatch| Win
@@ -193,6 +213,49 @@ flowchart TD
     - Правая (280 px): мини-датчики CPU/GPU, бегущий `NotificationTicker` (3с затухание) и сенсорная кнопка настроек ⚙.
   - `swipe_detector.py` (`DeckSwipeDetector`): Кинематический сенсорный детектор 1-пальцевого свайпа ($dt \le 600$ мс, $|dx| \ge 60$ px, $|dx| > 1.5 \cdot |dy|$) с изоляцией от глобального 2-пальцевого фильтра `TouchCursorFilter`.
 - `view.DeckView(TouchModuleView)`: Сенсорный экран 944×600 px (формула: $12 + 168 + 12 + 168 + 12 + 216 + 12 = 600$ px), двусторонняя реактивность пагинации (`deck_page_changed`), перелистывание страниц свайпом и кликом по точкам.
+
+### `modules.deck.editor` — Визуальный конфигуратор DuckDeck (WYSIWYG Configurator)
+
+- `window.py` (`DeckEditorWindow(QMainWindow)`):
+  - Главное окно конфигуратора (1080×740, min 960×640), центрирование на основном 27" экране.
+  - Двухпанельная компоновка на базе `QSplitter(Qt.Horizontal)` с пропорцией 70/30 (рабочая область 756 px / каталог действий 324 px, `childrenCollapsible=False`).
+  - Реактивный протокол Localization-First: метод `retranslate_ui()`, каскадный перевод дочерних компонентов и подписка на `bus.language_changed`.
+  - Публичный API слотов-плейсхолдеров: `set_header_bar()`, `set_canvas_widget()`, `set_pagination_bar()`, `set_inspector_widget()`, `set_action_drawer()`.
+- `styles.py`:
+  - Дизайн-система Dark Obsidian: палитра (`#0f0f11`, `#18181b`, `#222227`, `#27272a`, `#3f3f46`, `#71717a`, `#9ca3af`, `#f4f4f5`, акценты `#0078d4`, `#38bdf8`, семантические `#10b981`, `#ef4444`).
+  - Полная таблица стилей `EDITOR_MAIN_QSS` (окно, сплиттер 2px, выпадающие списки `QComboBox`, всплывающие меню, карточки, инпуты, тултипы, скроллбары 6px).
+  - Безопасная функция Win32 DWM `apply_immersive_dark_titlebar(window)` с защитой от `OSError`.
+  - Фасад применения темы `apply_editor_theme(window)`.
+- `dto.py`:
+  - Презентационные DTO структуры: `ButtonSlotDTO`, `TouchbarMediaDTO`, `TouchbarClockDTO`, `TouchbarTelemetryDTO`, `ActionItemDTO`, `ActionCategoryDTO`.
+  - Метод `ActionItemDTO.get_title()` с поддержкой локализации через `t(self.title_key)`.
+  - Двуязычные списки `keywords` (RU/EN) для моментальной фильтрации действий.
+- `actions_registry.py`:
+  - Статический реестр `get_default_action_catalog() -> list[ActionCategoryDTO]` (6 категорий: System, Media, Navigation, Applications, Windows, Tools с предустановленными действиями).
+- `demo_data.py`:
+  - Фабрика эталонного датасета `get_demo_editor_profile()` по референсной раскладке (слоты 0, 1, 8, пустые 2..7, 9, три секции тачбара).
+  - Вспомогательная функция `load_demo_profile_into_window(window: DeckEditorWindow)`.
+- `demo_launcher.py`:
+  - Автономный демонстрационный лончер с предварительным вызовом `core.dpi.init_dpi_awareness()` до импорта `PySide6`.
+- `widgets/`:
+  - `header_bar.py` (`EditorHeaderBar`): Верхняя панель 52 px с селекторами устройств (`DeviceComboBox`) и профилей (`ProfileComboBox`), сохранением `userData` и каскадным `retranslate_ui()` без сброса `currentIndex`. Обработка пункта `+ New Profile...` (`create_profile_requested`).
+  - `deck_canvas.py` (`DeckCanvasWidget`): Холст макро-панели (сетка 2×5 из 10 ячеек `GridCellWidget` 80×80 px и полоса тачбара из 3 секций `TouchbarSectionWidget`). Подсветка выбора синей рамкой 2px (`#38bdf8`), сброс выделения по клику в нейтральный фон и по клавише `Escape`.
+  - `grid_cell.py` (`GridCellWidget`): Интерактивная ячейка сетки с поддержкой состояний `empty` (`+`), иконки, заголовка, категории и фокуса.
+  - `touchbar_section.py` (`TouchbarSectionWidget`): Интерактивный блок тачбара (Media, Clock, Telemetry).
+  - `pagination_bar.py` (`PageNavigationBar`): Нижняя панель пагинации 36 px со стрелками и точечными индикаторами (`● ○ ○`).
+  - `property_inspector.py` (`KeyPropertyInspector`): Инспектор свойств на базе `QStackedWidget`:
+    - Индекс 0: Плейсхолдер при отсутствии выделения (`deck.editor.inspector.placeholder_no_selection`).
+    - Индекс 1: Форма параметров кнопки `ButtonPropertyForm`.
+    - Индекс 2: Форма медиаплеера тачбара `TouchbarMediaForm`.
+    - Индекс 3: Форма часов тачбара `TouchbarClockForm`.
+    - Индекс 4: Форма датчиков тачбара `TouchbarTelemetryForm`.
+  - `inspector_widgets.py`:
+    - `KeyPreviewTile`: Виджет предпросмотра кнопки 64×64 px с кнопками смены/удаления иконки.
+    - `HotkeyCaptureButton`: Кнопка интерактивного перехвата хоткеев клавиатуры с очисткой по Backspace/Delete, отменой по Esc/FocusOut и каскадным `retranslate_ui()`.
+  - `action_drawer.py` (`ActionLibraryDrawer`): Панель каталога действий со строкой поиска `ActionSearchBar` и аккордеоном `ActionAccordionWidget`.
+  - `search_bar.py` (`ActionSearchBar`): Инпут поиска 52 px с кнопкой очистки `✕` и тултипом кнопки вида.
+  - `action_category.py` (`ActionCategorySection`): Сворачиваемая секция аккордеона с анимированным шевроном (`›` / `⌄`) и двуязычной фильтрацией `apply_filter(query)`.
+  - `action_item.py` (`ActionItemWidget`): Карточка действия 36 px с подложкой иконки 24×24 px и сигналом `item_clicked(ActionItemDTO)`.
 
 ### `modules.settings` — Управление конфигурацией приложения
 

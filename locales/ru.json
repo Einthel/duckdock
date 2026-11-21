@@ -171,6 +171,118 @@
     },
     "feedback": {
       "switched": "Переключено"
+    },
+    "editor": {
+      "window": {
+        "title": "Редактор кнопок и тачбара DuckDeck"
+      },
+      "header": {
+        "devices": {
+          "touch_2x5_strip": "DuckDeck Touch (2x5 + Strip)",
+          "classic_3x5": "Classic Stream Deck (3x5)"
+        },
+        "profiles": {
+          "default": "Основной профиль",
+          "gaming": "Игровой",
+          "streaming": "Стриминг",
+          "new_profile": "+ Новый профиль..."
+        },
+        "tooltips": {
+          "notifications": "Уведомления и лог макросов",
+          "store": "Магазин расширений и иконок",
+          "settings": "Настройки редактора DuckDeck",
+          "account": "Профиль пользователя"
+        }
+      },
+      "canvas": {
+        "pagination": {
+          "home_tooltip": "Домашняя страница",
+          "add_tooltip": "Создать новую страницу"
+        },
+        "touchbar": {
+          "media_title": "Медиаплеер",
+          "clock_title": "Часы и навигация",
+          "telemetry_title": "Телеметрия"
+        }
+      },
+      "inspector": {
+        "placeholder": "Выберите кнопку для настройки действия.",
+        "tooltips": {
+          "delete_action": "Очистить действие кнопки",
+          "load_image": "Загрузить изображение",
+          "icon_options": "Параметры иконки",
+          "reset_settings": "Сбросить настройки секции"
+        },
+        "fields": {
+          "title": "Название:",
+          "actions": "Действия:",
+          "hotkey": "Хоткей:"
+        },
+        "hotkey": {
+          "click_to_assign": "Нажмите для назначения",
+          "press_shortcut": "Нажмите сочетание..."
+        },
+        "actions_presets": {
+          "preset_actions": "Готовые действия",
+          "hotkey": "Хоткей",
+          "open_application": "Запуск приложения",
+          "media_control": "Управление медиа",
+          "text_macro": "Текстовый макрос"
+        },
+        "touchbar": {
+          "media_header": "Тачбар: Медиаплеер",
+          "clock_header": "Тачбар: Часы и навигация",
+          "telemetry_header": "Тачбар: Системные датчики",
+          "player_label": "Плеер:",
+          "marquee_enabled": "Бегущая строка названия",
+          "marquee_speed": "Скорость прокрутки:",
+          "time_format_24h": "24-часовой формат",
+          "show_date": "Показывать дату",
+          "swipe_sensitivity": "Чувствительность свайпа:",
+          "show_cpu": "Мониторинг CPU",
+          "show_gpu": "Мониторинг GPU",
+          "refresh_interval": "Интервал обновления:",
+          "refresh_1s": "1 сек",
+          "refresh_2s": "2 сек",
+          "refresh_5s": "5 сек",
+          "overheat_alerts": "Оповещения о перегреве"
+        }
+      },
+      "drawer": {
+        "search_placeholder": "Поиск...",
+        "view_options_tooltip": "Параметры отображения действий",
+        "no_results": "Действий по запросу \"{query}\" не найдено",
+        "categories": {
+          "multi_action": "Мульти-действие",
+          "navigation": "Навигация",
+          "soundboard": "Саундборд",
+          "stream_deck": "Stream Deck",
+          "system": "Система",
+          "volume_controller": "Регулятор громкости"
+        },
+        "actions": {
+          "multi_action": "Мульти-действие",
+          "multi_action_switch": "Переключатель мульти-действий",
+          "create_folder": "Создать папку",
+          "switch_profile": "Сменить профиль",
+          "prev_page": "Предыдущая страница",
+          "next_page": "Следующая страница",
+          "goto_page": "Перейти на страницу",
+          "page_indicator": "Индикатор страниц",
+          "play_audio": "Воспроизвести аудио",
+          "stop_audio": "Остановить аудио",
+          "brightness": "Яркость",
+          "sleep_display": "Спящий режим экрана",
+          "hotkey": "Хоткей",
+          "open_app": "Запуск приложения",
+          "open_website": "Открыть веб-сайт",
+          "text_macro": "Текстовый макрос",
+          "mute_audio": "Заглушить звук",
+          "volume_up": "Увеличить громкость",
+          "volume_down": "Уменьшить громкость",
+          "toggle_device": "Переключить устройство"
+        }
+      }
     }
   },
   "telemetry": {

@@ -5,6 +5,51 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-11-21
+
+### Added
+- **DuckDeck Button & Touchbar Editor (WYSIWYG Configurator, Фазы 1–6 из `.md/deck/edit_but.md`)**:
+  - **Каркас окна и стилизация (`modules/deck/editor/window.py`, `styles.py`)**:
+    - Класс `DeckEditorWindow` (1080×740, min 960×640) с двухпанельной компоновкой `QSplitter` (соотношение 70/30: рабочая область 756 px / библиотека действий 324 px, `childrenCollapsible=False`).
+    - Дизайн-система Dark Obsidian (`#0f0f11`, `#18181b`, `#222227`, `#27272a`, акценты `#38bdf8` / `#0078d4`, типографика Segoe UI, скругления 6 px, тонкие скроллбары 6 px).
+    - Безопасная стилизация заголовка окна Win32 DWM `apply_immersive_dark_titlebar()` с изоляцией `OSError`.
+    - Реактивный протокол Localization-First (`retranslate_ui()` и подписка на `bus.language_changed`).
+  - **Верхняя панель устройств и профилей (`widgets/header_bar.py`)**:
+    - Компонент `EditorHeaderBar` (высота 52 px) с кастомными селекторами `DeviceComboBox` и `ProfileComboBox`.
+    - Сохранение стабильных `userData` и обновление текста при смене языка без сброса активного выбранного индекса.
+    - Перехват пункта `+ New Profile...` с эмиссией сигнала `create_profile_requested`.
+    - Сервисные кнопки тулбара (Notifications, Plugins, Settings, Profile) со всплывающими подсказками `QToolTip` в стиле Dark Obsidian.
+  - **Интерактивный холст кнопок и тачбара (`widgets/deck_canvas.py`, `grid_cell.py`, `touchbar_section.py`, `pagination_bar.py`)**:
+    - Сетка макро-кнопок 2×5: 10 ячеек `GridCellWidget` (80×80 px, отступы 10 px) с визуализацией иконки, заголовка, категории и состояния пустого слота (`+`).
+    - Полоса тачбара (3-й ряд) с 3 интерактивными секциями: Media (обложка, трек, плеер), Clock (HH:mm, день недели, дата), Telemetry (CPU/GPU бейджи, график).
+    - Подсветка активного выбора акцентной синей рамкой 2 px (`#38bdf8`) и сброс выделения по клику в нейтральный фон или по клавише `Escape`.
+    - Панель пагинации `PageNavigationBar` с кнопками переключения страниц и точечными индикаторами (`● ○ ○`).
+  - **Инспектор свойств (`widgets/property_inspector.py`, `inspector_widgets.py`)**:
+    - Двухрежимный `KeyPropertyInspector` на базе `QStackedWidget`:
+      - Режим 0: Плейсхолдер с центрированной подсказкой (`deck.editor.inspector.placeholder_no_selection`).
+      - Режим 1: Форма параметров кнопки `ButtonPropertyForm` (превью `KeyPreviewTile`, поле `Title`, селектор `Action`, кнопка захвата хоткея `HotkeyCaptureButton` с интерактивным режимом перехвата и очисткой Backspace/Delete, кнопка удаления `🗑️`).
+      - Режимы 2–4: Специализированные формы настройки секций тачбара (`TouchbarMediaForm`, `TouchbarClockForm`, `TouchbarTelemetryForm`).
+  - **Библиотека действий и двуязычный поиск (`widgets/action_drawer.py`, `search_bar.py`, `action_category.py`, `action_item.py`, `actions_registry.py`)**:
+    - Панель `ActionLibraryDrawer` со строкой поиска `ActionSearchBar` (микро-кнопка очистки `✕`, кнопка вида `☰`).
+    - Аккордеон категорий `ActionCategorySection` с независимым сворачиванием секций (шевроны `›` / `⌄`).
+    - Карточки действий `ActionItemWidget` с подложками иконок и каскадным переводом названий.
+    - Мгновенная двуязычная фильтрация поиска по названию и ключевым тегам `keywords` на русском и английском языках (например, "хоткей" / "hotkey", "папка" / "folder").
+    - Плейсхолдер пустого результата поиска с интерполяцией запроса (`deck.editor.drawer.no_results`).
+    - Прямое назначение выбранного действия из каталога на выделенный слот холста.
+  - **Демо-данные, лончер и CLI интеграция (`demo_data.py`, `demo_launcher.py`, `main.py`)**:
+    - Фабрика эталонного датасета `get_demo_editor_profile()` по референсной раскладке.
+    - Автономный запуск через `python -m modules.deck.editor.demo_launcher` с предварительной инициализацией Per-Monitor DPI Awareness V2.
+    - Интеграция CLI флага `--editor` / `--deck-editor` в главную точку входа `main.py`.
+  - **Автоматизированное тестирование (326 тестов, 100% PASS)**:
+    - Модульные тесты каркаса окна (`test_deck_editor_window.py`).
+    - Модульные тесты верхней панели (`test_deck_editor_header_bar.py`).
+    - Модульные тесты холста, ячеек и тачбара (`test_deck_editor_canvas.py`).
+    - Модульные тесты инспектора свойств и виджетов форм (`test_deck_editor_inspector.py`, `test_deck_editor_inspector_widgets.py`).
+    - Модульные тесты строки поиска и библиотеки действий (`test_deck_editor_search_bar.py`, `test_deck_editor_action_drawer.py`).
+    - Модульные тесты CLI флагов `main.py` (`test_main_cli.py`).
+    - Сквозной E2E интеграционный тест полного пользовательского пути и Hot Reload (`tests/integration/test_deck_editor_e2e.py`).
+    - Общий тестовый набор увеличен с 227 до **326 тестов (100% PASS)**.
+
 ## [0.4.2] - 2026-11-20
 
 ### Added
