@@ -34,6 +34,8 @@ from modules.deck.editor.styles import (
     INPUT_HEIGHT,
     INSPECTOR_HEIGHT,
     PREVIEW_TILE_SIZE,
+    SURFACE_1_PANEL,
+    SURFACE_2_CARD,
 )
 from modules.deck.editor.widgets.button_property_form import ButtonPropertyForm
 from modules.deck.editor.widgets.hotkey_capture import HotkeyCaptureButton
@@ -102,10 +104,10 @@ def test_styles_inspector_constants() -> None:
     assert PREVIEW_TILE_SIZE == 84
     assert INPUT_HEIGHT == 30
     assert FORM_LABEL_WIDTH == 60
-    assert ICON_BTN_SIZE == 18
+    assert ICON_BTN_SIZE == 20
 
-    assert BG_INSPECTOR == "#18181b"
-    assert BG_PREVIEW_TILE == "#222227"
+    assert BG_INSPECTOR == SURFACE_1_PANEL
+    assert BG_PREVIEW_TILE == SURFACE_2_CARD
     assert BTN_DELETE_HOVER == "#ef4444"
     assert HOTKEY_CAPTURING_BORDER == "#38bdf8"
 
@@ -136,10 +138,10 @@ def test_key_preview_tile_initialization(qapp: QApplication) -> None:
     tile = KeyPreviewTile()
     assert tile.width() == 84
     assert tile.height() == 84
-    assert tile.btn_add.width() == 18
-    assert tile.btn_add.height() == 18
-    assert tile.btn_menu.width() == 18
-    assert tile.btn_menu.height() == 18
+    assert tile.btn_add.width() == 20
+    assert tile.btn_add.height() == 20
+    assert tile.btn_menu.width() == 20
+    assert tile.btn_menu.height() == 20
     assert tile.btn_add.text() == "+"
     assert tile.btn_menu.text() == "v"
     assert tile.get_icon() == "🖲️"

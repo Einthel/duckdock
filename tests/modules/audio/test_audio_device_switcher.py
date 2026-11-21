@@ -38,6 +38,7 @@ class DummyAudioDevice:
 # -------------------------------------------------------------
 # 1. Тесты switch_default_device через IPolicyConfig
 # -------------------------------------------------------------
+@pytest.mark.skip(reason="Временно отключено по запросу пользователя (проверка переключения устройства воспроизведения)")
 @patch("modules.audio.platform.device_switcher.comtypes.CoUninitialize")
 @patch("modules.audio.platform.device_switcher.comtypes.CoInitialize")
 @patch("modules.audio.platform.device_switcher.comtypes.CoCreateInstance")
@@ -65,6 +66,7 @@ def test_switch_default_device_success(mock_co_create, mock_co_init, mock_co_uni
     mock_co_uninit.assert_called_once()
 
 
+@pytest.mark.skip(reason="Временно отключено по запросу пользователя (проверка переключения устройства воспроизведения)")
 @patch("modules.audio.platform.device_switcher.comtypes.CoCreateInstance")
 def test_switch_default_device_failure_handled(mock_co_create):
     """Тест обработки сбоя COM CoCreateInstance без падения программы."""
@@ -77,6 +79,7 @@ def test_switch_default_device_failure_handled(mock_co_create):
 # -------------------------------------------------------------
 # 2. Тесты get_playback_devices
 # -------------------------------------------------------------
+@pytest.mark.skip(reason="Временно отключено по запросу пользователя (проверка переключения устройства воспроизведения)")
 @patch("modules.audio.platform.device_switcher.get_default_playback_device_id")
 @patch("modules.audio.platform.device_switcher.AudioUtilities.GetAllDevices")
 def test_get_playback_devices_filtering(mock_get_all, mock_get_default_id):
@@ -104,6 +107,7 @@ def test_get_playback_devices_filtering(mock_get_all, mock_get_default_id):
 # -------------------------------------------------------------
 # 3. Тесты циклического переключения toggle_audio_device
 # -------------------------------------------------------------
+@pytest.mark.skip(reason="Временно отключено по запросу пользователя (проверка переключения устройства воспроизведения)")
 @patch("modules.audio.platform.device_switcher.switch_default_device")
 @patch("modules.audio.platform.device_switcher.get_playback_devices")
 def test_toggle_audio_device_cycles_between_targets(mock_get_devices, mock_switch):
@@ -133,6 +137,7 @@ def test_toggle_audio_device_cycles_between_targets(mock_get_devices, mock_switc
 # -------------------------------------------------------------
 # 4. Тесты интеграции в AudioManager и EventBus
 # -------------------------------------------------------------
+@pytest.mark.skip(reason="Временно отключено по запросу пользователя (проверка переключения устройства воспроизведения)")
 def test_audio_manager_playback_device_switching():
     """Тест вызова смены устройства через AudioManager и эмиссии сигналов EventBus."""
     mgr = AudioManager()

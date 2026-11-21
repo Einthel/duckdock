@@ -36,7 +36,6 @@ class ActionAccordionWidget(QScrollArea):
         self.setFrameShape(QFrame.NoFrame)
         self.setWidgetResizable(True)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setStyleSheet("background-color: transparent; border: none;")
 
         self.sections: List[ActionCategorySection] = []
         self._last_query: str = ""
@@ -44,7 +43,6 @@ class ActionAccordionWidget(QScrollArea):
         # Внутренний контейнер скролла
         self.content_widget = QWidget(self)
         self.content_widget.setObjectName("actionAccordionContent")
-        self.content_widget.setStyleSheet("background-color: transparent;")
 
         self.content_layout = QVBoxLayout(self.content_widget)
         self.content_layout.setContentsMargins(4, 4, 4, 4)
@@ -151,13 +149,13 @@ class ActionLibraryDrawer(QWidget):
         self.search_bar = ActionSearchBar(self)
         layout.addWidget(self.search_bar)
 
-        # 2. Тонкий горизонтальный разделитель (1 px #2e2e36)
+        # 2. Тонкий горизонтальный разделитель (1 px BORDER_SURFACE_1)
         self.separator = QFrame(self)
         self.separator.setObjectName("drawerInternalSeparator")
+        self.separator.setProperty("class", "DrawerInternalSeparator")
         self.separator.setFrameShape(QFrame.HLine)
         self.separator.setFrameShadow(QFrame.Plain)
         self.separator.setFixedHeight(1)
-        self.separator.setStyleSheet("background-color: #2e2e36; border: none;")
         layout.addWidget(self.separator)
 
         # 3. Аккордеон библиотеки действий (растягиваемый QScrollArea)

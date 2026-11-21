@@ -11,23 +11,46 @@ from typing import Any, Optional
 from PySide6.QtWidgets import QFrame, QWidget
 
 # ==============================================================================
-# Цветовая палитра Dark Obsidian
+# Дизайн-токены Dark Obsidian v2 (4-уровневая система поверхностей и палитра Slate)
 # ==============================================================================
-BG_WINDOW = "#121214"
-BG_PANEL = "#18181b"
-BG_CARD = "#222227"
-BG_STRIP = "#161b26"
-BG_STRIP_SECTION_HOVER = "#1e2638"
+SURFACE_0_CANVAS = "#0b0d13"       # Deep Canvas / Void
+SURFACE_1_PANEL = "#0f141f"        # Panels, Drawer, Inspector base
+SURFACE_2_CARD = "#141924"         # Cells, Preview Tile, Inputs base
+SURFACE_3_HOVER = "#1c2940"        # Hover background & Active Selection
 
-BORDER_SUBTLE = "#2e2e36"
-BORDER_FOCUS = "#0078d4"
-BORDER_FOCUS_ACCENT = "#38bdf8"
-BORDER_HOVER = "#3f3f46"
+BORDER_SURFACE_1 = "#1e2638"       # Тонкая граница панелей
+BORDER_SURFACE_2 = "#202a3c"       # Граница интерактивных ячеек
+BORDER_FOCUS_NEON = "#38bdf8"      # Неоновый акцент выделения
+BORDER_FOCUS_BASE = "#0078d4"      # Синий базовый фокус
 
-TEXT_PRIMARY = "#f4f4f5"
-TEXT_SECONDARY = "#9ca3af"
-TEXT_MUTED = "#71717a"
-TEXT_PLACEHOLDER = "#71717a"
+TEXT_SLOT_INDEX = "#475569"        # Приглушенные индексы [0]..[9] (Slate 600)
+TEXT_PRIMARY_HIGH = "#f8fafc"      # Основной текст (Slate 50)
+TEXT_SECONDARY_MED = "#94a3b8"     # Вторичный текст (Slate 400)
+TEXT_MUTED_SUBTLE = "#64748b"      # Подписи и плейсхолдеры (Slate 500)
+
+# ==============================================================================
+# Re-export Shims для 100% обратной совместимости (Dark Obsidian v1 -> v2)
+# ==============================================================================
+BG_WINDOW = SURFACE_0_CANVAS
+BG_PANEL = SURFACE_1_PANEL
+BG_CARD = SURFACE_2_CARD
+BG_STRIP = SURFACE_1_PANEL
+BG_CELL = SURFACE_2_CARD
+BG_CELL_HOVER = SURFACE_3_HOVER
+BG_STRIP_SECTION_HOVER = SURFACE_3_HOVER
+
+BORDER_SUBTLE = BORDER_SURFACE_1
+BORDER_CELL = BORDER_SURFACE_2
+BORDER_FOCUS = BORDER_FOCUS_BASE
+BORDER_FOCUS_ACCENT = BORDER_FOCUS_NEON
+BORDER_SELECTED = BORDER_FOCUS_BASE
+BORDER_SELECTED_GLOW = BORDER_FOCUS_NEON
+BORDER_HOVER = "#2e3d5c"
+
+TEXT_PRIMARY = TEXT_PRIMARY_HIGH
+TEXT_SECONDARY = TEXT_SECONDARY_MED
+TEXT_MUTED = TEXT_MUTED_SUBTLE
+TEXT_PLACEHOLDER = TEXT_MUTED_SUBTLE
 
 ACCENT_DANGER = "#ef4444"
 
@@ -72,17 +95,13 @@ TOUCHBAR_RADIUS = 12
 
 PAGE_NAV_BTN_SIZE = 28
 
-BG_CELL = "#222227"
-BG_CELL_HOVER = "#2a2a32"
-BG_TOUCHBAR = "#161b26"
-BG_SECTION_HOVER = "#1e2638"
-BG_SECTION_HOVER_SUBTLE = "#1a2233"
+# Re-export Shims & фоны сетки / тачбара
+BG_TOUCHBAR = SURFACE_1_PANEL
+BG_SECTION_HOVER = SURFACE_3_HOVER
+BG_SECTION_HOVER_SUBTLE = "#192338"
 
-BORDER_CELL = "#2e2e36"
-BORDER_CELL_HOVER = "#3f3f46"
-BORDER_TOUCHBAR = "#2a3447"
-BORDER_SELECTED = "#0078d4"
-BORDER_SELECTED_GLOW = "#38bdf8"
+BORDER_CELL_HOVER = "#2e3d5c"
+BORDER_TOUCHBAR = BORDER_SURFACE_1
 
 # ==============================================================================
 # Токены инспектора свойств и превью-плитки (Property Inspector & Tile Geometry)
@@ -91,15 +110,15 @@ INSPECTOR_HEIGHT = 220
 PREVIEW_TILE_SIZE = 84
 INPUT_HEIGHT = 30
 FORM_LABEL_WIDTH = 60
-ICON_BTN_SIZE = 18
+ICON_BTN_SIZE = 20
 
-BG_INSPECTOR = "#18181b"
-BG_PREVIEW_TILE = "#222227"
-BORDER_PREVIEW_TILE = "#2e2e36"
-BORDER_PREVIEW_HOVER = "#3f3f46"
-TEXT_HEADER_CATEGORY = "#e4e4e7"
-BTN_DELETE_HOVER = "#ef4444"
-HOTKEY_CAPTURING_BORDER = "#38bdf8"
+BG_INSPECTOR = SURFACE_1_PANEL
+BG_PREVIEW_TILE = SURFACE_2_CARD
+BORDER_PREVIEW_TILE = BORDER_SURFACE_2
+BORDER_PREVIEW_HOVER = BORDER_HOVER
+TEXT_HEADER_CATEGORY = TEXT_PRIMARY_HIGH
+BTN_DELETE_HOVER = ACCENT_DANGER
+HOTKEY_CAPTURING_BORDER = BORDER_FOCUS_NEON
 
 # ==============================================================================
 # Токены библиотеки действий и поиска (Action Library & Search Bar)
@@ -109,11 +128,11 @@ ACTION_ITEM_HEIGHT = 36
 CATEGORY_HEADER_HEIGHT = 38
 DRAWER_PADDING = 8
 
-BG_SEARCH_INPUT = "#18181b"
-BG_ACTION_ITEM_HOVER = "#27272a"
-BG_ACTION_ITEM_ACTIVE = "#1e2638"
-TEXT_CATEGORY_TITLE = "#f4f4f5"
-CHEVRON_COLOR = "#9ca3af"
+BG_SEARCH_INPUT = SURFACE_2_CARD
+BG_ACTION_ITEM_HOVER = SURFACE_3_HOVER
+BG_ACTION_ITEM_ACTIVE = "#192338"
+TEXT_CATEGORY_TITLE = TEXT_PRIMARY_HIGH
+CHEVRON_COLOR = TEXT_MUTED_SUBTLE
 
 # ==============================================================================
 # Единая таблица стилей EDITOR_MAIN_QSS
@@ -196,23 +215,23 @@ QLabel[placeholderLabel="true"] {{
 
 /* QComboBox (Dark Obsidian) */
 QComboBox {{
-    background-color: {BG_DROPDOWN};
-    border: 1px solid {BORDER_SUBTLE};
+    background-color: #101522;
+    border: 1px solid {BORDER_SURFACE_1};
     border-radius: 6px;
     padding: 4px 10px 4px 10px;
-    color: {TEXT_PRIMARY};
+    color: {TEXT_PRIMARY_HIGH};
     font-size: 13px;
     font-weight: 500;
     min-height: 24px;
 }}
 
 QComboBox:hover {{
-    background-color: {BG_DROPDOWN_HOVER};
+    background-color: {SURFACE_2_CARD};
     border-color: {BORDER_HOVER};
 }}
 
 QComboBox:focus, QComboBox:on {{
-    border-color: {BORDER_DROPDOWN_FOCUS};
+    border: 1.5px solid {BORDER_FOCUS_NEON};
 }}
 
 QComboBox::drop-down {{
@@ -228,23 +247,23 @@ QComboBox::down-arrow {{
     height: 0px;
     border-left: 4px solid transparent;
     border-right: 4px solid transparent;
-    border-top: 5px solid {TEXT_SECONDARY};
+    border-top: 5px solid {TEXT_SECONDARY_MED};
     margin-right: 6px;
 }}
 
 QComboBox::down-arrow:hover {{
-    border-top: 5px solid {TEXT_PRIMARY};
+    border-top: 5px solid {TEXT_PRIMARY_HIGH};
 }}
 
 /* QComboBox Popup List (Dark Obsidian QAbstractItemView) */
 QComboBox QAbstractItemView {{
-    background-color: {BG_PANEL};
-    border: 1px solid {BORDER_SUBTLE};
+    background-color: {SURFACE_1_PANEL};
+    border: 1px solid {BORDER_SURFACE_1};
     border-radius: 6px;
     padding: 4px;
-    selection-background-color: #27272a;
-    selection-color: {BORDER_FOCUS_ACCENT};
-    color: {TEXT_PRIMARY};
+    selection-background-color: {SURFACE_3_HOVER};
+    selection-color: {BORDER_FOCUS_NEON};
+    color: {TEXT_PRIMARY_HIGH};
     outline: none;
 }}
 
@@ -252,17 +271,17 @@ QComboBox QAbstractItemView::item {{
     min-height: 28px;
     padding: 4px 10px;
     border-radius: 4px;
-    color: {TEXT_PRIMARY};
+    color: {TEXT_PRIMARY_HIGH};
 }}
 
 QComboBox QAbstractItemView::item:hover {{
-    background-color: #27272a;
-    color: {BORDER_FOCUS_ACCENT};
+    background-color: {SURFACE_3_HOVER};
+    color: {BORDER_FOCUS_NEON};
 }}
 
 QComboBox QAbstractItemView::item:selected {{
-    background-color: #27272a;
-    color: {BORDER_FOCUS_ACCENT};
+    background-color: {SURFACE_3_HOVER};
+    color: {BORDER_FOCUS_NEON};
 }}
 
 /* QPushButton.HeaderIconButton */
@@ -320,36 +339,75 @@ ToolbarVLine {{
 }}
 
 /* ========================================================================== */
-/* EditorGridCell (Холст: ячейки кнопок 96x96)                                */
+/* EditorGridCell (Холст: ячейки кнопок 96x96, Dark Obsidian v2)               */
 /* ========================================================================== */
 QFrame#editorGridCell,
 QFrame[editorGridCell="true"],
 EditorGridCell {{
-    background-color: {BG_CARD};
-    border: 1px solid {BORDER_SUBTLE};
+    background-color: {SURFACE_2_CARD};
+    border: 1px solid {BORDER_SURFACE_2};
     border-radius: {GRID_CORNER_RADIUS}px;
 }}
 
 QFrame#editorGridCell:hover,
 QFrame[editorGridCell="true"]:hover,
 EditorGridCell:hover {{
-    background-color: {BG_CELL_HOVER};
+    background-color: {SURFACE_3_HOVER};
     border: 1px solid {BORDER_HOVER};
 }}
 
 QFrame#editorGridCell[selected="true"],
 QFrame[editorGridCell="true"][selected="true"],
 EditorGridCell[selected="true"] {{
-    background-color: {BG_CARD};
-    border: 2px solid {BORDER_FOCUS};
+    background-color: {SURFACE_2_CARD};
+    border: 2px solid {BORDER_FOCUS_NEON};
     border-radius: {GRID_CORNER_RADIUS}px;
 }}
 
 QFrame#editorGridCell[selected="true"]:hover,
 QFrame[editorGridCell="true"][selected="true"]:hover,
 EditorGridCell[selected="true"]:hover {{
-    background-color: #26262c;
-    border: 2px solid {BORDER_FOCUS_ACCENT};
+    background-color: {SURFACE_3_HOVER};
+    border: 2px solid {BORDER_FOCUS_NEON};
+}}
+
+/* Лейблы ячейки сетки кнопок (CellIndexLabel, CellIconLabel, CellTitleLabel) */
+QLabel.CellIndexLabel,
+QLabel[class="CellIndexLabel"],
+QLabel#lblCellIndex {{
+    color: {TEXT_SLOT_INDEX};
+    font-size: 10px;
+    font-weight: 600;
+    background: transparent;
+    border: none;
+}}
+
+QLabel.CellIconLabel,
+QLabel[class="CellIconLabel"],
+QLabel#lblCellIcon {{
+    color: {TEXT_PRIMARY_HIGH};
+    font-size: 26px;
+    background: transparent;
+    border: none;
+}}
+
+QLabel.CellTitleLabel,
+QLabel[class="CellTitleLabel"],
+QLabel#lblCellTitle {{
+    color: {TEXT_SECONDARY_MED};
+    font-size: 11px;
+    font-weight: 500;
+    background: transparent;
+    border: none;
+}}
+
+QFrame#editorGridCell:hover QLabel.CellTitleLabel,
+QFrame[editorGridCell="true"]:hover QLabel.CellTitleLabel,
+EditorGridCell:hover QLabel.CellTitleLabel,
+QFrame#editorGridCell:hover QLabel[class="CellTitleLabel"],
+QFrame[editorGridCell="true"]:hover QLabel[class="CellTitleLabel"],
+EditorGridCell:hover QLabel[class="CellTitleLabel"] {{
+    color: {TEXT_PRIMARY_HIGH};
 }}
 
 /* ========================================================================== */
@@ -358,9 +416,19 @@ EditorGridCell[selected="true"]:hover {{
 QFrame#editorTouchbarStrip,
 QFrame[editorTouchbarStrip="true"],
 EditorTouchbarStrip {{
-    background-color: {BG_STRIP};
-    border: 1px solid {BORDER_TOUCHBAR};
+    background-color: {SURFACE_1_PANEL};
+    border: 1px solid {BORDER_SURFACE_1};
     border-radius: {TOUCHBAR_RADIUS}px;
+}}
+
+/* Вертикальный микро-разделитель 1px между секциями тачбара */
+QFrame#touchbarDivider,
+QFrame.TouchbarDivider,
+QFrame[class="TouchbarDivider"] {{
+    background-color: {BORDER_SURFACE_1};
+    border: none;
+    width: 1px;
+    max-width: 1px;
 }}
 
 /* ========================================================================== */
@@ -377,23 +445,109 @@ TouchbarSectionWidget {{
 QFrame#touchbarSectionWidget:hover,
 QFrame[touchbarSection="true"]:hover,
 TouchbarSectionWidget:hover {{
-    background-color: {BG_SECTION_HOVER_SUBTLE};
+    background-color: {SURFACE_3_HOVER};
     border: 1px solid {BORDER_HOVER};
 }}
 
 QFrame#touchbarSectionWidget[selected="true"],
 QFrame[touchbarSection="true"][selected="true"],
 TouchbarSectionWidget[selected="true"] {{
-    background-color: {BG_SECTION_HOVER};
-    border: 2px solid {BORDER_FOCUS};
+    background-color: #192338;
+    border: 2px solid {BORDER_FOCUS_NEON};
     border-radius: 10px;
 }}
 
 QFrame#touchbarSectionWidget[selected="true"]:hover,
 QFrame[touchbarSection="true"][selected="true"]:hover,
 TouchbarSectionWidget[selected="true"]:hover {{
-    background-color: #242d42;
-    border: 2px solid {BORDER_FOCUS_ACCENT};
+    background-color: {SURFACE_3_HOVER};
+    border: 2px solid {BORDER_FOCUS_NEON};
+}}
+
+/* Элементы и текстовые метки секций тачбара */
+QLabel.TouchbarMediaIcon,
+QLabel[class="TouchbarMediaIcon"],
+QLabel#lblTouchbarMediaIcon {{
+    color: {BORDER_FOCUS_NEON};
+    font-size: 18px;
+    background: transparent;
+    border: none;
+}}
+
+QLabel.TouchbarMediaTrack,
+QLabel[class="TouchbarMediaTrack"],
+QLabel#lblTouchbarMediaTrack {{
+    color: {TEXT_PRIMARY_HIGH};
+    font-size: 11px;
+    font-weight: 600;
+    background: transparent;
+    border: none;
+}}
+
+QLabel.TouchbarMediaArtist,
+QLabel[class="TouchbarMediaArtist"],
+QLabel#lblTouchbarMediaArtist {{
+    color: {TEXT_MUTED_SUBTLE};
+    font-size: 9px;
+    background: transparent;
+    border: none;
+}}
+
+QLabel.TouchbarMediaControls,
+QLabel[class="TouchbarMediaControls"],
+QLabel#lblTouchbarMediaControls {{
+    color: {TEXT_SECONDARY_MED};
+    font-size: 12px;
+    background: transparent;
+    border: none;
+}}
+
+QLabel.TouchbarClockTime,
+QLabel[class="TouchbarClockTime"],
+QLabel#lblTouchbarClockTime {{
+    color: {BORDER_FOCUS_NEON};
+    font-size: 16px;
+    font-weight: 700;
+    background: transparent;
+    border: none;
+}}
+
+QLabel.TouchbarClockDots,
+QLabel[class="TouchbarClockDots"],
+QLabel#lblTouchbarClockDots {{
+    color: {TEXT_MUTED_SUBTLE};
+    font-size: 9px;
+    background: transparent;
+    border: none;
+}}
+
+QLabel.TouchbarTelemetrySensor,
+QLabel[class="TouchbarTelemetrySensor"],
+QLabel#lblTouchbarCpu,
+QLabel#lblTouchbarGpu {{
+    color: #10b981;
+    font-size: 10px;
+    font-weight: 600;
+    background: transparent;
+    border: none;
+}}
+
+QLabel.TouchbarTelemetryGear,
+QLabel[class="TouchbarTelemetryGear"],
+QLabel#lblTouchbarGear {{
+    color: {TEXT_SECONDARY_MED};
+    font-size: 14px;
+    background: transparent;
+    border: none;
+}}
+
+QLabel.TouchbarFallbackLabel,
+QLabel[class="TouchbarFallbackLabel"],
+QLabel#lblTouchbarFallback {{
+    color: {TEXT_SECONDARY_MED};
+    font-size: 11px;
+    background: transparent;
+    border: none;
 }}
 
 /* ========================================================================== */
@@ -446,8 +600,20 @@ PageNavButton[active="true"]:hover {{
 QFrame#propertyInspector,
 QFrame[class="KeyPropertyInspector"],
 KeyPropertyInspector {{
-    background-color: {BG_INSPECTOR};
+    background-color: {SURFACE_1_PANEL};
     border: none;
+}}
+
+/* Разделители форм инспектора и панелей */
+QFrame#formSeparator,
+QFrame#touchbarFormSeparator,
+QFrame.FormSeparator,
+QFrame#drawerInternalSeparator,
+QFrame.DrawerInternalSeparator {{
+    background-color: {BORDER_SURFACE_1};
+    border: none;
+    height: 1px;
+    max-height: 1px;
 }}
 
 QLabel.InspectorPlaceholder,
@@ -462,7 +628,7 @@ InspectorPlaceholder {{
 QLabel.InspectorCategoryLabel,
 QLabel[class="InspectorCategoryLabel"],
 InspectorCategoryLabel {{
-    color: {TEXT_HEADER_CATEGORY};
+    color: {TEXT_PRIMARY_HIGH};
     font-size: 13px;
     font-weight: bold;
     background: transparent;
@@ -478,7 +644,7 @@ InspectorDeleteButton {{
     background-color: transparent;
     border: none;
     border-radius: 6px;
-    color: {TEXT_SECONDARY};
+    color: {TEXT_MUTED_SUBTLE};
     font-size: 14px;
     padding: 0px;
 }}
@@ -486,8 +652,8 @@ InspectorDeleteButton {{
 QPushButton.InspectorDeleteButton:hover,
 QPushButton[class="InspectorDeleteButton"]:hover,
 InspectorDeleteButton:hover {{
-    background-color: {BG_CARD};
-    color: {BTN_DELETE_HOVER};
+    background-color: #2a171b;
+    color: {ACCENT_DANGER};
 }}
 
 QPushButton.InspectorDeleteButton:pressed,
@@ -501,8 +667,8 @@ InspectorDeleteButton:pressed {{
 QFrame.KeyPreviewTile,
 QFrame[class="KeyPreviewTile"],
 KeyPreviewTile {{
-    background-color: {BG_PREVIEW_TILE};
-    border: 1px solid {BORDER_PREVIEW_TILE};
+    background-color: {SURFACE_2_CARD};
+    border: 1px solid {BORDER_SURFACE_2};
     border-radius: 10px;
     min-width: {PREVIEW_TILE_SIZE}px;
     max-width: {PREVIEW_TILE_SIZE}px;
@@ -513,10 +679,10 @@ KeyPreviewTile {{
 QFrame.KeyPreviewTile:hover,
 QFrame[class="KeyPreviewTile"]:hover,
 KeyPreviewTile:hover {{
-    border: 1px solid {BORDER_PREVIEW_HOVER};
+    border: 1px solid {BORDER_HOVER};
 }}
 
-/* Угловые микро-кнопки плитки превью (18x18 px) */
+/* Угловые микро-кнопки плитки превью (20x20 px) */
 QPushButton.TileCornerButton,
 QPushButton[class="TileCornerButton"],
 TileCornerButton {{
@@ -524,11 +690,11 @@ TileCornerButton {{
     max-width: {ICON_BTN_SIZE}px;
     min-height: {ICON_BTN_SIZE}px;
     max-height: {ICON_BTN_SIZE}px;
-    background-color: {BORDER_PREVIEW_TILE};
-    border: 1px solid {BORDER_PREVIEW_HOVER};
-    border-radius: 4px;
-    color: {TEXT_PRIMARY};
-    font-size: 10px;
+    background-color: {SURFACE_3_HOVER};
+    border: 1px solid {BORDER_HOVER};
+    border-radius: 5px;
+    color: {TEXT_SECONDARY_MED};
+    font-size: 11px;
     font-weight: bold;
     padding: 0px;
 }}
@@ -536,16 +702,17 @@ TileCornerButton {{
 QPushButton.TileCornerButton:hover,
 QPushButton[class="TileCornerButton"]:hover,
 TileCornerButton:hover {{
-    background-color: {BORDER_PREVIEW_HOVER};
-    border-color: {BORDER_FOCUS_ACCENT};
+    background-color: {SURFACE_3_HOVER};
+    border: 1px solid {BORDER_FOCUS_NEON};
     color: #ffffff;
 }}
 
 QPushButton.TileCornerButton:pressed,
 QPushButton[class="TileCornerButton"]:pressed,
 TileCornerButton:pressed {{
-    background-color: #4b5563;
-    color: {BORDER_FOCUS_ACCENT};
+    background-color: #2e3d5c;
+    border: 1px solid {BORDER_FOCUS_NEON};
+    color: {BORDER_FOCUS_NEON};
 }}
 
 /* Поля ввода инспектора */
@@ -554,12 +721,14 @@ QLineEdit[class="InspectorLineEdit"],
 InspectorLineEdit {{
     min-height: {INPUT_HEIGHT}px;
     max-height: {INPUT_HEIGHT}px;
-    background-color: {BG_PANEL};
-    border: 1px solid {BORDER_SUBTLE};
+    background-color: #101522;
+    border: 1px solid {BORDER_SURFACE_1};
     border-radius: 6px;
-    color: {TEXT_PRIMARY};
+    color: {TEXT_PRIMARY_HIGH};
     font-size: 13px;
     padding: 0 8px;
+    selection-background-color: {BORDER_FOCUS_BASE};
+    selection-color: #ffffff;
 }}
 
 QLineEdit.InspectorLineEdit:hover,
@@ -571,7 +740,7 @@ InspectorLineEdit:hover {{
 QLineEdit.InspectorLineEdit:focus,
 QLineEdit[class="InspectorLineEdit"]:focus,
 InspectorLineEdit:focus {{
-    border-color: {BORDER_FOCUS};
+    border: 1.5px solid {BORDER_FOCUS_NEON};
 }}
 
 /* Кнопка настроек шрифта */
@@ -582,10 +751,10 @@ FontSettingButton {{
     max-width: {INPUT_HEIGHT}px;
     min-height: {INPUT_HEIGHT}px;
     max-height: {INPUT_HEIGHT}px;
-    background-color: {BG_CARD};
-    border: 1px solid {BORDER_SUBTLE};
+    background-color: {SURFACE_2_CARD};
+    border: 1px solid {BORDER_SURFACE_1};
     border-radius: 6px;
-    color: {TEXT_SECONDARY};
+    color: {TEXT_SECONDARY_MED};
     font-size: 12px;
     font-weight: bold;
     padding: 0px;
@@ -594,9 +763,9 @@ FontSettingButton {{
 QPushButton.FontSettingButton:hover,
 QPushButton[class="FontSettingButton"]:hover,
 FontSettingButton:hover {{
-    background-color: {BG_DROPDOWN_HOVER};
+    background-color: {SURFACE_3_HOVER};
     border-color: {BORDER_HOVER};
-    color: {TEXT_PRIMARY};
+    color: {TEXT_PRIMARY_HIGH};
 }}
 
 /* Кнопка захвата хоткея (HotkeyCaptureButton) */
@@ -605,10 +774,10 @@ QPushButton[class="HotkeyCaptureButton"],
 HotkeyCaptureButton {{
     min-height: {INPUT_HEIGHT}px;
     max-height: {INPUT_HEIGHT}px;
-    background-color: {BG_PANEL};
-    border: 1px solid {BORDER_SUBTLE};
+    background-color: #101522;
+    border: 1px solid {BORDER_SURFACE_1};
     border-radius: 6px;
-    color: {TEXT_PRIMARY};
+    color: {TEXT_PRIMARY_HIGH};
     font-size: 12px;
     padding: 0 10px;
     text-align: left;
@@ -618,15 +787,21 @@ QPushButton.HotkeyCaptureButton:hover,
 QPushButton[class="HotkeyCaptureButton"]:hover,
 HotkeyCaptureButton:hover {{
     border-color: {BORDER_HOVER};
-    background-color: #1e1e24;
+    background-color: {SURFACE_2_CARD};
+}}
+
+QPushButton.HotkeyCaptureButton:focus,
+QPushButton[class="HotkeyCaptureButton"]:focus,
+HotkeyCaptureButton:focus {{
+    border: 1.5px solid {BORDER_FOCUS_NEON};
 }}
 
 QPushButton.HotkeyCaptureButton[capturing="true"],
 QPushButton[class="HotkeyCaptureButton"][capturing="true"],
 HotkeyCaptureButton[capturing="true"] {{
-    border: 2px solid {HOTKEY_CAPTURING_BORDER};
-    color: {HOTKEY_CAPTURING_BORDER};
-    background-color: {BG_STRIP_SECTION_HOVER};
+    border: 1.5px solid {BORDER_FOCUS_NEON};
+    color: {BORDER_FOCUS_NEON};
+    background-color: {SURFACE_3_HOVER};
     font-weight: bold;
 }}
 
@@ -634,7 +809,7 @@ HotkeyCaptureButton[capturing="true"] {{
 QLabel.InspectorFieldLabel,
 QLabel[class="InspectorFieldLabel"],
 InspectorFieldLabel {{
-    color: {TEXT_SECONDARY};
+    color: {TEXT_SECONDARY_MED};
     font-size: 12px;
     font-weight: 500;
     background: transparent;
@@ -734,19 +909,31 @@ QSlider::handle:horizontal:hover {{
    Библиотека действий (Action Library Drawer) и поиск
    ============================================================================== */
 
+QWidget#actionLibraryDrawer,
+QWidget[class="ActionLibraryDrawer"],
+ActionLibraryDrawer {{
+    background-color: {SURFACE_1_PANEL};
+}}
+
+QFrame#actionSearchBar,
+ActionSearchBar {{
+    background-color: transparent;
+    border: none;
+}}
+
 /* Поле поиска каталога действий (ActionSearchInput) */
 QLineEdit.ActionSearchInput,
 QLineEdit[class="ActionSearchInput"],
 ActionSearchInput {{
-    background-color: {BG_SEARCH_INPUT};
-    border: 1px solid {BORDER_SUBTLE};
+    background-color: {SURFACE_2_CARD};
+    border: 1px solid {BORDER_SURFACE_2};
     border-radius: 6px;
     padding: 0px 28px 0px 30px;
-    color: {TEXT_PRIMARY};
+    color: {TEXT_PRIMARY_HIGH};
     font-size: 13px;
     font-weight: 500;
     min-height: 28px;
-    selection-background-color: {BORDER_FOCUS};
+    selection-background-color: {BORDER_FOCUS_BASE};
     selection-color: #ffffff;
 }}
 
@@ -759,8 +946,17 @@ ActionSearchInput:hover {{
 QLineEdit.ActionSearchInput:focus,
 QLineEdit[class="ActionSearchInput"]:focus,
 ActionSearchInput:focus {{
-    border-color: {BORDER_FOCUS};
-    background-color: {BG_WINDOW};
+    border: 1.5px solid {BORDER_FOCUS_NEON};
+    background-color: #101522;
+}}
+
+/* Иконка лупы в строке поиска */
+QLabel.SearchIconLabel,
+QLabel#searchIconLabel {{
+    color: {TEXT_MUTED_SUBTLE};
+    font-size: 13px;
+    background: transparent;
+    border: none;
 }}
 
 /* Микро-кнопка быстрой очистки поиска (SearchClearButton) */
@@ -774,7 +970,7 @@ SearchClearButton {{
     background-color: transparent;
     border: none;
     border-radius: 9px;
-    color: {TEXT_MUTED};
+    color: {TEXT_MUTED_SUBTLE};
     font-size: 11px;
     font-weight: bold;
     padding: 0px;
@@ -783,8 +979,8 @@ SearchClearButton {{
 QPushButton.SearchClearButton:hover,
 QPushButton[class="SearchClearButton"]:hover,
 SearchClearButton:hover {{
-    background-color: {BORDER_SUBTLE};
-    color: {TEXT_PRIMARY};
+    background-color: {SURFACE_3_HOVER};
+    color: {TEXT_PRIMARY_HIGH};
 }}
 
 QPushButton.SearchClearButton:pressed,
@@ -802,10 +998,10 @@ ActionViewButton {{
     max-width: 32px;
     min-height: 32px;
     max-height: 32px;
-    background-color: {BG_SEARCH_INPUT};
-    border: 1px solid {BORDER_SUBTLE};
+    background-color: {SURFACE_2_CARD};
+    border: 1px solid {BORDER_SURFACE_2};
     border-radius: 6px;
-    color: {TEXT_SECONDARY};
+    color: {TEXT_SECONDARY_MED};
     font-size: 15px;
     font-weight: bold;
     padding: 0px;
@@ -814,49 +1010,79 @@ ActionViewButton {{
 QPushButton.ActionViewButton:hover,
 QPushButton[class="ActionViewButton"]:hover,
 ActionViewButton:hover {{
-    background-color: {BG_CARD};
+    background-color: {SURFACE_3_HOVER};
     border-color: {BORDER_HOVER};
-    color: {TEXT_PRIMARY};
+    color: {TEXT_PRIMARY_HIGH};
 }}
 
 QPushButton.ActionViewButton:pressed,
 QPushButton[class="ActionViewButton"]:pressed,
 ActionViewButton:pressed {{
-    background-color: {BG_DROPDOWN_HOVER};
-    color: #ffffff;
+    background-color: #192338;
+    border-color: {BORDER_FOCUS_NEON};
+    color: {BORDER_FOCUS_NEON};
+}}
+
+/* Скроллируемый контейнер-аккордеон категорий */
+QScrollArea#actionAccordionWidget,
+ActionAccordionWidget {{
+    background-color: transparent;
+    border: none;
+}}
+
+QWidget#actionAccordionContent {{
+    background-color: transparent;
+}}
+
+/* Секция категории действий */
+QFrame.ActionCategorySection,
+ActionCategorySection {{
+    background: transparent;
+    border: none;
+}}
+
+QWidget[objectName^="categoryBody_"] {{
+    background: transparent;
 }}
 
 /* Заголовок категории аккордеона (ActionCategoryHeader) */
 QFrame.ActionCategoryHeader,
 QFrame[class="ActionCategoryHeader"],
 ActionCategoryHeader {{
-    background-color: {BG_SEARCH_INPUT};
+    background-color: {SURFACE_1_PANEL};
     border: none;
-    border-bottom: 1px solid {BG_CARD};
-    min-height: 38px;
-    max-height: 38px;
+    border-bottom: 1px solid {BORDER_SURFACE_1};
+    min-height: {CATEGORY_HEADER_HEIGHT}px;
+    max-height: {CATEGORY_HEADER_HEIGHT}px;
 }}
 
 QFrame.ActionCategoryHeader:hover,
 QFrame[class="ActionCategoryHeader"]:hover,
 ActionCategoryHeader:hover {{
-    background-color: {BG_CARD};
+    background-color: {SURFACE_2_CARD};
 }}
 
 /* Шеврон и заголовок категории */
 QLabel.CategoryChevron,
 QLabel[class="CategoryChevron"],
 CategoryChevron {{
-    color: {CHEVRON_COLOR};
+    color: {TEXT_MUTED_SUBTLE};
     font-size: 13px;
     font-weight: bold;
     background: transparent;
 }}
 
+QLabel.CategoryChevron[expanded="true"],
+QLabel[class="CategoryChevron"][expanded="true"],
+CategoryChevron[expanded="true"],
+QFrame.ActionCategoryHeader[expanded="true"] QLabel.CategoryChevron {{
+    color: {BORDER_FOCUS_NEON};
+}}
+
 QLabel.CategoryTitle,
 QLabel[class="CategoryTitle"],
 CategoryTitle {{
-    color: {TEXT_CATEGORY_TITLE};
+    color: {TEXT_PRIMARY_HIGH};
     font-size: 13px;
     font-weight: bold;
     background: transparent;
@@ -867,23 +1093,25 @@ QFrame.ActionItemCard,
 QFrame[class="ActionItemCard"],
 ActionItemCard {{
     background-color: transparent;
-    border: none;
+    border: 1px solid transparent;
     border-radius: 6px;
-    min-height: 36px;
-    max-height: 36px;
+    min-height: {ACTION_ITEM_HEIGHT}px;
+    max-height: {ACTION_ITEM_HEIGHT}px;
 }}
 
 QFrame.ActionItemCard:hover,
 QFrame[class="ActionItemCard"]:hover,
 ActionItemCard:hover {{
-    background-color: {BG_ACTION_ITEM_HOVER};
+    background-color: {SURFACE_3_HOVER};
+    border: 1px solid {BORDER_HOVER};
 }}
 
 QFrame.ActionItemCard:pressed,
 QFrame[class="ActionItemCard"]:pressed,
 ActionItemCard:pressed,
 QFrame.ActionItemCard[active="true"] {{
-    background-color: {BG_ACTION_ITEM_ACTIVE};
+    background-color: #192338;
+    border: 1px solid {BORDER_FOCUS_NEON};
 }}
 
 /* Подложка иконки действия */
@@ -894,30 +1122,39 @@ ActionItemIconBox {{
     max-width: 24px;
     min-height: 24px;
     max-height: 24px;
-    background-color: {BG_CARD};
-    border: 1px solid {BORDER_SUBTLE};
+    background-color: {SURFACE_2_CARD};
+    border: 1px solid {BORDER_SURFACE_2};
     border-radius: 4px;
+}}
+
+QLabel.ActionItemIcon,
+QLabel#actionItemIcon {{
+    font-size: 13px;
+    background: transparent;
+    border: none;
 }}
 
 /* Название действия */
 QLabel.ActionItemTitle,
 QLabel[class="ActionItemTitle"],
 ActionItemTitle {{
-    color: #d4d4d8;
+    color: {TEXT_SECONDARY_MED};
     font-size: 12px;
     font-weight: 500;
     background: transparent;
 }}
 
-QFrame.ActionItemCard:hover QLabel.ActionItemTitle {{
-    color: {TEXT_PRIMARY};
+QFrame.ActionItemCard:hover QLabel.ActionItemTitle,
+QFrame[class="ActionItemCard"]:hover QLabel[class="ActionItemTitle"],
+ActionItemCard:hover ActionItemTitle {{
+    color: {TEXT_PRIMARY_HIGH};
 }}
 
 /* Плейсхолдер пустого поиска (SearchEmptyPlaceholder) */
 QLabel.SearchEmptyPlaceholder,
 QLabel[class="SearchEmptyPlaceholder"],
 SearchEmptyPlaceholder {{
-    color: {TEXT_MUTED};
+    color: {TEXT_MUTED_SUBTLE};
     font-size: 13px;
     font-weight: 500;
     background: transparent;

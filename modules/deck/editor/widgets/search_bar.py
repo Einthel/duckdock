@@ -34,7 +34,6 @@ class ActionSearchBar(QFrame):
         super().__init__(parent)
         self.setObjectName("actionSearchBar")
         self.setFixedHeight(SEARCH_SLOT_HEIGHT)
-        self.setStyleSheet("background-color: transparent; border: none;")
 
         # Главный горизонтальный лэйаут
         layout = QHBoxLayout(self)
@@ -55,9 +54,7 @@ class ActionSearchBar(QFrame):
         # Инлайн-иконка лупы
         self.lbl_search_icon = QLabel("🔍", self.search_input)
         self.lbl_search_icon.setObjectName("searchIconLabel")
-        self.lbl_search_icon.setStyleSheet(
-            "color: #71717a; font-size: 13px; background: transparent; border: none;"
-        )
+        self.lbl_search_icon.setProperty("class", "SearchIconLabel")
         self.lbl_search_icon.setAttribute(Qt.WA_TransparentForMouseEvents)
         input_layout.addWidget(self.lbl_search_icon, 0, Qt.AlignLeft | Qt.AlignVCenter)
 

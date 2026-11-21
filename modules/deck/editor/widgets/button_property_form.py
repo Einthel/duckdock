@@ -86,13 +86,13 @@ class ButtonPropertyForm(QWidget):
         header_layout.addWidget(self.btn_delete)
         root_layout.addLayout(header_layout)
 
-        # Разделитель HLine (1px #2e2e36)
+        # Разделитель HLine (1px BORDER_SURFACE_1)
         separator = QFrame(self)
         separator.setObjectName("formSeparator")
+        separator.setProperty("class", "FormSeparator")
         separator.setFrameShape(QFrame.HLine)
         separator.setFrameShadow(QFrame.Plain)
         separator.setFixedHeight(1)
-        separator.setStyleSheet("background-color: #2e2e36; border: none;")
         root_layout.addWidget(separator)
 
         # ----------------------------------------------------------------------

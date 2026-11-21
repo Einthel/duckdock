@@ -44,13 +44,14 @@ TELEMETRY_REFRESH_INTERVALS = [
 
 def _create_form_separator(parent: QWidget) -> QFrame:
     """
-    Вспомогательная функция создания разделителя HLine (1px #2e2e36).
+    Вспомогательная функция создания разделителя HLine (1px BORDER_SURFACE_1).
     """
     separator = QFrame(parent)
+    separator.setObjectName("touchbarFormSeparator")
+    separator.setProperty("class", "FormSeparator")
     separator.setFrameShape(QFrame.HLine)
     separator.setFrameShadow(QFrame.Plain)
     separator.setFixedHeight(1)
-    separator.setStyleSheet("background-color: #2e2e36; border: none;")
     return separator
 
 

@@ -23,12 +23,6 @@ from PySide6.QtWidgets import (
 )
 
 from core.i18n import t
-from modules.deck.editor.styles import (
-    BORDER_FOCUS_ACCENT,
-    TEXT_MUTED,
-    TEXT_PRIMARY,
-    TEXT_SECONDARY,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +34,7 @@ class TouchbarSectionWidget(QFrame):
     - title_key: ключ локализации из 'deck.editor.canvas.touchbar.*_title'
     - Инвариант: все дочерние элементы получают WA_TransparentForMouseEvents=True.
       Секция перехватывает клик и эмитирует section_clicked(str).
+    - Инвариант Stealth Focus: setFocusPolicy(Qt.NoFocus).
     """
 
     section_clicked = Signal(str)
@@ -57,6 +52,7 @@ class TouchbarSectionWidget(QFrame):
         self.setObjectName("touchbarSectionWidget")
         self.setProperty("touchbarSection", "true")
         self.setProperty("selected", "false")
+        self.setFocusPolicy(Qt.NoFocus)
         self.setCursor(Qt.PointingHandCursor)
 
         self._build_section_ui()
@@ -84,9 +80,8 @@ class TouchbarSectionWidget(QFrame):
 
         # Иконка ноты
         lbl_icon = QLabel("🎵", self)
-        lbl_icon.setStyleSheet(
-            f"color: {BORDER_FOCUS_ACCENT}; font-size: 18px; background: transparent; border: none;"
-        )
+        lbl_icon.setObjectName("lblTouchbarMediaIcon")
+        lbl_icon.setProperty("class", "TouchbarMediaIcon")
         layout.addWidget(lbl_icon)
 
         # Текстовый блок (название трека)
@@ -96,15 +91,13 @@ class TouchbarSectionWidget(QFrame):
         text_layout.setAlignment(Qt.AlignVCenter)
 
         lbl_track = QLabel("YouTube Music", self)
-        lbl_track.setStyleSheet(
-            f"color: {TEXT_PRIMARY}; font-size: 11px; font-weight: 600; background: transparent; border: none;"
-        )
+        lbl_track.setObjectName("lblTouchbarMediaTrack")
+        lbl_track.setProperty("class", "TouchbarMediaTrack")
         text_layout.addWidget(lbl_track)
 
         lbl_artist = QLabel("DuckDeck Player", self)
-        lbl_artist.setStyleSheet(
-            f"color: {TEXT_MUTED}; font-size: 9px; background: transparent; border: none;"
-        )
+        lbl_artist.setObjectName("lblTouchbarMediaArtist")
+        lbl_artist.setProperty("class", "TouchbarMediaArtist")
         text_layout.addWidget(lbl_artist)
 
         layout.addLayout(text_layout)
@@ -112,9 +105,8 @@ class TouchbarSectionWidget(QFrame):
 
         # Мини-кнопки управления ⏮ ⏯ ⏭
         lbl_controls = QLabel("⏮  ⏯  ⏭", self)
-        lbl_controls.setStyleSheet(
-            f"color: {TEXT_SECONDARY}; font-size: 12px; background: transparent; border: none;"
-        )
+        lbl_controls.setObjectName("lblTouchbarMediaControls")
+        lbl_controls.setProperty("class", "TouchbarMediaControls")
         layout.addWidget(lbl_controls)
 
     def _build_clock_ui(self) -> None:
@@ -125,18 +117,16 @@ class TouchbarSectionWidget(QFrame):
 
         # Цифровые часы
         lbl_time = QLabel("14:45", self)
+        lbl_time.setObjectName("lblTouchbarClockTime")
+        lbl_time.setProperty("class", "TouchbarClockTime")
         lbl_time.setAlignment(Qt.AlignCenter)
-        lbl_time.setStyleSheet(
-            f"color: {BORDER_FOCUS_ACCENT}; font-size: 16px; font-weight: 700; background: transparent; border: none;"
-        )
         layout.addWidget(lbl_time)
 
         # Точечный индикатор страниц
         lbl_dots = QLabel("●  ○  ○", self)
+        lbl_dots.setObjectName("lblTouchbarClockDots")
+        lbl_dots.setProperty("class", "TouchbarClockDots")
         lbl_dots.setAlignment(Qt.AlignCenter)
-        lbl_dots.setStyleSheet(
-            f"color: {TEXT_MUTED}; font-size: 9px; background: transparent; border: none;"
-        )
         layout.addWidget(lbl_dots)
 
     def _build_telemetry_ui(self) -> None:
@@ -152,15 +142,13 @@ class TouchbarSectionWidget(QFrame):
         sensors_layout.setAlignment(Qt.AlignVCenter)
 
         lbl_cpu = QLabel("CPU 48°C", self)
-        lbl_cpu.setStyleSheet(
-            "color: #10b981; font-size: 10px; font-weight: 600; background: transparent; border: none;"
-        )
+        lbl_cpu.setObjectName("lblTouchbarCpu")
+        lbl_cpu.setProperty("class", "TouchbarTelemetrySensor")
         sensors_layout.addWidget(lbl_cpu)
 
         lbl_gpu = QLabel("GPU 52°C", self)
-        lbl_gpu.setStyleSheet(
-            "color: #10b981; font-size: 10px; font-weight: 600; background: transparent; border: none;"
-        )
+        lbl_gpu.setObjectName("lblTouchbarGpu")
+        lbl_gpu.setProperty("class", "TouchbarTelemetrySensor")
         sensors_layout.addWidget(lbl_gpu)
 
         layout.addLayout(sensors_layout)
@@ -168,9 +156,8 @@ class TouchbarSectionWidget(QFrame):
 
         # Сервисная иконка шестеренки
         lbl_gear = QLabel("⚙", self)
-        lbl_gear.setStyleSheet(
-            f"color: {TEXT_SECONDARY}; font-size: 14px; background: transparent; border: none;"
-        )
+        lbl_gear.setObjectName("lblTouchbarGear")
+        lbl_gear.setProperty("class", "TouchbarTelemetryGear")
         layout.addWidget(lbl_gear)
 
     def _build_fallback_ui(self) -> None:
@@ -178,7 +165,8 @@ class TouchbarSectionWidget(QFrame):
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setAlignment(Qt.AlignCenter)
         lbl = QLabel(self.section_type, self)
-        lbl.setStyleSheet(f"color: {TEXT_SECONDARY}; font-size: 11px;")
+        lbl.setObjectName("lblTouchbarFallback")
+        lbl.setProperty("class", "TouchbarFallbackLabel")
         layout.addWidget(lbl)
 
     def _make_children_transparent(self) -> None:

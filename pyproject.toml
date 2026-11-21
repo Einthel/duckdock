@@ -1,6 +1,6 @@
 [project]
 name = "duckdock"
-version = "0.5.0"
+version = "0.5.1"
 description = "Custom Tiling Window Manager and Touch Dashboard for 7-inch 800x600 subscreen"
 authors = [{ name = "Nexus" }]
 requires-python = ">=3.11"

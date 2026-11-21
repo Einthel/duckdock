@@ -41,6 +41,7 @@ class ActionCategoryHeader(QFrame):
 
         self.setObjectName(f"categoryHeader_{category_dto.id}")
         self.setProperty("class", "ActionCategoryHeader")
+        self.setProperty("expanded", "true" if is_expanded else "false")
         self.setFixedHeight(CATEGORY_HEADER_HEIGHT)
         self.setCursor(Qt.PointingHandCursor)
 
@@ -52,6 +53,7 @@ class ActionCategoryHeader(QFrame):
         self.lbl_chevron = QLabel("⌄" if is_expanded else "›", self)
         self.lbl_chevron.setObjectName("categoryChevron")
         self.lbl_chevron.setProperty("class", "CategoryChevron")
+        self.lbl_chevron.setProperty("expanded", "true" if is_expanded else "false")
         self.lbl_chevron.setFixedWidth(14)
         self.lbl_chevron.setAlignment(Qt.AlignCenter)
         self.lbl_chevron.setAttribute(Qt.WA_TransparentForMouseEvents)
@@ -68,6 +70,12 @@ class ActionCategoryHeader(QFrame):
     def set_chevron(self, is_expanded: bool) -> None:
         """Обновляет глиф шеврона в соответствии со статусом раскрытия."""
         self.lbl_chevron.setText("⌄" if is_expanded else "›")
+        self.setProperty("expanded", "true" if is_expanded else "false")
+        self.lbl_chevron.setProperty("expanded", "true" if is_expanded else "false")
+        self.style().unpolish(self)
+        self.style().polish(self)
+        self.lbl_chevron.style().unpolish(self.lbl_chevron)
+        self.lbl_chevron.style().polish(self.lbl_chevron)
 
     def retranslate_ui(self) -> None:
         """Обновляет локализованный заголовок категории."""
@@ -104,7 +112,6 @@ class ActionCategorySection(QFrame):
 
         self.setObjectName(f"categorySection_{category_dto.id}")
         self.setProperty("class", "ActionCategorySection")
-        self.setStyleSheet("background: transparent; border: none;")
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -122,7 +129,6 @@ class ActionCategorySection(QFrame):
         # 2. Сворачиваемое тело со списком действий
         self.body_widget = QWidget(self)
         self.body_widget.setObjectName(f"categoryBody_{category_dto.id}")
-        self.body_widget.setStyleSheet("background: transparent;")
 
         self.body_layout = QVBoxLayout(self.body_widget)
         self.body_layout.setContentsMargins(4, 2, 4, 4)

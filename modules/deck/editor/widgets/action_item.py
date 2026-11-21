@@ -57,10 +57,8 @@ class ActionItemWidget(QFrame):
 
         self.lbl_icon = QLabel(self.item_dto.icon, self.icon_box)
         self.lbl_icon.setObjectName("actionItemIcon")
+        self.lbl_icon.setProperty("class", "ActionItemIcon")
         self.lbl_icon.setAlignment(Qt.AlignCenter)
-        self.lbl_icon.setStyleSheet(
-            "font-size: 13px; background: transparent; border: none;"
-        )
         self.lbl_icon.setAttribute(Qt.WA_TransparentForMouseEvents)
         icon_layout.addWidget(self.lbl_icon)
 

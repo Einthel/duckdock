@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-11-22
+
+### Added
+- **Dark Obsidian v2 Design System & Editor Polish (Спринт 1 из `.md/deck/edit_func.md`)**:
+  - **4-уровневая система поверхностей и палитра Slate (`modules/deck/editor/styles.py`)**:
+    - Внедрены токены поверхностей `SURFACE_0_CANVAS` (`#0b0d13`), `SURFACE_1_PANEL` (`#0f141f`), `SURFACE_2_CARD` (`#141924`), `SURFACE_3_HOVER` (`#1c2940`).
+    - Внедрена типографика Slate: `TEXT_SLOT_INDEX` (`#475569`), `TEXT_PRIMARY_HIGH` (`#f8fafc`), `TEXT_SECONDARY_MED` (`#94a3b8`), `TEXT_MUTED_SUBTLE` (`#64748b`).
+    - Обеспечена 100% обратная совместимость через Re-export Shims (`BG_WINDOW`, `BG_PANEL`, `BG_CARD`, `BG_CELL`, `BORDER_SUBTLE` и др.).
+  - **Рефакторинг ячеек сетки `EditorGridCell` (`modules/deck/editor/widgets/grid_cell.py`)**:
+    - Устранены все инлайн-стили вызовами `setStyleSheet()`.
+    - Добавлены селекторы классов `.CellIndexLabel`, `.CellIconLabel`, `.CellTitleLabel` для точной стилизации в `EDITOR_MAIN_QSS`.
+    - Добавлен инвариант `setFocusPolicy(Qt.NoFocus)` для соблюдения Stealth Focus.
+  - **Стилизация подложки холста и тачбара (`widgets/touchbar_strip.py`, `touchbar_section.py`)**:
+    - Динамический селектор состояния выбора `TouchbarSectionWidget[selected="true"]` с акцентной неоновой окантовкой 2 px (`#38bdf8`).
+    - Плавное фоновое выделение при наведении `:hover` (`SURFACE_3_HOVER` `#1c2940`).
+  - **Инспектор свойств и превью-плитка (`widgets/key_preview_tile.py`, `button_property_form.py`)**:
+    - Плитка `KeyPreviewTile` 84×84 px на базе `SURFACE_2_CARD` с микро-кнопками опций иконки 20×20 px.
+    - Контрастный глубокий фон полей ввода `QLineEdit.InspectorLineEdit` (`#101522`) и алый акцент кнопки удаления `InspectorDeleteButton` (`#ef4444`).
+  - **Каталог действий и строка поиска (`widgets/action_drawer.py`, `search_bar.py`, `action_category.py`, `action_item.py`)**:
+    - Стилизация разделителя панели `QSplitter` с неоновым ховером.
+    - Карточки действий `ActionItemCard` и подложки иконок `ActionItemIconBox`.
+  - **Модульные тесты стилей и целостности QSS (`tests/unit/test_deck_editor_styles.py`)**:
+    - Полная валидация токенов поверхностей, палитры Slate, HEX-форматов и shims.
+    - Тесты переключения динамического свойства `selected` ячейки `EditorGridCell` и секции `TouchbarSectionWidget`.
+    - Тестовый набор расширен до **329 passed (100% PASS)**.
+
 ## [0.5.0] - 2026-11-21
 
 ### Added

@@ -21,7 +21,11 @@ from modules.deck.editor.styles import (
     EDITOR_MAIN_QSS,
     SEARCH_BAR_HEIGHT,
     SEARCH_SLOT_HEIGHT,
+    SURFACE_2_CARD,
+    SURFACE_3_HOVER,
     TEXT_CATEGORY_TITLE,
+    TEXT_MUTED_SUBTLE,
+    TEXT_PRIMARY_HIGH,
 )
 from modules.deck.editor.widgets.search_bar import ActionSearchBar
 
@@ -98,11 +102,11 @@ def test_action_library_styles_and_tokens():
     assert CATEGORY_HEADER_HEIGHT == 38
     assert DRAWER_PADDING == 8
 
-    assert BG_SEARCH_INPUT == "#18181b"
-    assert BG_ACTION_ITEM_HOVER == "#27272a"
-    assert BG_ACTION_ITEM_ACTIVE == "#1e2638"
-    assert TEXT_CATEGORY_TITLE == "#f4f4f5"
-    assert CHEVRON_COLOR == "#9ca3af"
+    assert BG_SEARCH_INPUT == SURFACE_2_CARD
+    assert BG_ACTION_ITEM_HOVER == SURFACE_3_HOVER
+    assert BG_ACTION_ITEM_ACTIVE == "#192338"
+    assert TEXT_CATEGORY_TITLE == TEXT_PRIMARY_HIGH
+    assert CHEVRON_COLOR == TEXT_MUTED_SUBTLE
 
     # Проверка наличия ключевых селекторов в EDITOR_MAIN_QSS
     assert "ActionSearchInput" in EDITOR_MAIN_QSS

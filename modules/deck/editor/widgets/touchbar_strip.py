@@ -84,11 +84,13 @@ class EditorTouchbarStrip(QFrame):
 
     def _create_divider(self) -> QFrame:
         """
-        Создает вертикальный микро-разделитель 1px #232b3e между секциями.
+        Создает вертикальный микро-разделитель 1px между секциями.
+        Стилизуется централизованно через QSS (селектор .TouchbarDivider).
         """
         divider = QFrame(self)
+        divider.setObjectName("touchbarDivider")
+        divider.setProperty("class", "TouchbarDivider")
         divider.setFixedWidth(1)
-        divider.setStyleSheet("background-color: #232b3e; border: none;")
         divider.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         return divider
 

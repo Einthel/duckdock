@@ -1,13 +1,14 @@
 # DuckDeck Button & Touchbar Editor: Единый мастер-план функциональной интеграции (v0.6.0 Master Roadmap)
 
-> **Статус документа:** Активный закон реализации и Actionable Roadmap  
-> **Версия подсистемы:** DuckDeck Editor v0.6.0 (Functional Core, Extended Actions & Obsidian v2 Refresh)  
-> **Целевая среда:** Windows 10/11 x64, Desktop GUI (PySide6 / Qt6, Python 3.12+)  
+> **Статус документа:** Активный закон реализации и Actionable Roadmap
+> **Версия подсистемы:** DuckDeck Editor v0.6.0 (Functional Core, Extended Actions & Obsidian v2 Refresh)
+> **Целевая среда:** Windows 10/11 x64, Desktop GUI (PySide6 / Qt6, Python 3.12+)
 > **Дисплейное окружение:** Двухмониторный комплекс:
+>
 > - **Основной монитор (Primary 27" 2560×1440 dGPU):** Окно конфигуратора `DeckEditorWindow` (1080×740 px) + диалог `IconLibraryDialog` (580×640 px).
 > - **Вспомогательный экран (Secondary 7" 1024×600 JRP7813S iGPU):** Сенсорная оболочка DuckDock (`DeckView` 944×600 px).
-> **Базовый архитектурный стандарт:** `GEMINI.md` (Zero-Bespoke Invariant, Platform-First, Feature-First Modularity, Weak Coupling через EventBus, Bilingual Localization-First).  
-> **Ключевой принцип:** **DRY & Unified Button Template Invariant** — использование единой Pydantic v2 схемы `DeckButtonConfig` и единого движка исполнения `DeckActionDispatcher` для базовых пресетов и кастомных кнопок без дублирования сущностей.
+>   **Базовый архитектурный стандарт:** `GEMINI.md` (Zero-Bespoke Invariant, Platform-First, Feature-First Modularity, Weak Coupling через EventBus, Bilingual Localization-First).
+>   **Ключевой принцип:** **DRY & Unified Button Template Invariant** — использование единой Pydantic v2 схемы `DeckButtonConfig` и единого движка исполнения `DeckActionDispatcher` для базовых пресетов и кастомных кнопок без дублирования сущностей.
 
 ---
 
@@ -32,25 +33,25 @@ flowchart LR
 
 ## 2. Краткий паспорт спринтов
 
-| Спринт | Фокус и ключевая цель | Основные затронутые файлы | Ответственные роли |
-| :---: | :--- | :--- | :---: |
-| **Спринт 1** | **Dark Obsidian v2 Visual Refresh**: устранение плоской блеклости, внедрение глубины Surface 0–3, неонового акцента `#38bdf8` и приглушенных индексов `[0]..[9]`. | `styles.py`, `grid_cell.py`, `touchbar_section.py`, `button_property_form.py`, `action_drawer.py` | `@ui-creator`<br>`@frontend-ui-designer` |
-| **Спринт 2** | **Core & I/O Integration**: вызов по кнопке ⚙ из `interactive_panel.py` через `DeckEditorManager`, атомарное сохранение `config/deck_config.json` через `DeckConfigAdapter`, реактивный `bus.deck_config_updated` Hot Reload. | `interactive_panel.py`, `modules/deck/editor/manager.py`, `modules/deck/editor/adapter.py`, `modules/deck/view.py`, `core/event_bus.py` | `@fullstack-builder`<br>`@code-review` |
-| **Спринт 3** | **Icon Ecosystem**: всплывающее меню `QMenu` опций иконки (`v`), модальный диалог библиотеки иконок `IconLibraryDialog` (`+`), декларативный каталог `icon_catalog.py`, фильтрация и зум. | `key_preview_tile.py`, `icon_catalog.py`, `widgets/icon_library_dialog.py`, `locales/*.json` | `@frontend-ui-designer`<br>`@ui-creator` |
-| **Спринт 4** | **Extended Actions & Dynamic Inspector**: внедрение 8 действий `System` (включая `Hotkey Switch`, `Open`, `Close`, `Multimedia`) и 4 действий `Volume Controller`, адаптивный стек подформ в `ButtonPropertyForm`. | `actions_registry.py`, `models.py`, `action_dispatcher.py`, `button_property_form.py`, `locales/*.json` | `@fullstack-builder`<br>`@frontend-ui-designer` |
-| **Спринт 5** | **E2E Testing, DoD & Hardening**: модульные тесты новых компонентов, интеграционный сценарий полного цикла, 100% паритет локализации (AST-линтер), обновление документации и памяти Serena. | `tests/unit/test_deck_*.py`, `tests/integration/test_deck_editor_e2e.py`, `tests/core/test_i18n_linter.py`, `.md/backend.md`, `.md/changelog.md` | `@bug-hunter`<br>`@git-release-master` |
+|    Спринт    | Фокус и ключевая цель                                                                                                                                                                                                         | Основные затронутые файлы                                                                                                                        |               Ответственные роли                |
+| :----------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------: |
+| **Спринт 1** | **Dark Obsidian v2 Visual Refresh**: устранение плоской блеклости, внедрение глубины Surface 0–3, неонового акцента `#38bdf8` и приглушенных индексов `[0]..[9]`.                                                             | `styles.py`, `grid_cell.py`, `touchbar_section.py`, `button_property_form.py`, `action_drawer.py`                                                |    `@ui-creator`<br>`@frontend-ui-designer`     |
+| **Спринт 2** | **Core & I/O Integration**: вызов по кнопке ⚙ из `interactive_panel.py` через `DeckEditorManager`, атомарное сохранение `config/deck_config.json` через `DeckConfigAdapter`, реактивный `bus.deck_config_updated` Hot Reload. | `interactive_panel.py`, `modules/deck/editor/manager.py`, `modules/deck/editor/adapter.py`, `modules/deck/view.py`, `core/event_bus.py`          |     `@fullstack-builder`<br>`@code-review`      |
+| **Спринт 3** | **Icon Ecosystem**: всплывающее меню `QMenu` опций иконки (`v`), модальный диалог библиотеки иконок `IconLibraryDialog` (`+`), декларативный каталог `icon_catalog.py`, фильтрация и зум.                                     | `key_preview_tile.py`, `icon_catalog.py`, `widgets/icon_library_dialog.py`, `locales/*.json`                                                     |    `@frontend-ui-designer`<br>`@ui-creator`     |
+| **Спринт 4** | **Extended Actions & Dynamic Inspector**: внедрение 8 действий `System` (включая `Hotkey Switch`, `Open`, `Close`, `Multimedia`) и 4 действий `Volume Controller`, адаптивный стек подформ в `ButtonPropertyForm`.            | `actions_registry.py`, `models.py`, `action_dispatcher.py`, `button_property_form.py`, `locales/*.json`                                          | `@fullstack-builder`<br>`@frontend-ui-designer` |
+| **Спринт 5** | **E2E Testing, DoD & Hardening**: модульные тесты новых компонентов, интеграционный сценарий полного цикла, 100% паритет локализации (AST-линтер), обновление документации и памяти Serena.                                   | `tests/unit/test_deck_*.py`, `tests/integration/test_deck_editor_e2e.py`, `tests/core/test_i18n_linter.py`, `.md/backend.md`, `.md/changelog.md` |     `@bug-hunter`<br>`@git-release-master`      |
 
 ---
 
 ## 3. Матрица ответственности (RACI)
 
-| Спринт / Компонент | `@deep-researcher` | `@frontend-ui-designer` | `@ui-creator` | `@fullstack-builder` | `@bug-hunter` | `@code-review` |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Спринт 1: Палитра Dark Obsidian v2** | Informed | Support | **Responsible** | Support | Informed | Pre-Flight |
-| **Спринт 2: Singleton ⚙, I/O и Hot Reload** | **Accountable** | Support | Informed | **Responsible** | Support | Pre-Flight |
-| **Спринт 3: Меню и Библиотека иконок** | Support | **Responsible** | Accountable | Support | Support | Pre-Flight |
-| **Спринт 4: Расширенные действия и инспектор** | **Accountable** | Support | Informed | **Responsible** | Support | Pre-Flight |
-| **Спринт 5: E2E Тесты, DoD и Release** | Informed | Support | Informed | Support | **Responsible** | Pre-Flight |
+| Спринт / Компонент                             | `@deep-researcher` | `@frontend-ui-designer` |  `@ui-creator`  | `@fullstack-builder` |  `@bug-hunter`  | `@code-review` |
+| :--------------------------------------------- | :----------------: | :---------------------: | :-------------: | :------------------: | :-------------: | :------------: |
+| **Спринт 1: Палитра Dark Obsidian v2**         |      Informed      |         Support         | **Responsible** |       Support        |    Informed     |   Pre-Flight   |
+| **Спринт 2: Singleton ⚙, I/O и Hot Reload**    |  **Accountable**   |         Support         |    Informed     |   **Responsible**    |     Support     |   Pre-Flight   |
+| **Спринт 3: Меню и Библиотека иконок**         |      Support       |     **Responsible**     |   Accountable   |       Support        |     Support     |   Pre-Flight   |
+| **Спринт 4: Расширенные действия и инспектор** |  **Accountable**   |         Support         |    Informed     |   **Responsible**    |     Support     |   Pre-Flight   |
+| **Спринт 5: E2E Тесты, DoD и Release**         |      Informed      |         Support         |    Informed     |       Support        | **Responsible** |   Pre-Flight   |
 
 ---
 
@@ -62,13 +63,13 @@ flowchart LR
 
 Перед реализацией дизайн-системы Dark Obsidian v2 зафиксированы ключевые инженерные, алгоритмические и интерфейсные инварианты:
 
-| Узкое место / Риск | Первопричина в кодовой базе | Архитектурное решение и инвариант |
-| :--- | :--- | :--- |
-| **Разрыв обратной совместимости токенов** | Прямая замена старых констант (`BG_WINDOW`, `BG_PANEL`, `BG_CARD` и др.) на `SURFACE_*` сломает существующие модули и тесты `tests/unit/test_deck_editor_*.py`. | **Layered Palette & Re-export Shims:** внедрение 4 уровней поверхностей (`SURFACE_0_CANVAS`...`SURFACE_3_HOVER`) с обязательным сохранением прежних констант в виде алиасов в [styles.py](file:///d:/Projects_X/duckdock/modules/deck/editor/styles.py). |
-| **Конфликт инлайн-стилей `setStyleSheet`** | В [grid_cell.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/grid_cell.py#L71), [touchbar_section.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/touchbar_section.py#L87) и [touchbar_strip.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/touchbar_strip.py#L91) захардкожены цвета (`#2e2e36`, `#232b3e`, `#71717a`), которые перебивают каскад QSS. | Полная очистка виджетов от инлайн-стилей. Вынос всех правил шрифтов, цветов и ховеров в централизованную таблицу `EDITOR_MAIN_QSS` по классам и `objectName`. |
-| **Смена динамического свойства `selected` в Qt** | Изменение `self.setProperty("selected", "true")` в PySide6 не обновляет рамку на лету без принудительной ре-полировки стиля виджета. | Применение паттерна `self.style().unpolish(self); self.style().polish(self);` при переключении выбора слота или секции. Сохранение фиксированных отступов для исключения дрожания интерфейса при появлении рамки 2px. |
-| **Контрастность типографики (WCAG AA)** | На темных подложках Surface 2/3 индексы слотов `[0]..[9]` сливались, либо давали лишний визуальный шум, а вторичные лейблы не имели достаточного контраста. | Внедрение палитры Slate: индексы слотов получают приглушенный `#475569` (Slate 600), вторичный текст — `#94a3b8` (Slate 400), основной заголовок — контрастный `#f8fafc` (Slate 50, WCAG > 14:1). |
-| **Сохранение Stealth Focus (`GEMINI.md` §1.3)** | Конфигуратор работает на основном 27" мониторе (`Qt.StrongFocus`), но элементы холста (ячейки 96x96, тачбар) не должны вызывать системных звуков Windows при кликах и не должны перехватывать глобальный фокус у субскрина. | Ячейки холста и секции тачбара обрабатывают `mousePressEvent` без активации клавиатурного фокуса (`setFocusPolicy(Qt.NoFocus)` для графических элементов сетки). |
+| Узкое место / Риск                               | Первопричина в кодовой базе                                                                                                                                                                                                                                                                                                                                                                           | Архитектурное решение и инвариант                                                                                                                                                                                                                        |
+| :----------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Разрыв обратной совместимости токенов**        | Прямая замена старых констант (`BG_WINDOW`, `BG_PANEL`, `BG_CARD` и др.) на `SURFACE_*` сломает существующие модули и тесты `tests/unit/test_deck_editor_*.py`.                                                                                                                                                                                                                                       | **Layered Palette & Re-export Shims:** внедрение 4 уровней поверхностей (`SURFACE_0_CANVAS`...`SURFACE_3_HOVER`) с обязательным сохранением прежних констант в виде алиасов в [styles.py](file:///d:/Projects_X/duckdock/modules/deck/editor/styles.py). |
+| **Конфликт инлайн-стилей `setStyleSheet`**       | В [grid_cell.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/grid_cell.py#L71), [touchbar_section.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/touchbar_section.py#L87) и [touchbar_strip.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/touchbar_strip.py#L91) захардкожены цвета (`#2e2e36`, `#232b3e`, `#71717a`), которые перебивают каскад QSS. | Полная очистка виджетов от инлайн-стилей. Вынос всех правил шрифтов, цветов и ховеров в централизованную таблицу `EDITOR_MAIN_QSS` по классам и `objectName`.                                                                                            |
+| **Смена динамического свойства `selected` в Qt** | Изменение `self.setProperty("selected", "true")` в PySide6 не обновляет рамку на лету без принудительной ре-полировки стиля виджета.                                                                                                                                                                                                                                                                  | Применение паттерна `self.style().unpolish(self); self.style().polish(self);` при переключении выбора слота или секции. Сохранение фиксированных отступов для исключения дрожания интерфейса при появлении рамки 2px.                                    |
+| **Контрастность типографики (WCAG AA)**          | На темных подложках Surface 2/3 индексы слотов `[0]..[9]` сливались, либо давали лишний визуальный шум, а вторичные лейблы не имели достаточного контраста.                                                                                                                                                                                                                                           | Внедрение палитры Slate: индексы слотов получают приглушенный `#475569` (Slate 600), вторичный текст — `#94a3b8` (Slate 400), основной заголовок — контрастный `#f8fafc` (Slate 50, WCAG > 14:1).                                                        |
+| **Сохранение Stealth Focus (`GEMINI.md` §1.3)**  | Конфигуратор работает на основном 27" мониторе (`Qt.StrongFocus`), но элементы холста (ячейки 96x96, тачбар) не должны вызывать системных звуков Windows при кликах и не должны перехватывать глобальный фокус у субскрина.                                                                                                                                                                           | Ячейки холста и секции тачбара обрабатывают `mousePressEvent` без активации клавиатурного фокуса (`setFocusPolicy(Qt.NoFocus)` для графических элементов сетки).                                                                                         |
 
 ---
 
@@ -85,24 +86,26 @@ flowchart LR
 
 #### 1.2. Пошаговый план реализации Спринта 1 (@frontend-ui-designer)
 
-- [ ] **Шаг 1.1: Архитектура дизайн-токенов Surface 0–3 и Backward Compatibility Shims ([modules/deck/editor/styles.py](file:///d:/Projects_X/duckdock/modules/deck/editor/styles.py))**
+- [x] **Шаг 1.1: Архитектура дизайн-токенов Surface 0–3 и Backward Compatibility Shims ([modules/deck/editor/styles.py](file:///d:/Projects_X/duckdock/modules/deck/editor/styles.py))**
   - Объявить 4 уровня поверхностей и палитру акцентов Dark Obsidian v2:
+
     ```python
     SURFACE_0_CANVAS = "#0b0d13"       # Deep Canvas / Void
     SURFACE_1_PANEL = "#0f141f"        # Panels, Drawer, Inspector base
     SURFACE_2_CARD = "#141924"         # Cells, Preview Tile, Inputs base
     SURFACE_3_HOVER = "#1c2940"        # Hover background & Active Selection
-    
+
     BORDER_SURFACE_1 = "#1e2638"       # Тонкая граница панелей
     BORDER_SURFACE_2 = "#202a3c"       # Граница интерактивных ячеек
     BORDER_FOCUS_NEON = "#38bdf8"      # Неоновый акцент выделения
     BORDER_FOCUS_BASE = "#0078d4"      # Синий базовый фокус
-    
+
     TEXT_SLOT_INDEX = "#475569"        # Приглушенные индексы [0]..[9] (Slate 600)
     TEXT_PRIMARY_HIGH = "#f8fafc"      # Основной текст (Slate 50)
     TEXT_SECONDARY_MED = "#94a3b8"     # Вторичный текст (Slate 400)
     TEXT_MUTED_SUBTLE = "#64748b"      # Подписи и плейсхолдеры (Slate 500)
     ```
+
   - Обеспечить 100% обратную совместимость через Re-export Shims:
     ```python
     BG_WINDOW = SURFACE_0_CANVAS
@@ -116,7 +119,7 @@ flowchart LR
     BORDER_SELECTED_GLOW = BORDER_FOCUS_NEON
     ```
 
-- [ ] **Шаг 1.2: Рефакторинг ячеек сетки `EditorGridCell` и устранение инлайн-стилей ([modules/deck/editor/widgets/grid_cell.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/grid_cell.py), [modules/deck/editor/styles.py](file:///d:/Projects_X/duckdock/modules/deck/editor/styles.py))**
+- [x] **Шаг 1.2: Рефакторинг ячеек сетки `EditorGridCell` и устранение инлайн-стилей ([modules/deck/editor/widgets/grid_cell.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/grid_cell.py), [modules/deck/editor/styles.py](file:///d:/Projects_X/duckdock/modules/deck/editor/styles.py))**
   - В `_setup_ui()` класса `EditorGridCell`:
     - Удалить все прямые вызовы `setStyleSheet()` у `lbl_index`, `lbl_icon` и `lbl_title`.
     - Задать элементам селекторы классов для точного каскада: `lbl_index.setProperty("class", "CellIndexLabel")`, `lbl_icon.setProperty("class", "CellIconLabel")`, `lbl_title.setProperty("class", "CellTitleLabel")`.
@@ -128,7 +131,7 @@ flowchart LR
     - Стилизация индекса `.CellIndexLabel`: цвет `TEXT_SLOT_INDEX` (`#475569`), размер `10px`, `font-weight: 600`.
     - Стилизация заголовка `.CellTitleLabel`: цвет `TEXT_SECONDARY_MED` (`#94a3b8`), размер `11px`, `font-weight: 500`. При ховере ячейки — `TEXT_PRIMARY_HIGH` (`#f8fafc`).
 
-- [ ] **Шаг 1.3: Стилизация подложки холста и секций тачбара `EditorTouchbarStrip` ([modules/deck/editor/widgets/touchbar_strip.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/touchbar_strip.py), [modules/deck/editor/widgets/touchbar_section.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/touchbar_section.py))**
+- [x] **Шаг 1.3: Стилизация подложки холста и секций тачбара `EditorTouchbarStrip` ([modules/deck/editor/widgets/touchbar_strip.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/touchbar_strip.py), [modules/deck/editor/widgets/touchbar_section.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/touchbar_section.py))**
   - В [touchbar_strip.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/touchbar_strip.py):
     - Заменить хардкод цвета разделителя `#232b3e` на `BORDER_SURFACE_1` (`#1e2638`).
     - В `EDITOR_MAIN_QSS` настроить подложку `EditorTouchbarStrip`: фон `SURFACE_1_PANEL` (`#0f141f`), окантовка `1px solid BORDER_SURFACE_1`, скругление `12px`.
@@ -139,7 +142,7 @@ flowchart LR
       - Ховер `:hover`: фон `SURFACE_3_HOVER` (`#1c2940`), граница `1px solid #2e3d5c`.
       - Выбор `[selected="true"]`: акцентная рамка `2px solid BORDER_FOCUS_NEON` (`#38bdf8`), фон `#192338`.
 
-- [ ] **Шаг 1.4: Инспектор свойств `ButtonPropertyForm` и плитка `KeyPreviewTile` ([modules/deck/editor/widgets/key_preview_tile.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/key_preview_tile.py), [modules/deck/editor/widgets/button_property_form.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/button_property_form.py))**
+- [x] **Шаг 1.4: Инспектор свойств `ButtonPropertyForm` и плитка `KeyPreviewTile` ([modules/deck/editor/widgets/key_preview_tile.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/key_preview_tile.py), [modules/deck/editor/widgets/button_property_form.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/button_property_form.py))**
   - Плитка предварительного просмотра `KeyPreviewTile`:
     - Размер 84×84 px, фон `SURFACE_2_CARD` (`#141924`), граница `1px solid BORDER_SURFACE_2` (`#202a3c`), скругление `10px`.
     - Микро-кнопки `+` (загрузка/библиотека) и `v` (меню опций иконки): размер 20×20 px, скругление 5 px, фон `SURFACE_3_HOVER` (`#1c2940`), граница `1px solid #2e3d5c`.
@@ -149,13 +152,13 @@ flowchart LR
     - Фокус полей `:focus`: неоновый контур `1.5px solid BORDER_FOCUS_NEON`.
     - Кнопка удаления действия `InspectorDeleteButton`: в покое `#64748b`, при ховере алый акцент `#ef4444` на контрастной подложке `#2a171b`.
 
-- [ ] **Шаг 1.5: Оформление каталога действий `ActionDrawer` и поиска `ActionSearchBar` ([modules/deck/editor/widgets/action_drawer.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/action_drawer.py), [modules/deck/editor/widgets/search_bar.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/search_bar.py), [modules/deck/editor/widgets/action_category.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/action_category.py), [modules/deck/editor/widgets/action_item.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/action_item.py))**
+- [x] **Шаг 1.5: Оформление каталога действий `ActionDrawer` и поиска `ActionSearchBar` ([modules/deck/editor/widgets/action_drawer.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/action_drawer.py), [modules/deck/editor/widgets/search_bar.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/search_bar.py), [modules/deck/editor/widgets/action_category.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/action_category.py), [modules/deck/editor/widgets/action_item.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/action_item.py))**
   - Панель `ActionDrawer`: подложка `SURFACE_1_PANEL` (`#0f141f`), левый разделитель `QSplitter` 2px `BORDER_SURFACE_1` с ховером `BORDER_FOCUS_NEON` (`#38bdf8`).
   - Поисковая строка `ActionSearchBar`: фон поля ввода `SURFACE_2_CARD` (`#141924`), граница `1px solid BORDER_SURFACE_2`, иконка лупы `#64748b`, при фокусе контур `BORDER_FOCUS_NEON`.
   - Заголовки аккордеона `ActionCategoryHeader`: фон `SURFACE_1_PANEL`, нижняя граница `BORDER_SURFACE_1`, шеврон окрашивается в `BORDER_FOCUS_NEON` при раскрытии категории.
   - Карточки действий `ActionItemCard`: при ховере принимают фон `SURFACE_3_HOVER` (`#1c2940`), подложка иконки `ActionItemIconBox` — `SURFACE_2_CARD` с тонкой рамкой `BORDER_SURFACE_2`.
 
-- [ ] **Шаг 1.6: Верификация стилей, тесты целостности QSS и регрессионный прогон ([tests/unit/test_deck_editor_window.py](file:///d:/Projects_X/duckdock/tests/unit/test_deck_editor_window.py))**
+- [x] **Шаг 1.6: Верификация стилей, тесты целостности QSS и регрессионный прогон ([tests/unit/test_deck_editor_window.py](file:///d:/Projects_X/duckdock/tests/unit/test_deck_editor_window.py))**
   - Добавить тест `tests/unit/test_deck_editor_styles.py`:
     - Проверка наличия всех токенов `SURFACE_0`..`SURFACE_3` и валидность HEX-форматов.
     - Проверка применения `EDITOR_MAIN_QSS` к окну редактора без синтаксических ошибок Qt.
@@ -168,7 +171,7 @@ flowchart LR
 
 ```text
 #### Запуск шага 1.1 (Токены Dark Obsidian v2 и Shims):
-@frontend-ui-designer реализуй шаг 1.1 Спринта 1 из .md/deck/edit_func.md:
+@frontend-ui-designer реализуй шаг 1.1 Спринта 1 из @edit_func.md :
 1. Внедри 4-уровневую систему токенов поверхностей (SURFACE_0_CANVAS #0b0d13, SURFACE_1_PANEL #0f141f, SURFACE_2_CARD #141924, SURFACE_3_HOVER #1c2940) и палитру Slate в modules/deck/editor/styles.py.
 2. Сохрани 100% обратную совместимость через Re-export Shims (BG_WINDOW, BG_PANEL, BG_CARD, BG_CELL, BORDER_SUBTLE и др.).
 3. Критерий завершения: modules/deck/editor/styles.py экспортирует обновленные токены, существующие импорты не сломаны, синтаксис QSS валиден.
@@ -180,7 +183,7 @@ flowchart LR
 
 ```text
 #### Запуск шагов [1.2 - 1.3] (Рефакторинг GridCell, Touchbar и устранение инлайн-стилей):
-@frontend-ui-designer и @ui-creator реализуйте шаги 1.2 и 1.3 Спринта 1 из .md/deck/edit_func.md:
+@frontend-ui-designer и @ui-creator реализуйте шаги 1.2 и 1.3 Спринта 1 из @edit_func.md :
 1. Очисти modules/deck/editor/widgets/grid_cell.py от инлайн-вызовов setStyleSheet() у lbl_index, lbl_icon и lbl_title, назначив селекторы классов CellIndexLabel, CellIconLabel, CellTitleLabel.
 2. В modules/deck/editor/styles.py настрой стилизацию EditorGridCell: фон Surface 2, ховер Surface 3, приглушенные индексы [0]..[9] (#475569) и неоновую рамку выделения 2px #38bdf8.
 3. Очисти modules/deck/editor/widgets/touchbar_section.py и touchbar_strip.py от инлайн-цветов, настроив подложку Surface 1 и подсветку активных секций в styles.py.
@@ -193,7 +196,7 @@ flowchart LR
 
 ```text
 #### Запуск шагов [1.4 - 1.5] (Инспектор ButtonPropertyForm, KeyPreviewTile и ActionDrawer):
-@frontend-ui-designer реализуй шаги 1.4 и 1.5 Спринта 1 из .md/deck/edit_func.md:
+@frontend-ui-designer реализуй шаги 1.4 и 1.5 Спринта 1 из @edit_func.md :
 1. Освежи KeyPreviewTile: фон Surface 2, микро-кнопки [+] и [v] 20x20 px со скруглением 5 px и неоновым ховером #38bdf8.
 2. Стилизуй инпуты инспектора в styles.py: глубокий фон #101522, контрастный текст #f8fafc и неоновый фокус 1.5px #38bdf8.
 3. Оформи ActionDrawer, строку поиска ActionSearchBar и аккордеон действий: фон Surface 1/2, неоновые шевроны категорий и ховер карточек действий Surface 3.
@@ -206,7 +209,7 @@ flowchart LR
 
 ```text
 #### Запуск шага 1.6 (Верификация, модульные тесты и приемка):
-@bug-hunter выполни шаг 1.6 Спринта 1 из .md/deck/edit_func.md:
+@bug-hunter выполни шаг 1.6 Спринта 1 из @edit_func.md :
 1. Запусти полный прогон существующих тестов: pytest tests/unit/test_deck_editor*.py.
 2. Проверь прохождение линтера локализации: pytest tests/core/test_i18n_linter.py.
 3. Добавь тест tests/unit/test_deck_editor_styles.py на целостность палитры Dark Obsidian v2 (наличие SURFACE_0..3, HEX-валидация, применение темы к окну).
@@ -221,14 +224,14 @@ flowchart LR
 
 Перед реализацией системной интеграции и двустороннего адаптера данных зафиксированы ключевые инженерные риски, инварианты целостности и UX-требования:
 
-| Узкое место / Риск | Первопричина в кодовой базе | Архитектурное решение и инвариант |
-| :--- | :--- | :--- |
-| **Угон фокуса и курсора при открытии редактора (`GEMINI.md` §1.3)** | Тач по кнопке ⚙ на 7" мониторе (`WS_EX_NOACTIVATE`) может вызвать паразитный перехват курсора мыши или перевод фокуса Windows на скрытую оболочку DuckDock. | **Targeted Desktop Focus & Anti-Cursor Warp:** `DeckEditorManager` явно открывает окно на `primaryScreen` (27" dGPU), применяет `activateWindow()`, `raise_()`, а окно DuckDock на 7" экране сохраняет свойство `WS_EX_NOACTIVATE` и `Qt.NoFocus`. Курсор мыши не перемещается принудительно на тач-экран. |
-| **Повреждение конфигурации при сбое I/O (Race Condition / Zero-Byte File)** | Прямая запись через `open(path, "w")` приводит к очистке файла до 0 байт при падении процесса или отключении питания в момент записи. | **Atomic Replace Pattern:** Запись конфигурации осуществляется строго через временный файл `.tmp` в той же файловой системе (`config/deck_config.json.tmp`) с последующим атомарным вызовом `os.replace()` и созданием резервной копии `.bak`. |
-| **Потеря расширенных полей Pydantic v2 при маппинге DTO ↔ Config** | В презентационной модели `ButtonSlotDTO` присутствуют только базовые поля (`slot_index`, `title`, `icon`, `hotkey`), а в `DeckButtonConfig` содержатся `status_source`, `color_accent`, `sound_override`, `toggle_action`. | **Full-Fidelity DTO/Config Preservation:** `DeckConfigAdapter` хранит исходный объект `DeckButtonConfig` или выполняет дифференциальное слияние (Merge), обновляя только модифицированные пользователем поля и сохраняя нетронутыми `status_source`, `sound_override` и `toggle_action`. |
-| **Разрушение многостраничной структуры (Pages 1..8)** | Редактор редактирует текущую активную страницу, при сохранении нельзя перезаписывать весь `DeckRootConfig` только одной страницей. | **Root Config Context Preservation:** `DeckEditorWindow` загружает полный `DeckRootConfig`, связывает `PageNavigationBar` с конкретными страницами из списка `root_config.pages`, а при сохранении обновляет массив кнопок только для целевой страницы, сохраняя остальные страницы без изменений. |
-| **Визуальный фриз и мерцание при Hot Reload (`DeckView`)** | Полное пересоздание сетки `DeckGrid` и инстансов `DeckButtonWidget` при получении сигнала сбросит тактильные анимации и состояние тайлов. | **In-Place Reactive Tile Update:** В `DeckView` метод `reload_config()` обновляет конфигурации существующих кнопок по индексам слотов `0..9` через `btn_widget.update_config()`, исключая пересоздание виджетов и мерцание холста. |
-| **Обратная связь сохранения в UI (Save Feedback)** | Пользователь на основном 27" экране не понимает, применились ли изменения, если кнопка «Сохранить» статична. | **Tactile Save Button & Transient Checkmark:** Кнопка «💾 Сохранить» в `EditorHeaderBar` при успешном сохранении меняет цвет на изумрудный `#10b981`, иконку на `✓` и текст на `"Сохранено!"` с автоматическим возвратом через `QTimer` (2000 мс). |
+| Узкое место / Риск                                                          | Первопричина в кодовой базе                                                                                                                                                                                                | Архитектурное решение и инвариант                                                                                                                                                                                                                                                                          |
+| :-------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Угон фокуса и курсора при открытии редактора (`GEMINI.md` §1.3)**         | Тач по кнопке ⚙ на 7" мониторе (`WS_EX_NOACTIVATE`) может вызвать паразитный перехват курсора мыши или перевод фокуса Windows на скрытую оболочку DuckDock.                                                                | **Targeted Desktop Focus & Anti-Cursor Warp:** `DeckEditorManager` явно открывает окно на `primaryScreen` (27" dGPU), применяет `activateWindow()`, `raise_()`, а окно DuckDock на 7" экране сохраняет свойство `WS_EX_NOACTIVATE` и `Qt.NoFocus`. Курсор мыши не перемещается принудительно на тач-экран. |
+| **Повреждение конфигурации при сбое I/O (Race Condition / Zero-Byte File)** | Прямая запись через `open(path, "w")` приводит к очистке файла до 0 байт при падении процесса или отключении питания в момент записи.                                                                                      | **Atomic Replace Pattern:** Запись конфигурации осуществляется строго через временный файл `.tmp` в той же файловой системе (`config/deck_config.json.tmp`) с последующим атомарным вызовом `os.replace()` и созданием резервной копии `.bak`.                                                             |
+| **Потеря расширенных полей Pydantic v2 при маппинге DTO ↔ Config**          | В презентационной модели `ButtonSlotDTO` присутствуют только базовые поля (`slot_index`, `title`, `icon`, `hotkey`), а в `DeckButtonConfig` содержатся `status_source`, `color_accent`, `sound_override`, `toggle_action`. | **Full-Fidelity DTO/Config Preservation:** `DeckConfigAdapter` хранит исходный объект `DeckButtonConfig` или выполняет дифференциальное слияние (Merge), обновляя только модифицированные пользователем поля и сохраняя нетронутыми `status_source`, `sound_override` и `toggle_action`.                   |
+| **Разрушение многостраничной структуры (Pages 1..8)**                       | Редактор редактирует текущую активную страницу, при сохранении нельзя перезаписывать весь `DeckRootConfig` только одной страницей.                                                                                         | **Root Config Context Preservation:** `DeckEditorWindow` загружает полный `DeckRootConfig`, связывает `PageNavigationBar` с конкретными страницами из списка `root_config.pages`, а при сохранении обновляет массив кнопок только для целевой страницы, сохраняя остальные страницы без изменений.         |
+| **Визуальный фриз и мерцание при Hot Reload (`DeckView`)**                  | Полное пересоздание сетки `DeckGrid` и инстансов `DeckButtonWidget` при получении сигнала сбросит тактильные анимации и состояние тайлов.                                                                                  | **In-Place Reactive Tile Update:** В `DeckView` метод `reload_config()` обновляет конфигурации существующих кнопок по индексам слотов `0..9` через `btn_widget.update_config()`, исключая пересоздание виджетов и мерцание холста.                                                                         |
+| **Обратная связь сохранения в UI (Save Feedback)**                          | Пользователь на основном 27" экране не понимает, применились ли изменения, если кнопка «Сохранить» статична.                                                                                                               | **Tactile Save Button & Transient Checkmark:** Кнопка «💾 Сохранить» в `EditorHeaderBar` при успешном сохранении меняет цвет на изумрудный `#10b981`, иконку на `✓` и текст на `"Сохранено!"` с автоматическим возвратом через `QTimer` (2000 мс).                                                         |
 
 ---
 
@@ -331,7 +334,7 @@ sequenceDiagram
 
 - [ ] **Шаг 2.5: Реактивный `bus.deck_config_updated` Hot Reload ([core/event_bus.py](file:///d:/Projects_X/duckdock/core/event_bus.py), [modules/deck/view.py](file:///d:/Projects_X/duckdock/modules/deck/view.py))**
   - В [core/event_bus.py](file:///d:/Projects_X/duckdock/core/event_bus.py):
-    - Зарегистрировать сигнал `deck_config_updated = Signal()` с аннотацией: *"Сигнал горячей перезагрузки конфигурации макро-панели DuckDeck"*.
+    - Зарегистрировать сигнал `deck_config_updated = Signal()` с аннотацией: _"Сигнал горячей перезагрузки конфигурации макро-панели DuckDeck"_.
   - В [modules/deck/view.py](file:///d:/Projects_X/duckdock/modules/deck/view.py):
     - В `_subscribe_eventbus()`: подключить `bus.deck_config_updated.connect(self._on_deck_config_updated)`.
     - В `_unsubscribe_eventbus()`: обеспечить безопасное отключение `bus.deck_config_updated.disconnect(self._on_deck_config_updated)`.
@@ -360,7 +363,7 @@ sequenceDiagram
 
 ```text
 #### Запуск шагов [2.1 - 2.2] (Singleton DeckEditorManager и интеграция кнопки ⚙):
-@fullstack-builder реализуй шаги 2.1 и 2.2 Спринта 2 из .md/deck/edit_func.md:
+@fullstack-builder реализуй шаги 2.1 и 2.2 Спринта 2 из @edit_func.md :
 1. Создай modules/deck/editor/manager.py с классом DeckEditorManager (Singleton, методы open_editor, get_instance, close_editor, центрирование на primaryScreen 27" dGPU, сохранение инварианта Stealth Focus).
 2. В modules/deck/widgets/interactive_panel.py замени заглушку в _on_settings_clicked() на вызов DeckEditorManager.open_editor(page_id=...) с отложенным импортом и уведомлением в тикер.
 3. Добавь ключ локализации deck.interactive.opening_editor в locales/ru.json и locales/en.json.
@@ -373,7 +376,7 @@ sequenceDiagram
 
 ```text
 #### Запуск шага 2.3 (Двусторонний DeckConfigAdapter и атомарное сохранение):
-@fullstack-builder реализуй шаг 2.3 Спринта 2 из .md/deck/edit_func.md:
+@fullstack-builder реализуй шаг 2.3 Спринта 2 из @edit_func.md :
 1. Создай modules/deck/editor/adapter.py с классом DeckConfigAdapter:
    - Методы slot_to_dto() и dto_to_slot() со 100% сохранением полей Pydantic v2 (status_source, color_accent, sound_override, toggle_action);
    - Методы load_page_slots() и apply_slots_to_page() для сохранения контекста многостраничного DeckRootConfig;
@@ -388,7 +391,7 @@ sequenceDiagram
 
 ```text
 #### Запуск шагов [2.4 - 2.5] (Кнопка Сохранить, хоткей Ctrl+S и реактивный Hot Reload):
-@frontend-ui-designer и @fullstack-builder реализуйте шаги 2.4 и 2.5 Спринта 2 из .md/deck/edit_func.md:
+@frontend-ui-designer и @fullstack-builder реализуйте шаги 2.4 и 2.5 Спринта 2 из @edit_func.md :
 1. В modules/deck/editor/widgets/header_bar.py добавь кнопку '💾 Сохранить' со стилями Dark Obsidian v2, анимацией успеха '✓ Сохранено!' (2000 мс) и сигналом save_requested.
 2. В modules/deck/editor/window.py привяжи хоткей Ctrl+S, вызови сохранение через DeckConfigAdapter и эмитируй bus.deck_config_updated.
 3. В core/event_bus.py зарегистрируй сигнал deck_config_updated = Signal().
@@ -403,7 +406,7 @@ sequenceDiagram
 
 ```text
 #### Запуск шага 2.6 (Верификация, модульные тесты и сдача Спринта 2):
-@bug-hunter выполни шаг 2.6 Спринта 2 из .md/deck/edit_func.md:
+@bug-hunter выполни шаг 2.6 Спринта 2 из @edit_func.md :
 1. Разработай комплексный тест tests/unit/test_deck_editor_io.py, покрывающий Singleton менеджера, маппинг адаптера, атомарность записи и реактивность EventBus.
 2. Запусти полный прогон тестов: pytest tests/.
 3. Запусти проверку линтера локализации: pytest tests/core/test_i18n_linter.py.
@@ -418,14 +421,14 @@ sequenceDiagram
 
 Перед реализацией каталога и интерактивной библиотеки иконок зафиксированы ключевые инженерные, алгоритмические и интерфейсные инварианты:
 
-| Узкое место / Риск | Первопричина в кодовой базе | Архитектурное решение и инвариант |
-| :--- | :--- | :--- |
-| **Фриз UI при рендеринге каталога (100+ иконок)** | Создание сотен `QPixmap` на лету в основном потоке интерфейса вызывает задержки при открытии диалога и скроллинге. | **In-Memory Pixmap Caching & Batch Ingestion:** Внедрение класса `IconCache` внутри `icon_catalog.py`. Иконки кэшируются по ключу/пути с предмасштабированием под сетку (SmoothTransformation). Загрузка пользовательской папки выполняется безопасно с фильтрацией валидных графических форматов. |
-| **Разрушение путей к иконкам при переносе приложения** | Сохранение абсолютных путей `D:/Projects_X/...` в `DeckButtonConfig` ломает отображение при экспорте профилей или смене пути проекта. | **Normalized Relative Icon Paths:** Все встроенные системные иконки и бренды используют относительные пути от корня `resources/` (например, `deck/icons/system/mute.png`) или семантические URN-префиксы (`sys:audio_mute`, `app:discord`). Пользовательские файлы сохраняются в `resources/deck/custom_icons/` с хранением пути относительно корня ресурсов. |
-| **Двуязычный полнотекстовый поиск (Search Friction)** | Поиск только по имени файла `discord.png` не найдет иконку, если пользователь введет «дискорд» или «чат». | **Bilingual Semantic Keywords:** Структура `IconEntryDTO` содержит локализованные метаданные: списки ключевых слов на двух языках (`keywords_ru` и `keywords_en`). Фильтрация выполняется нормализованным lower-case сопоставлением без учета регистра. |
-| **Сохранение Stealth Focus (`GEMINI.md` §1.3)** | Модальный диалог `IconLibraryDialog` на основном мониторе не должен блокировать тач-события или перехватывать системный фокус у вторичного экрана. | **Modal-to-Editor Parenting:** Диалог инстанцируется с `parent=DeckEditorWindow`, использует флаги `Qt.Dialog | Qt.WindowCloseButtonHint` и позиционируется строго по центру родительского окна на основном 27" экране. |
-| **Утечки памяти диалога и контекстного меню** | Создание новых экземпляров `QMenu` и `IconLibraryDialog` без очистки приводит к утечке объектов в Qt C++ куче. | **Resource Cleanup & Parent Ownership:** Контекстное меню создается как дочерний объект `btn_menu`, а `IconLibraryDialog` освобождает ресурсы через `setAttribute(Qt.WA_DeleteOnClose, True)` или переиспользуется через ленивую инициализацию инспектора. |
-| **Консистентность палитры Dark Obsidian v2** | Стандартный `QMenu` в Windows 10/11 имеет белую/серую тему с резкими системными границами, выбиваясь из темного стиля Obsidian. | **Dedicated Dark Obsidian QSS for Menus & Dialog:** Полная стилизация `QMenu`, `QMenu::item`, `QMenu::separator` и всех подкомпонентов диалога в `styles.py` с использованием токенов `SURFACE_1_PANEL`, `SURFACE_2_CARD`, `SURFACE_3_HOVER` и акцента `#38bdf8`. |
+| Узкое место / Риск                                     | Первопричина в кодовой базе                                                                                                                        | Архитектурное решение и инвариант                                                                                                                                                                                                                                                                                                                             |
+| :----------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| **Фриз UI при рендеринге каталога (100+ иконок)**      | Создание сотен `QPixmap` на лету в основном потоке интерфейса вызывает задержки при открытии диалога и скроллинге.                                 | **In-Memory Pixmap Caching & Batch Ingestion:** Внедрение класса `IconCache` внутри `icon_catalog.py`. Иконки кэшируются по ключу/пути с предмасштабированием под сетку (SmoothTransformation). Загрузка пользовательской папки выполняется безопасно с фильтрацией валидных графических форматов.                                                            |
+| **Разрушение путей к иконкам при переносе приложения** | Сохранение абсолютных путей `D:/Projects_X/...` в `DeckButtonConfig` ломает отображение при экспорте профилей или смене пути проекта.              | **Normalized Relative Icon Paths:** Все встроенные системные иконки и бренды используют относительные пути от корня `resources/` (например, `deck/icons/system/mute.png`) или семантические URN-префиксы (`sys:audio_mute`, `app:discord`). Пользовательские файлы сохраняются в `resources/deck/custom_icons/` с хранением пути относительно корня ресурсов. |
+| **Двуязычный полнотекстовый поиск (Search Friction)**  | Поиск только по имени файла `discord.png` не найдет иконку, если пользователь введет «дискорд» или «чат».                                          | **Bilingual Semantic Keywords:** Структура `IconEntryDTO` содержит локализованные метаданные: списки ключевых слов на двух языках (`keywords_ru` и `keywords_en`). Фильтрация выполняется нормализованным lower-case сопоставлением без учета регистра.                                                                                                       |
+| **Сохранение Stealth Focus (`GEMINI.md` §1.3)**        | Модальный диалог `IconLibraryDialog` на основном мониторе не должен блокировать тач-события или перехватывать системный фокус у вторичного экрана. | **Modal-to-Editor Parenting:** Диалог инстанцируется с `parent=DeckEditorWindow`, использует флаги `Qt.Dialog                                                                                                                                                                                                                                                 | Qt.WindowCloseButtonHint` и позиционируется строго по центру родительского окна на основном 27" экране. |
+| **Утечки памяти диалога и контекстного меню**          | Создание новых экземпляров `QMenu` и `IconLibraryDialog` без очистки приводит к утечке объектов в Qt C++ куче.                                     | **Resource Cleanup & Parent Ownership:** Контекстное меню создается как дочерний объект `btn_menu`, а `IconLibraryDialog` освобождает ресурсы через `setAttribute(Qt.WA_DeleteOnClose, True)` или переиспользуется через ленивую инициализацию инспектора.                                                                                                    |
+| **Консистентность палитры Dark Obsidian v2**           | Стандартный `QMenu` в Windows 10/11 имеет белую/серую тему с резкими системными границами, выбиваясь из темного стиля Obsidian.                    | **Dedicated Dark Obsidian QSS for Menus & Dialog:** Полная стилизация `QMenu`, `QMenu::item`, `QMenu::separator` и всех подкомпонентов диалога в `styles.py` с использованием токенов `SURFACE_1_PANEL`, `SURFACE_2_CARD`, `SURFACE_3_HOVER` и акцента `#38bdf8`.                                                                                             |
 
 ---
 
@@ -477,33 +480,35 @@ flowchart TD
 ```
 
 ##### 1. Анатомия всплывающего контекстного меню `v` (QMenu)
-* Позиционируется под кнопкой `btn_menu` с выравниванием по правому краю.
-* Структура пунктов:
-  1. *Неактивный заголовок:* `🎨` `t("deck.editor.menu.icon.header")` (*"Иконка кнопки"* / *"Button Icon"*).
-  2. *Выбрать из файла...:* `📁` `t("deck.editor.menu.icon.set_from_file")` — открывает системный `QFileDialog` с фильтром `Images (*.png *.svg *.ico *.jpg *.webp)`. Выбранный файл копируется в `resources/deck/custom_icons/` с генерацией безопасного имени.
-  3. *Открыть библиотеку иконок...:* `📚` `t("deck.editor.menu.icon.open_library")` — открывает `IconLibraryDialog`.
-  4. *Разделитель (`addSeparator()`)*.
-  5. *Открыть папку пользовательских иконок:* `📂` `t("deck.editor.menu.icon.open_folder")` — открывает папку `resources/deck/custom_icons/` в Проводнике через `os.startfile`.
-  6. *Сбросить иконку:* `🗑️` `t("deck.editor.menu.icon.reset_icon")` — возвращает базовую иконку действия или дефолтный символ.
+
+- Позиционируется под кнопкой `btn_menu` с выравниванием по правому краю.
+- Структура пунктов:
+  1. _Неактивный заголовок:_ `🎨` `t("deck.editor.menu.icon.header")` (_"Иконка кнопки"_ / _"Button Icon"_).
+  2. _Выбрать из файла...:_ `📁` `t("deck.editor.menu.icon.set_from_file")` — открывает системный `QFileDialog` с фильтром `Images (*.png *.svg *.ico *.jpg *.webp)`. Выбранный файл копируется в `resources/deck/custom_icons/` с генерацией безопасного имени.
+  3. _Открыть библиотеку иконок...:_ `📚` `t("deck.editor.menu.icon.open_library")` — открывает `IconLibraryDialog`.
+  4. _Разделитель (`addSeparator()`)_.
+  5. _Открыть папку пользовательских иконок:_ `📂` `t("deck.editor.menu.icon.open_folder")` — открывает папку `resources/deck/custom_icons/` в Проводнике через `os.startfile`.
+  6. _Сбросить иконку:_ `🗑️` `t("deck.editor.menu.icon.reset_icon")` — возвращает базовую иконку действия или дефолтный символ.
 
 ##### 2. Анатомия модального диалога `IconLibraryDialog` (580×640 px)
-* **Header Bar (48 px):** Тонкая подложка Surface 1 (`#0f141f`), иконка каталога `📚`, локализованный заголовок `t("deck.editor.dialog.icon_library.title")`, бейдж счетчика найденных иконок `(86)`, кнопка закрытия `✕`.
-* **Search & Filter Zone (86 px):**
-  * Поле ввода `SearchBar` с иконкой лупы `🔍`, плейсхолдером `t("deck.editor.dialog.icon_library.search_placeholder")`, кнопкой мгновенного сброса `✕`.
-  * Лента категорий (Horizontal Pills Strip): кнопки-чипы со счетчиками:
+
+- **Header Bar (48 px):** Тонкая подложка Surface 1 (`#0f141f`), иконка каталога `📚`, локализованный заголовок `t("deck.editor.dialog.icon_library.title")`, бейдж счетчика найденных иконок `(86)`, кнопка закрытия `✕`.
+- **Search & Filter Zone (86 px):**
+  - Поле ввода `SearchBar` с иконкой лупы `🔍`, плейсхолдером `t("deck.editor.dialog.icon_library.search_placeholder")`, кнопкой мгновенного сброса `✕`.
+  - Лента категорий (Horizontal Pills Strip): кнопки-чипы со счетчиками:
     - `"Все"` `(86)`, `"Система"` `(28)`, `"Приложения"` `(34)`, `"Медиа & Стриминг"` `(16)`, `"Пользовательские"` `(8)`.
-* **Icon Grid View (Scroll Area, ~450 px):**
-  * Темный фон Surface 0 (`#0b0d13`).
-  * Сетка тайлов иконок (`IconTileWidget`):
+- **Icon Grid View (Scroll Area, ~450 px):**
+  - Темный фон Surface 0 (`#0b0d13`).
+  - Сетка тайлов иконок (`IconTileWidget`):
     - Размер превью по умолчанию: 48×48 px (шаг сетки 64×64 px с отступами).
     - Стиль тайла: подложка Surface 2 (`#141924`), тонкая рамка `#202a3c`, скругление 8 px.
     - Состояние Hover: всплытие фона в Surface 3 (`#1c2940`), неоновое свечение границы `#38bdf8`.
     - Состояние Selected: заливка Surface 3, плотная акцентная рамка 2px `#38bdf8`.
     - Поддержка форматов: как растровые/векторные изображения (SVG/PNG/ICO/JPG), так и текстовые Unicode-символы/эмодзи высокого разрешения.
     - Тултип с локализованным названием и тегами при наведении курсора.
-* **Footer Action Bar (56 px):**
-  * Слева: селектор масштаба превью (Zoom Controls): `[-]` (36 px), `[=]` (48 px), `[+]` (60 px) и текстовая ссылка `t("deck.editor.dialog.icon_library.add_custom")`.
-  * Справа: кнопка «Отмена» (`QPushButton`, Surface 2) и кнопка «Выбрать» (`QPushButton`, Accent Blue `#0078d4` / Hover `#0284c7`).
+- **Footer Action Bar (56 px):**
+  - Слева: селектор масштаба превью (Zoom Controls): `[-]` (36 px), `[=]` (48 px), `[+]` (60 px) и текстовая ссылка `t("deck.editor.dialog.icon_library.add_custom")`.
+  - Справа: кнопка «Отмена» (`QPushButton`, Surface 2) и кнопка «Выбрать» (`QPushButton`, Accent Blue `#0078d4` / Hover `#0284c7`).
 
 ---
 
@@ -525,26 +530,26 @@ flowchart TD
     - Добавить в `EDITOR_MAIN_QSS` правила для `QMenu`, `QMenu::item`, `QMenu::item:selected`, `QMenu::separator`:
       ```css
       QMenu {
-          background-color: #0f141f;
-          border: 1px solid #202a3c;
-          border-radius: 8px;
-          padding: 6px;
+        background-color: #0f141f;
+        border: 1px solid #202a3c;
+        border-radius: 8px;
+        padding: 6px;
       }
       QMenu::item {
-          background-color: transparent;
-          color: #f8fafc;
-          padding: 6px 12px;
-          border-radius: 4px;
-          font-size: 13px;
+        background-color: transparent;
+        color: #f8fafc;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 13px;
       }
       QMenu::item:selected {
-          background-color: #1c2940;
-          color: #38bdf8;
+        background-color: #1c2940;
+        color: #38bdf8;
       }
       QMenu::separator {
-          height: 1px;
-          background-color: #202a3c;
-          margin: 4px 6px;
+        height: 1px;
+        background-color: #202a3c;
+        margin: 4px 6px;
       }
       ```
 
@@ -603,26 +608,26 @@ flowchart TD
 
 - [ ] **Шаг 3.5: Двуязычная локализация RU/EN со 100% паритетом ([locales/ru.json](file:///d:/Projects_X/duckdock/locales/ru.json), [locales/en.json](file:///d:/Projects_X/duckdock/locales/en.json))**
   - Добавить словарь `deck.editor.menu.icon`:
-    - `header`: RU *"Иконка кнопки"*, EN *"Button Icon"*
-    - `set_from_file`: RU *"Выбрать из файла..."*, EN *"Choose from File..."*
-    - `open_library`: RU *"Открыть библиотеку иконок DuckDeck..."*, EN *"Open DuckDeck Icon Library..."*
-    - `open_folder`: RU *"Открыть папку пользовательских иконок"*, EN *"Open Custom Icons Folder"*
-    - `reset_icon`: RU *"Сбросить иконку"*, EN *"Reset Icon"*
+    - `header`: RU _"Иконка кнопки"_, EN _"Button Icon"_
+    - `set_from_file`: RU _"Выбрать из файла..."_, EN _"Choose from File..."_
+    - `open_library`: RU _"Открыть библиотеку иконок DuckDeck..."_, EN _"Open DuckDeck Icon Library..."_
+    - `open_folder`: RU _"Открыть папку пользовательских иконок"_, EN _"Open Custom Icons Folder"_
+    - `reset_icon`: RU _"Сбросить иконку"_, EN _"Reset Icon"_
   - Добавить словарь `deck.editor.dialog.icon_library`:
-    - `title`: RU *"Библиотека иконок DuckDeck"*, EN *"DuckDeck Icon Library"*
-    - `search_placeholder`: RU *"Поиск по названию или тегам..."*, EN *"Search by name or tags..."*
-    - `categories.all`: RU *"Все"*, EN *"All"*
-    - `categories.system`: RU *"Система"*, EN *"System"*
-    - `categories.apps`: RU *"Приложения"*, EN *"Applications"*
-    - `categories.media`: RU *"Медиа & Стриминг"*, EN *"Media & Streaming"*
-    - `categories.glyphs`: RU *"Символы & Эмодзи"*, EN *"Glyphs & Emoji"*
-    - `categories.custom`: RU *"Пользовательские"*, EN *"Custom Icons"*
-    - `add_custom`: RU *"+ Добавить свои иконки..."*, EN *"+ Add Custom Icons..."*
-    - `zoom_tooltip`: RU *"Масштаб сетки"*, EN *"Grid Zoom"*
-    - `btn_select`: RU *"Выбрать"*, EN *"Select"*
-    - `btn_cancel`: RU *"Отмена"*, EN *"Cancel"*
-    - `no_results`: RU *"Иконки не найдены"*, EN *"No icons found"*
-    - `files_filter`: RU *"Изображения (*.png *.svg *.ico *.jpg *.webp)"*, EN *"Images (*.png *.svg *.ico *.jpg *.webp)"*
+    - `title`: RU _"Библиотека иконок DuckDeck"_, EN _"DuckDeck Icon Library"_
+    - `search_placeholder`: RU _"Поиск по названию или тегам..."_, EN _"Search by name or tags..."_
+    - `categories.all`: RU _"Все"_, EN _"All"_
+    - `categories.system`: RU _"Система"_, EN _"System"_
+    - `categories.apps`: RU _"Приложения"_, EN _"Applications"_
+    - `categories.media`: RU _"Медиа & Стриминг"_, EN _"Media & Streaming"_
+    - `categories.glyphs`: RU _"Символы & Эмодзи"_, EN _"Glyphs & Emoji"_
+    - `categories.custom`: RU _"Пользовательские"_, EN _"Custom Icons"_
+    - `add_custom`: RU _"+ Добавить свои иконки..."_, EN _"+ Add Custom Icons..."_
+    - `zoom_tooltip`: RU _"Масштаб сетки"_, EN _"Grid Zoom"_
+    - `btn_select`: RU _"Выбрать"_, EN _"Select"_
+    - `btn_cancel`: RU _"Отмена"_, EN _"Cancel"_
+    - `no_results`: RU _"Иконки не найдены"_, EN _"No icons found"_
+    - `files_filter`: RU _"Изображения (_.png _.svg _.ico _.jpg _.webp)"_, EN _"Images (_.png _.svg _.ico _.jpg _.webp)"_
 
 - [ ] **Шаг 3.6: Модульные тесты и проверка линтера ([tests/unit/test_deck_icon_catalog.py](file:///d:/Projects_X/duckdock/tests/unit/test_deck_icon_catalog.py), [tests/unit/test_deck_icon_dialog.py](file:///d:/Projects_X/duckdock/tests/unit/test_deck_icon_dialog.py))**
   - Разработать `tests/unit/test_deck_icon_catalog.py`:
@@ -656,7 +661,7 @@ flowchart TD
 
 ```text
 #### Запуск шагов [3.1 - 3.2] (Контекстное меню QMenu и Каталог иконок):
-@frontend-ui-designer и @ui-creator реализуйте шаги 3.1 и 3.2 Спринта 3 из .md/deck/edit_func.md:
+@frontend-ui-designer и @ui-creator реализуйте шаги 3.1 и 3.2 Спринта 3 из @edit_func.md :
 1. В modules/deck/editor/widgets/key_preview_tile.py добавьте контекстное меню кнопки 'v' со стилями Dark Obsidian v2 и пунктами выбора файла, открытия библиотеки, перехода к папке и сброса.
 2. В modules/deck/editor/styles.py добавьте QSS-правила для QMenu (темный фон #0f141f, рамка #202a3c, hover #1c2940).
 3. Создайте модуль modules/deck/editor/icon_catalog.py с классами IconEntryDTO, IconCategoryDTO, IconCache и IconCatalog, набором системных, прикладных и глифовых иконок, и двуязычными тегами поиска.
@@ -670,7 +675,7 @@ flowchart TD
 
 ```text
 #### Запуск шагов [3.3 - 3.4] (Диалог библиотеки иконок и сквозная интеграция):
-@ui-creator и @frontend-ui-designer реализуйте шаги 3.3 и 3.4 Спринта 3 из .md/deck/edit_func.md:
+@ui-creator и @frontend-ui-designer реализуйте шаги 3.3 и 3.4 Спринта 3 из @edit_func.md :
 1. Создайте модальный диалог modules/deck/editor/widgets/icon_library_dialog.py (580x640 px, HeaderBar, SearchBar, Category Pills, сетка тайлов с поддержкой зума 36/48/60 px, FooterBar).
 2. Подключите сигнал двойного клика и кнопки 'Выбрать' к возврату выбранной иконки.
 3. В ButtonPropertyForm свяжите кнопку '+' и пункт меню 'Открыть библиотеку' с показом IconLibraryDialog.
@@ -684,7 +689,7 @@ flowchart TD
 
 ```text
 #### Запуск шагов [3.5 - 3.6] (Синхронизация локализации, модульные тесты и сдача DoD):
-@bug-hunter и @frontend-ui-designer выполните шаги 3.5 и 3.6 Спринта 3 из .md/deck/edit_func.md:
+@bug-hunter и @frontend-ui-designer выполните шаги 3.5 и 3.6 Спринта 3 из @edit_func.md :
 1. Добавьте все новые ключи локализации меню и диалога в locales/ru.json и locales/en.json со 100% паритетом.
 2. Разработайте модульные тесты tests/unit/test_deck_icon_catalog.py (кэш, поиск, DTO, сканирование папки).
 3. Разработайте тесты виджета tests/unit/test_deck_icon_dialog.py (инициализация, фильтрация, зум, выбор иконки).
@@ -706,15 +711,15 @@ flowchart TD
 
 Перед реализацией расширенного набора действий и динамического инспектора параметров зафиксированы ключевые инженерные, алгоритмические и интерфейсные инварианты:
 
-| Узкое место / Риск | Первопричина в кодовой базе | Архитектурное решение и инвариант |
-| :--- | :--- | :--- |
-| **Бюджет высоты инспектора (Strict Height Invariant ≤220 px)** | Динамическая подмена параметров для разных типов действий (например, Hotkey Switch с 2 состояниями или Volume Controller с 2 селекторами) может вызвать вертикальный скроллбар и поломать геометрию окна 1080×740 px. | **Strict Single-Row Subform Budget:** Высота контейнера подформ строго ограничена 32 px. Для сложных действий (Hotkey Switch) применяется компактная двухколоночная горизонтальная компоновка (State 1 слева, State 2 справа в одну строку). Высота `ButtonPropertyForm` остается строго 220 px без появления скроллбаров. |
-| **Полиморфизм и валидация параметров Pydantic v2 (`models.py`)** | Текущий `ActionType` ограничен 7 типами, а новые действия (`website`, `open_path`, `open_app`, `close_window`, `text_macro`, `multimedia`, `hotkey_switch`, `software_volume`, `device_volume`) не имеют типизированных схем валидации. | **Discriminated Sub-Param Schemas:** Расширение `ActionType` и добавление специализированных Pydantic v2 моделей (`WebsiteParams`, `HotkeySwitchParams`, `OpenPathParams`, `OpenAppParams`, `CloseWindowParams`, `TextMacroParams`, `MultimediaParams`, `SoftwareVolumeParams`, `DeviceVolumeParams`) с интеграцией в фабрику `DeckActionConfig.get_typed_params()`. |
-| **Неблокирующее исполнение в пуле `QThreadPool` (`action_dispatcher.py`)** | Симуляция мультимедиа-команд через Win32 API (`keybd_event` / `SendInput`), открытие тяжелых файлов через `os.startfile` и обращения к Core Audio (PyCaw) могут приводить к зависанию GUI потока при системных задержках. | **Isolated Worker Execution & COM CoInitialize:** Все действия выполняются строго в рабочих потоках `ActionRunnable` с обязательным вызовом `CoInitialize()` / `CoUninitialize()`, защитой тайм-аутами и неблокирующей передачей результатов через `WorkerSignals` (finished/started). |
-| **Безопасность выполнения внешних команд (Security Invariant)** | Риск инъекции шелл-команд при запуске исполняемых файлов или открытие небезопасных схем URL (`file:///`, выполнение батников без параметров). | **Sanitized Execution & URL Scheme Whitelist:** Строгая валидация URL (`http://`, `https://`), экранирование аргументов командной строки через `shlex.split`, запуск процессов строго через `subprocess.Popen(args, shell=False)` без посредничества `cmd.exe`. |
-| **Двухпозиционный триггер Hotkey Switch (State 1 ↔ State 2)** | Переключатель требует независимой смены заголовка, иконки и сочетания клавиш при каждом тапе с сохранением текущего состояния в рантайме `DeckButtonWidget`. | **Dual-State Runtime Invariant:** Модель `HotkeySwitchParams` хранит конфигурацию обоих состояний (`state_1`, `state_2`), а `DeckButtonWidget` переключает активный индекс состояния при клике, динамически перерисовывая иконку и заголовок тайла на 7" экране. |
-| **Отсутствие визуальной настройки цвета акцента кнопки** | Поле `color_accent` присутствует в `DeckButtonConfig`, но в инспекторе свойства не было элементов для его выбора, что ограничивало кастомизацию. | **Compact Accent Color Swatch Strip:** Внедрение горизонтальной палитры из 5 фирменных неоновых акцентов (Cyan `#38bdf8`, Emerald `#10b981`, Amber `#f59e0b`, Rose `#f43f5e`, Violet `#a855f7`) непосредственно под плиткой `KeyPreviewTile`. |
-| **Двуязычный поиск действий (Bilingual Discovery Invariant)** | Пользователь может искать новые действия как на русском («звук», «громкость», «сайт», «запуск»), так и на английском («volume», «mute», «web», «launch»). | **Bilingual Semantic Keywords in ActionsRegistry:** Все 12 новых действий получают расширенный список тегов поиска в `actions_registry.py` на обоих языках (RU и EN) со 100% паритетом. |
+| Узкое место / Риск                                                         | Первопричина в кодовой базе                                                                                                                                                                                                             | Архитектурное решение и инвариант                                                                                                                                                                                                                                                                                                                                    |
+| :------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Бюджет высоты инспектора (Strict Height Invariant ≤220 px)**             | Динамическая подмена параметров для разных типов действий (например, Hotkey Switch с 2 состояниями или Volume Controller с 2 селекторами) может вызвать вертикальный скроллбар и поломать геометрию окна 1080×740 px.                   | **Strict Single-Row Subform Budget:** Высота контейнера подформ строго ограничена 32 px. Для сложных действий (Hotkey Switch) применяется компактная двухколоночная горизонтальная компоновка (State 1 слева, State 2 справа в одну строку). Высота `ButtonPropertyForm` остается строго 220 px без появления скроллбаров.                                           |
+| **Полиморфизм и валидация параметров Pydantic v2 (`models.py`)**           | Текущий `ActionType` ограничен 7 типами, а новые действия (`website`, `open_path`, `open_app`, `close_window`, `text_macro`, `multimedia`, `hotkey_switch`, `software_volume`, `device_volume`) не имеют типизированных схем валидации. | **Discriminated Sub-Param Schemas:** Расширение `ActionType` и добавление специализированных Pydantic v2 моделей (`WebsiteParams`, `HotkeySwitchParams`, `OpenPathParams`, `OpenAppParams`, `CloseWindowParams`, `TextMacroParams`, `MultimediaParams`, `SoftwareVolumeParams`, `DeviceVolumeParams`) с интеграцией в фабрику `DeckActionConfig.get_typed_params()`. |
+| **Неблокирующее исполнение в пуле `QThreadPool` (`action_dispatcher.py`)** | Симуляция мультимедиа-команд через Win32 API (`keybd_event` / `SendInput`), открытие тяжелых файлов через `os.startfile` и обращения к Core Audio (PyCaw) могут приводить к зависанию GUI потока при системных задержках.               | **Isolated Worker Execution & COM CoInitialize:** Все действия выполняются строго в рабочих потоках `ActionRunnable` с обязательным вызовом `CoInitialize()` / `CoUninitialize()`, защитой тайм-аутами и неблокирующей передачей результатов через `WorkerSignals` (finished/started).                                                                               |
+| **Безопасность выполнения внешних команд (Security Invariant)**            | Риск инъекции шелл-команд при запуске исполняемых файлов или открытие небезопасных схем URL (`file:///`, выполнение батников без параметров).                                                                                           | **Sanitized Execution & URL Scheme Whitelist:** Строгая валидация URL (`http://`, `https://`), экранирование аргументов командной строки через `shlex.split`, запуск процессов строго через `subprocess.Popen(args, shell=False)` без посредничества `cmd.exe`.                                                                                                      |
+| **Двухпозиционный триггер Hotkey Switch (State 1 ↔ State 2)**              | Переключатель требует независимой смены заголовка, иконки и сочетания клавиш при каждом тапе с сохранением текущего состояния в рантайме `DeckButtonWidget`.                                                                            | **Dual-State Runtime Invariant:** Модель `HotkeySwitchParams` хранит конфигурацию обоих состояний (`state_1`, `state_2`), а `DeckButtonWidget` переключает активный индекс состояния при клике, динамически перерисовывая иконку и заголовок тайла на 7" экране.                                                                                                     |
+| **Отсутствие визуальной настройки цвета акцента кнопки**                   | Поле `color_accent` присутствует в `DeckButtonConfig`, но в инспекторе свойства не было элементов для его выбора, что ограничивало кастомизацию.                                                                                        | **Compact Accent Color Swatch Strip:** Внедрение горизонтальной палитры из 5 фирменных неоновых акцентов (Cyan `#38bdf8`, Emerald `#10b981`, Amber `#f59e0b`, Rose `#f43f5e`, Violet `#a855f7`) непосредственно под плиткой `KeyPreviewTile`.                                                                                                                        |
+| **Двуязычный поиск действий (Bilingual Discovery Invariant)**              | Пользователь может искать новые действия как на русском («звук», «громкость», «сайт», «запуск»), так и на английском («volume», «mute», «web», «launch»).                                                                               | **Bilingual Semantic Keywords in ActionsRegistry:** Все 12 новых действий получают расширенный список тегов поиска в `actions_registry.py` на обоих языках (RU и EN) со 100% паритетом.                                                                                                                                                                              |
 
 ---
 
@@ -758,6 +763,7 @@ flowchart TD
 ```
 
 ##### Архитектура подформ параметров:
+
 1. **`HotkeySubform` (Страница 0):**
    - Одиночная кнопка захвата `HotkeyCaptureButton` (размер по высоте 28 px).
 2. **`HotkeySwitchSubform` (Страница 1):**
@@ -779,8 +785,8 @@ flowchart TD
    - Поле `QLineEdit` для вводимой строки + компактный чекбокс `↵ Enter` (нажатие Enter после вставки).
 6. **`VolumeSubform` (Страница 5):**
    - Два связанных селектора `QComboBox`:
-     - Селектор цели: *"Активное приложение (в фокусе)"*, *"Общий звук (Master)"*, *"Микрофон (Input)"*.
-     - Селектор действия: *"Переключить Mute"*, *"Громкость +5%"*, *"Громкость -5%"*.
+     - Селектор цели: _"Активное приложение (в фокусе)"_, _"Общий звук (Master)"_, _"Микрофон (Input)"_.
+     - Селектор действия: _"Переключить Mute"_, _"Громкость +5%"_, _"Громкость -5%"_.
 
 ---
 
@@ -828,11 +834,11 @@ flowchart TD
 
 - [ ] **Шаг 4.3: Движок выполнения действий в `action_dispatcher.py` ([modules/deck/action_dispatcher.py](file:///d:/Projects_X/duckdock/modules/deck/action_dispatcher.py))**
   - Реализовать методы исполнения в `ActionRunnable.run()`:
-    - *Website / Open Path:* безопасное открытие через `os.startfile(target)` с проверкой существования пути или валидности схемы `http/https`.
-    - *Open App:* запуск через `subprocess.Popen([executable] + args, cwd=working_dir, shell=False)`.
-    - *Close Window:* мягкая отправка `WM_CLOSE` через Win32 API (`win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)`) для активного окна.
-    - *Text Macro:* симуляция набора текста через `pyautogui.write()` или отправка в буфер обмена с последующим `Ctrl+V` (для корректной поддержки кириллицы и спецсимволов) + опциональный `VK_RETURN`.
-    - *Multimedia:* генерация виртуальных скан-кодов Win32 через `keybd_event`:
+    - _Website / Open Path:_ безопасное открытие через `os.startfile(target)` с проверкой существования пути или валидности схемы `http/https`.
+    - _Open App:_ запуск через `subprocess.Popen([executable] + args, cwd=working_dir, shell=False)`.
+    - _Close Window:_ мягкая отправка `WM_CLOSE` через Win32 API (`win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)`) для активного окна.
+    - _Text Macro:_ симуляция набора текста через `pyautogui.write()` или отправка в буфер обмена с последующим `Ctrl+V` (для корректной поддержки кириллицы и спецсимволов) + опциональный `VK_RETURN`.
+    - _Multimedia:_ генерация виртуальных скан-кодов Win32 через `keybd_event`:
       ```python
       VK_MAPPING = {
           "play_pause": 0xCD, "next_track": 0xB0, "prev_track": 0xB1,
@@ -841,7 +847,7 @@ flowchart TD
       ctypes.windll.user32.keybd_event(vk_code, 0, 0, 0)
       ctypes.windll.user32.keybd_event(vk_code, 0, 2, 0) # KEYEVENTF_KEYUP
       ```
-    - *Volume Controller:* управление громкостью через `core.audio_manager` или прямые вызовы `pycaw.SimpleAudioVolume` для процесса в фокусе (`GetForegroundWindow()`).
+    - _Volume Controller:_ управление громкостью через `core.audio_manager` или прямые вызовы `pycaw.SimpleAudioVolume` для процесса в фокусе (`GetForegroundWindow()`).
   - Обеспечить потокобезопасность и возврат статусов через `WorkerSignals.finished(button_id, success, message)`.
 
 - [ ] **Шаг 4.4: Архитектура динамических подформ в `ButtonPropertyForm` и селектор цвета `color_accent` ([modules/deck/editor/widgets/button_property_form.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/button_property_form.py))**
@@ -896,7 +902,7 @@ flowchart TD
 
 ```text
 #### Запуск шагов [4.1 - 4.2] (Каталог действий, Pydantic v2 модели и DTO):
-@fullstack-builder реализуй шаги 4.1 и 4.2 Спринта 4 из .md/deck/edit_func.md:
+@fullstack-builder реализуй шаги 4.1 и 4.2 Спринта 4 из @edit_func.md :
 1. В modules/deck/editor/actions_registry.py пополни категории 'system' и 'volume_controller' 12 новыми действиями (website, hotkey_switch, open_path, open_app, close_window, text_macro, multimedia, auto_software_vol, master_volume_control, mic_mute_control, output_device_toggle) с двуязычными тегами поиска (RU/EN).
 2. В modules/deck/models.py расширь ActionType и добавь дискриминированные Pydantic v2 модели (WebsiteParams, HotkeySwitchParams, OpenPathParams, OpenAppParams, CloseWindowParams, TextMacroParams, MultimediaParams, VolumeControlParams) с фабрикой get_typed_params().
 3. В modules/deck/editor/dto.py синхронизируй ButtonSlotDTO, добавив поля action_params и color_accent.
@@ -909,7 +915,7 @@ flowchart TD
 
 ```text
 #### Запуск шага 4.3 (Движок исполнения расширенных действий в ActionDispatcher):
-@fullstack-builder реализуй шаг 4.3 Спринта 4 из .md/deck/edit_func.md:
+@fullstack-builder реализуй шаг 4.3 Спринта 4 из @edit_func.md :
 1. В modules/deck/action_dispatcher.py добавь обработчики выполнения новых действий внутри ActionRunnable.run():
    - Безопасный запуск URL и путей через os.startfile с валидацией http/https;
    - Запуск бинарников через subprocess.Popen(shell=False);
@@ -927,7 +933,7 @@ flowchart TD
 
 ```text
 #### Запуск шагов [4.4 - 4.5] (Динамические подформы инспектора, палитра акцентов и локализация):
-@frontend-ui-designer и @ui-creator реализуйте шаги 4.4 и 4.5 Спринта 4 из .md/deck/edit_func.md:
+@frontend-ui-designer и @ui-creator реализуйте шаги 4.4 и 4.5 Спринта 4 из @edit_func.md :
 1. В modules/deck/editor/widgets/button_property_form.py:
    - Добавь под KeyPreviewTile горизонтальный стрип выбора цвета акцента ColorAccentPicker (5 неоновых цветов Cyan, Emerald, Amber, Rose, Violet);
    - Внедри QStackedLayout для динамической смены подформ параметров (Hotkey, Hotkey Switch, Path/URL, Multimedia, Text Macro, Volume Control);
@@ -944,7 +950,7 @@ flowchart TD
 
 ```text
 #### Запуск шага 4.6 (Модульные тесты, проверка линтера локализации и сдача DoD):
-@bug-hunter выполни шаг 4.6 Спринта 4 из .md/deck/edit_func.md:
+@bug-hunter выполни шаг 4.6 Спринта 4 из @edit_func.md :
 1. Разработай модульные тесты tests/unit/test_deck_actions_extended.py (валидация параметров Pydantic v2, мокирование keybd_event, безопасный запуск процессов).
 2. Разработай тесты виджетов tests/unit/test_deck_property_form.py (переключение подформ, высота 220 px, выбор color_accent, in-place retranslate).
 3. Запусти проверку полного набора тестов и линтера локализации:
@@ -965,14 +971,14 @@ flowchart TD
 
 Перед разработкой тестового пакета и выполнением релизного протокола зафиксированы критические риски, инженерные ограничения и архитектурные инварианты:
 
-| Узкое место / Риск | Первопричина в кодовой базе | Архитектурное решение и инвариант |
-| :--- | :--- | :--- |
-| **Порча боевого `config/deck_config.json` при тестах** | Вызов `DeckConfigAdapter.save_deck_config()` в интеграционных или модульных тестах перезапишет рабочий пользовательский файл настроек. | **Filesystem Sandbox Fixture (`tmp_path`):** Создание автофикстуры `isolated_deck_env` в `conftest.py`, подменяющей константу `CONFIG_PATH` через `unittest.mock.patch` на временную директорию. Боевой конфиг DuckDock остается строго неприкосновенным. |
-| **Падение тестов в Headless/CI окружении (No Display / Multi-Screen Mock)** | При вызове `DeckEditorManager.open_editor()` обращение к `QGuiApplication.primaryScreen()` в окружении без физического дисплея вернет `None`, приводя к `AttributeError: 'NoneType' object has no attribute 'geometry'`. | **Headless Screen Fallback & Mock Fixture:** Реализация защитного fallback-кода в `manager.py` (если экран не обнаружен — использовать дефолтную геометрию `(100, 100, 1080, 740)`), а в тестах использовать фикстуру `mock_primary_screen` с виртуальным разрешением 2560×1440. |
-| **Побочные эффекты WinAPI в модульных тестах действий (`DeckActionDispatcher`)** | Тестирование действий `hotkey_switch`, `app_open`, `app_close`, `volume_*` может посылать реальные синтетические клики клавиш (`keybd_event`) в ОС или порождать фоновые процессы `subprocess.Popen`. | **Strict Subsystem Isolation & WinAPI Mocking:** Полное мокирование низкоуровневых фасадов `keybd_event`, `SendInput`, `subprocess.Popen` и COM-интерфейса `IPolicyConfig` в `tests/unit/test_deck_actions_extended.py`. Проверяются аргументы вызовов и Pydantic-валидация, а не реальные системные мутации Windows. |
-| **Утечка подписок и фантомные события шины (`EventBus Weak Coupling`)** | Если экземпляр `DeckEditorWindow` или боевого `DeckView` подписался на `bus.deck_config_updated` в тесте и не отписался при завершении, последующие тесты получат лишние вызовы обработчиков. | **EventBus Isolation & Teardown Protocol:** Гарантированная очистка подписчиков `bus.deck_config_updated` в фикстуре `teardown`, а также реализация метода `cleanup()` во всех тестируемых виджетах. |
-| **Скрытый хардкод строковых литералов в динамических подформах** | В формах `ButtonPropertyForm` (подформы Hotkey Switch, Multimedia, Volume) и диалоге `IconLibraryDialog` разработчик может случайно оставить сырые строки на кириллице или английском в обход `t(...)`. | **AST-Linter Automated Enforcement:** Расширение линтера `tests/core/test_i18n_linter.py` обязательным AST-сканированием всех файлов пакета `modules/deck/editor/`. Ни один коммит и слияние не допускаются при наличии хотя бы одной нелокализованной UI-строки. |
-| **Нарушение инварианта Stealth Focus (`GEMINI.md` §1.3) при открытии редактора** | Вызов `DeckEditorManager.open_editor()` не должен активировать корневое окно DuckDock на 7" мониторе и не должен перехватывать курсор мыши у основного экрана. | **Stealth Focus E2E Assertion:** В интеграционном E2E тесте проверяется сохранение стиля `WS_EX_NOACTIVATE` и политики `Qt.NoFocus` у сенсорной оболочки при открытии и сохранении данных в редакторе на 27" экране. |
+| Узкое место / Риск                                                               | Первопричина в кодовой базе                                                                                                                                                                                              | Архитектурное решение и инвариант                                                                                                                                                                                                                                                                                     |
+| :------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Порча боевого `config/deck_config.json` при тестах**                           | Вызов `DeckConfigAdapter.save_deck_config()` в интеграционных или модульных тестах перезапишет рабочий пользовательский файл настроек.                                                                                   | **Filesystem Sandbox Fixture (`tmp_path`):** Создание автофикстуры `isolated_deck_env` в `conftest.py`, подменяющей константу `CONFIG_PATH` через `unittest.mock.patch` на временную директорию. Боевой конфиг DuckDock остается строго неприкосновенным.                                                             |
+| **Падение тестов в Headless/CI окружении (No Display / Multi-Screen Mock)**      | При вызове `DeckEditorManager.open_editor()` обращение к `QGuiApplication.primaryScreen()` в окружении без физического дисплея вернет `None`, приводя к `AttributeError: 'NoneType' object has no attribute 'geometry'`. | **Headless Screen Fallback & Mock Fixture:** Реализация защитного fallback-кода в `manager.py` (если экран не обнаружен — использовать дефолтную геометрию `(100, 100, 1080, 740)`), а в тестах использовать фикстуру `mock_primary_screen` с виртуальным разрешением 2560×1440.                                      |
+| **Побочные эффекты WinAPI в модульных тестах действий (`DeckActionDispatcher`)** | Тестирование действий `hotkey_switch`, `app_open`, `app_close`, `volume_*` может посылать реальные синтетические клики клавиш (`keybd_event`) в ОС или порождать фоновые процессы `subprocess.Popen`.                    | **Strict Subsystem Isolation & WinAPI Mocking:** Полное мокирование низкоуровневых фасадов `keybd_event`, `SendInput`, `subprocess.Popen` и COM-интерфейса `IPolicyConfig` в `tests/unit/test_deck_actions_extended.py`. Проверяются аргументы вызовов и Pydantic-валидация, а не реальные системные мутации Windows. |
+| **Утечка подписок и фантомные события шины (`EventBus Weak Coupling`)**          | Если экземпляр `DeckEditorWindow` или боевого `DeckView` подписался на `bus.deck_config_updated` в тесте и не отписался при завершении, последующие тесты получат лишние вызовы обработчиков.                            | **EventBus Isolation & Teardown Protocol:** Гарантированная очистка подписчиков `bus.deck_config_updated` в фикстуре `teardown`, а также реализация метода `cleanup()` во всех тестируемых виджетах.                                                                                                                  |
+| **Скрытый хардкод строковых литералов в динамических подформах**                 | В формах `ButtonPropertyForm` (подформы Hotkey Switch, Multimedia, Volume) и диалоге `IconLibraryDialog` разработчик может случайно оставить сырые строки на кириллице или английском в обход `t(...)`.                  | **AST-Linter Automated Enforcement:** Расширение линтера `tests/core/test_i18n_linter.py` обязательным AST-сканированием всех файлов пакета `modules/deck/editor/`. Ни один коммит и слияние не допускаются при наличии хотя бы одной нелокализованной UI-строки.                                                     |
+| **Нарушение инварианта Stealth Focus (`GEMINI.md` §1.3) при открытии редактора** | Вызов `DeckEditorManager.open_editor()` не должен активировать корневое окно DuckDock на 7" мониторе и не должен перехватывать курсор мыши у основного экрана.                                                           | **Stealth Focus E2E Assertion:** В интеграционном E2E тесте проверяется сохранение стиля `WS_EX_NOACTIVATE` и политики `Qt.NoFocus` у сенсорной оболочки при открытии и сохранении данных в редакторе на 27" экране.                                                                                                  |
 
 ---
 
@@ -1087,7 +1093,7 @@ flowchart TD
 
 ```text
 #### Запуск шагов [5.1 - 5.3] (Разработка модульных тестов ядра, иконок и действий):
-@bug-hunter реализуй шаги 5.1, 5.2 и 5.3 Спринта 5 из .md/deck/edit_func.md:
+@bug-hunter реализуй шаги 5.1, 5.2 и 5.3 Спринта 5 из @edit_func.md :
 1. Создай тесты ядра и адаптера в tests/unit/test_deck_editor_manager.py и tests/unit/test_deck_config_adapter.py (Singleton, центрирование на primaryScreen, атомарная запись .tmp -> os.replace, создание .bak, DTO Merge).
 2. Создай тесты каталога иконок и диалога в tests/unit/test_deck_icon_catalog.py и tests/unit/test_deck_icon_dialog.py (категории, поиск, фильтр, зум 24..64 px, сигнал icon_selected, retranslate_ui).
 3. Создай тесты расширенных действий в tests/unit/test_deck_actions_extended.py и tests/unit/test_deck_property_form_subforms.py (Hotkey Switch, App Open/Close, Volume Controller, QStackedLayout с бюджетом 220 px, ColorAccentPicker).
@@ -1101,7 +1107,7 @@ flowchart TD
 
 ```text
 #### Запуск шага 5.4 (Сквозной интеграционный сценарий E2E полного цикла):
-@bug-hunter реализуй шаг 5.4 Спринта 5 из .md/deck/edit_func.md:
+@bug-hunter реализуй шаг 5.4 Спринта 5 из @edit_func.md :
 1. В tests/integration/test_deck_editor_e2e.py добавь сквозной сценарий test_deck_editor_full_runtime_integration_journey:
    - Инициализация 7" DeckView в изоляции -> клик по ⚙ -> открытие DeckEditorWindow на 27" экране (Stealth Focus инвариант);
    - Выбор слота [0] -> назначение действия Website ("GitHub") -> выбор иконки из IconLibraryDialog -> выбор акцента Cyan;
@@ -1117,7 +1123,7 @@ flowchart TD
 
 ```text
 #### Запуск шага 5.5 (Аудит локализации и AST-линтер):
-@fullstack-builder выполни шаг 5.5 Спринта 5 из .md/deck/edit_func.md:
+@fullstack-builder выполни шаг 5.5 Спринта 5 из @edit_func.md :
 1. Запусти линтер локализации: pytest tests/core/test_i18n_linter.py
 2. Убедись в 100% паритете ключей между locales/ru.json и locales/en.json для всех новых подформ, действий и диалога иконок.
 3. Проверь отсутствие хардкода строковых литералов в модулях editor через AST-анализ.

@@ -18,12 +18,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from modules.deck.editor.styles import (
-    GRID_CELL_SIZE,
-    TEXT_MUTED,
-    TEXT_PRIMARY,
-    TEXT_SECONDARY,
-)
+from modules.deck.editor.styles import GRID_CELL_SIZE
 
 logger = logging.getLogger(__name__)
 
@@ -31,10 +26,11 @@ logger = logging.getLogger(__name__)
 class EditorGridCell(QFrame):
     """
     Интерактивная ячейка холста DuckDeck (96x96 px).
-    - Метка индекса [0]..[9] в верхнем левом углу (10px, #71717a).
-    - Центральная иконка (шрифт 26px, центрированная).
-    - Нижний заголовок (11px, центрированный, с эллипсисом).
-    - Эксклюзивное выделение рамкой 2px #0078d4 через свойство selected.
+    - Метка индекса [0]..[9] в верхнем левом углу (.CellIndexLabel, 10px, TEXT_SLOT_INDEX).
+    - Центральная иконка (.CellIconLabel, 26px, центрированная).
+    - Нижний заголовок (.CellTitleLabel, 11px, центрированный, с эллипсисом).
+    - Эксклюзивное выделение неоновой рамкой 2px #38bdf8 через свойство selected.
+    - Инвариант Stealth Focus: setFocusPolicy(Qt.NoFocus).
     """
 
     cell_clicked = Signal(int)
@@ -51,6 +47,7 @@ class EditorGridCell(QFrame):
         self.setProperty("editorGridCell", "true")
         self.setProperty("selected", "false")
         self.setFixedSize(GRID_CELL_SIZE, GRID_CELL_SIZE)
+        self.setFocusPolicy(Qt.NoFocus)
         self.setCursor(Qt.PointingHandCursor)
 
         self._setup_ui()
@@ -67,10 +64,8 @@ class EditorGridCell(QFrame):
 
         self.lbl_index = QLabel(f"[{self.slot_index}]", self)
         self.lbl_index.setObjectName("lblCellIndex")
+        self.lbl_index.setProperty("class", "CellIndexLabel")
         self.lbl_index.setAttribute(Qt.WA_TransparentForMouseEvents, True)
-        self.lbl_index.setStyleSheet(
-            f"color: {TEXT_MUTED}; font-size: 10px; font-weight: 600; background: transparent; border: none;"
-        )
         top_layout.addWidget(self.lbl_index, alignment=Qt.AlignLeft | Qt.AlignTop)
         top_layout.addStretch(1)
 
@@ -79,21 +74,17 @@ class EditorGridCell(QFrame):
         # Центральная зона: иконка (26px)
         self.lbl_icon = QLabel("", self)
         self.lbl_icon.setObjectName("lblCellIcon")
+        self.lbl_icon.setProperty("class", "CellIconLabel")
         self.lbl_icon.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         self.lbl_icon.setAlignment(Qt.AlignCenter)
-        self.lbl_icon.setStyleSheet(
-            f"color: {TEXT_PRIMARY}; font-size: 26px; background: transparent; border: none;"
-        )
         layout.addWidget(self.lbl_icon, 1, alignment=Qt.AlignCenter)
 
         # Нижняя зона: заголовок (11px)
         self.lbl_title = QLabel("", self)
         self.lbl_title.setObjectName("lblCellTitle")
+        self.lbl_title.setProperty("class", "CellTitleLabel")
         self.lbl_title.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         self.lbl_title.setAlignment(Qt.AlignCenter)
-        self.lbl_title.setStyleSheet(
-            f"color: {TEXT_SECONDARY}; font-size: 11px; font-weight: 500; background: transparent; border: none;"
-        )
         layout.addWidget(self.lbl_title, alignment=Qt.AlignCenter)
 
     def set_selected(self, selected: bool) -> None:

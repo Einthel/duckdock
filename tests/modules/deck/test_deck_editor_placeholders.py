@@ -19,6 +19,10 @@ from modules.deck.editor.styles import (
     INSPECTOR_SLOT_HEIGHT,
     PAGINATION_SLOT_HEIGHT,
     SEARCH_SLOT_HEIGHT,
+    SURFACE_0_CANVAS,
+    SURFACE_1_PANEL,
+    SURFACE_2_CARD,
+    SURFACE_3_HOVER,
     TEXT_PLACEHOLDER,
     TEXT_PRIMARY,
     WINDOW_DEFAULT_SIZE,
@@ -56,16 +60,16 @@ def test_deck_editor_i18n_keys():
 
 
 def test_styles_tokens_and_qss():
-    """Проверка дизайн-токенов Dark Obsidian и наличия селекторов в EDITOR_MAIN_QSS."""
-    assert BG_WINDOW == "#121214"
-    assert BG_PANEL == "#18181b"
-    assert BG_CARD == "#222227"
-    assert BG_STRIP == "#161b26"
-    assert BORDER_SUBTLE == "#2e2e36"
+    """Проверка дизайн-токенов Dark Obsidian v2 и наличия селекторов в EDITOR_MAIN_QSS."""
+    assert BG_WINDOW == SURFACE_0_CANVAS == "#0b0d13"
+    assert BG_PANEL == SURFACE_1_PANEL == "#0f141f"
+    assert BG_CARD == SURFACE_2_CARD == "#141924"
+    assert BG_STRIP == SURFACE_1_PANEL == "#0f141f"
+    assert BORDER_SUBTLE == "#1e2638"
     assert BORDER_FOCUS == "#0078d4"
     assert BORDER_FOCUS_ACCENT == "#38bdf8"
-    assert TEXT_PRIMARY == "#f4f4f5"
-    assert TEXT_PLACEHOLDER == "#71717a"
+    assert TEXT_PRIMARY == "#f8fafc"
+    assert TEXT_PLACEHOLDER == "#64748b"
     assert WINDOW_DEFAULT_SIZE == (1080, 740)
     assert WINDOW_MIN_SIZE == (960, 640)
 
@@ -92,7 +96,7 @@ def test_apply_immersive_dark_titlebar_and_theme(qapp):
     # Фасадная функция применения темы
     apply_editor_theme(window)
     assert len(window.styleSheet()) > 0
-    assert "#121214" in window.styleSheet()
+    assert SURFACE_0_CANVAS in window.styleSheet()
 
 
 def test_placeholder_box_widget(qapp):

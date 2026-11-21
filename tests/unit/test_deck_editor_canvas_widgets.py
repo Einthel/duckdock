@@ -44,6 +44,15 @@ def test_grid_cell_initialization(qapp):
     assert cell.property("selected") == "false"
     assert cell.lbl_icon.text() == ""
     assert cell.lbl_title.text() == ""
+    # Проверка инвариантов Obsidian v2 и Stealth Focus
+    assert cell.focusPolicy() == Qt.NoFocus
+    assert cell.lbl_index.property("class") == "CellIndexLabel"
+    assert cell.lbl_icon.property("class") == "CellIconLabel"
+    assert cell.lbl_title.property("class") == "CellTitleLabel"
+    # Проверка отсутствия инлайн-стилей
+    assert cell.lbl_index.styleSheet() == ""
+    assert cell.lbl_icon.styleSheet() == ""
+    assert cell.lbl_title.styleSheet() == ""
 
 
 def test_grid_cell_selection_toggle(qapp):
@@ -115,12 +124,16 @@ def test_touchbar_section_initialization_and_children_transparency(qapp):
         assert section.title_key == title_key
         assert section.is_selected() is False
         assert section.property("selected") == "false"
+        assert section.focusPolicy() == Qt.NoFocus
 
         # Инвариант: все дочерние элементы получают WA_TransparentForMouseEvents = True
+        # и очищены от инлайн-стилей (отсутствие жестких цветов)
         children = section.findChildren(object)
         for child in children:
             if hasattr(child, "testAttribute"):
                 assert child.testAttribute(Qt.WA_TransparentForMouseEvents) is True
+            if hasattr(child, "styleSheet"):
+                assert child.styleSheet() == ""
 
 
 def test_touchbar_section_selection_toggle(qapp):
@@ -183,6 +196,7 @@ def test_touchbar_strip_initialization_and_geometry(qapp):
     assert strip.height() == TOUCHBAR_HEIGHT
     assert strip.width() == 528
     assert strip.height() == 68
+    assert strip.focusPolicy() == Qt.NoFocus
     assert strip.sec_media is not None
     assert strip.sec_clock is not None
     assert strip.sec_telemetry is not None
@@ -190,6 +204,11 @@ def test_touchbar_strip_initialization_and_geometry(qapp):
     assert not strip.sec_media.is_selected()
     assert not strip.sec_clock.is_selected()
     assert not strip.sec_telemetry.is_selected()
+
+    # Проверка отсутствия инлайн-стилей у разделителей полосы
+    for child in strip.findChildren(object):
+        if hasattr(child, "property") and child.property("class") == "TouchbarDivider":
+            assert child.styleSheet() == ""
 
 
 def test_touchbar_strip_selection_and_signals(qapp):
