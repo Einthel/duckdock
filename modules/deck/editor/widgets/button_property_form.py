@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
+    QSlider,
     QStackedLayout,
     QVBoxLayout,
     QWidget,
@@ -35,6 +36,7 @@ from modules.deck.editor.styles import (
     INPUT_HEIGHT,
     INSPECTOR_HEIGHT,
 )
+from modules.deck.editor.widgets.font_popover import FontCustomizationPopover
 from modules.deck.editor.widgets.hotkey_capture import HotkeyCaptureButton
 from modules.deck.editor.widgets.key_preview_tile import KeyPreviewTile
 
@@ -61,6 +63,25 @@ ACTION_PRESET_KEYS = [
     "audio_device",
     "screenshot",
     "system",
+    "play_audio",
+    "stop_audio",
+]
+
+# Источники данных живых тайлов (Live Status Tiles)
+STATUS_SOURCE_KEYS = [
+    "none",
+    "mic_mute",
+    "audio_device",
+    "dimmer",
+    "cpu_temp",
+    "gpu_temp",
+]
+
+# Настройка индивидуального звука клика (sound_override)
+CLICK_SOUND_KEYS = [
+    "default",
+    "muted",
+    "custom",
 ]
 
 # Команды мультимедиа
@@ -767,6 +788,125 @@ class SystemSubform(QWidget):
             self.combo_cmd.blockSignals(False)
 
 
+class SoundboardSubform(QWidget):
+    """Подформа 10: Воспроизведение звука саундборда (файл + предпрослушка + громкость, 28 px)."""
+
+    params_changed = Signal(dict)
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self.setFixedHeight(INPUT_HEIGHT)
+        self._is_previewing: bool = False
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+
+        self.edit_sound_path = QLineEdit(self)
+        self.edit_sound_path.setFixedHeight(INPUT_HEIGHT)
+        self.edit_sound_path.setPlaceholderText("*.wav, *.mp3, *.ogg")
+        self.edit_sound_path.textEdited.connect(self._emit_params)
+
+        self.btn_browse = QPushButton("📁", self)
+        self.btn_browse.setFixedSize(INPUT_HEIGHT, INPUT_HEIGHT)
+        self.btn_browse.setCursor(Qt.PointingHandCursor)
+        self.btn_browse.clicked.connect(self._on_browse_clicked)
+
+        self.btn_preview = QPushButton("▶", self)
+        self.btn_preview.setProperty("class", "InspectorTestButton")
+        self.btn_preview.setFixedSize(INPUT_HEIGHT, INPUT_HEIGHT)
+        self.btn_preview.setCursor(Qt.PointingHandCursor)
+        self.btn_preview.clicked.connect(self._on_preview_clicked)
+
+        self.slider_vol = QSlider(Qt.Horizontal, self)
+        self.slider_vol.setFixedHeight(INPUT_HEIGHT)
+        self.slider_vol.setFixedWidth(75)
+        self.slider_vol.setRange(0, 100)
+        self.slider_vol.setValue(100)
+        self.slider_vol.valueChanged.connect(self._on_vol_changed)
+
+        self.lbl_vol_val = QLabel("100%", self)
+        self.lbl_vol_val.setFixedWidth(36)
+        self.lbl_vol_val.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.lbl_vol_val.setStyleSheet("color: #94a3b8; font-size: 11px;")
+
+        layout.addWidget(self.edit_sound_path, 1)
+        layout.addWidget(self.btn_browse)
+        layout.addWidget(self.btn_preview)
+        layout.addWidget(self.slider_vol)
+        layout.addWidget(self.lbl_vol_val)
+
+        self.retranslate_ui()
+
+    def _on_browse_clicked(self) -> None:
+        file_path, _ = QFileDialog.getOpenFileName(
+            self.window(),
+            t("deck.editor.inspector.fields.sound_file"),
+            "",
+            "Audio Files (*.wav *.mp3 *.ogg);;All Files (*.*)",
+        )
+        if file_path:
+            self.edit_sound_path.setText(file_path)
+            self._emit_params()
+
+    def _on_preview_clicked(self) -> None:
+        from modules.deck.sound_engine import DeckSoundEngine
+        eng = DeckSoundEngine()
+        if self._is_previewing:
+            eng.stop_preview()
+            self._is_previewing = False
+            self.btn_preview.setText("▶")
+        else:
+            path = self.edit_sound_path.text().strip()
+            if path:
+                vol = self.slider_vol.value() / 100.0
+                if eng.preview_sound(path, vol):
+                    self._is_previewing = True
+                    self.btn_preview.setText("⏹")
+                else:
+                    self._is_previewing = False
+                    self.btn_preview.setText("▶")
+
+    def _on_vol_changed(self, val: int) -> None:
+        self.lbl_vol_val.setText(f"{val}%")
+        self._emit_params()
+
+    def _emit_params(self) -> None:
+        path = self.edit_sound_path.text().strip()
+        vol = self.slider_vol.value() / 100.0
+        self.params_changed.emit({
+            "file_path": path,
+            "volume": vol,
+            "stop_others": False,
+        })
+
+    def set_params(self, params: dict[str, Any]) -> None:
+        path = params.get("file_path", "") or params.get("sound_path", "")
+        vol = float(params.get("volume", 1.0))
+        vol_pct = max(0, min(100, int(vol * 100)))
+
+        self.edit_sound_path.blockSignals(True)
+        self.slider_vol.blockSignals(True)
+        try:
+            self.edit_sound_path.setText(str(path))
+            self.slider_vol.setValue(vol_pct)
+            self.lbl_vol_val.setText(f"{vol_pct}%")
+        finally:
+            self.edit_sound_path.blockSignals(False)
+            self.slider_vol.blockSignals(False)
+
+    def get_params(self) -> dict[str, Any]:
+        return {
+            "file_path": self.edit_sound_path.text().strip(),
+            "volume": self.slider_vol.value() / 100.0,
+            "stop_others": False,
+        }
+
+    def retranslate_ui(self) -> None:
+        self.btn_preview.setToolTip(t("deck.editor.inspector.tooltips.preview_sound"))
+        self.btn_browse.setToolTip(t("deck.editor.inspector.fields.browse"))
+
+
 class ButtonPropertyForm(QWidget):
     """
     Форма редактирования свойств кнопки сетки DuckDeck (0..9).
@@ -786,6 +926,12 @@ class ButtonPropertyForm(QWidget):
 
         self._slot_index: int = 0
         self._current_category_raw: str = "System: Hotkey"
+        self._current_font_size: int = 11
+        self._current_font_color: str = "#d4d4d8"
+        self._current_text_alignment: str = "bottom"
+        self._current_hide_title: bool = False
+        self._font_popover: Optional[Any] = None
+        self._sound_override_path: Optional[str] = None
 
         # Главный вертикальный лэйаут формы
         root_layout = QVBoxLayout(self)
@@ -890,7 +1036,7 @@ class ButtonPropertyForm(QWidget):
         self.btn_font.setProperty("class", "FontSettingButton")
         self.btn_font.setFixedSize(INPUT_HEIGHT, INPUT_HEIGHT)
         self.btn_font.setCursor(Qt.PointingHandCursor)
-        self.btn_font.clicked.connect(self.font_settings_requested.emit)
+        self.btn_font.clicked.connect(self._show_font_popover)
 
         fields_grid.addWidget(self.lbl_title_field, 0, 0, Qt.AlignVCenter)
         fields_grid.addWidget(self.edit_title, 0, 1)
@@ -927,7 +1073,7 @@ class ButtonPropertyForm(QWidget):
         self.params_stack = QStackedLayout(params_container)
         self.params_stack.setContentsMargins(0, 0, 0, 0)
 
-        # Подформы 0..9
+        # Подформы 0..10
         self.subform_hotkey = HotkeySubform(params_container)
         self.subform_hotkey_switch = HotkeySwitchSubform(params_container)
         self.subform_path_url = PathUrlSubform(params_container)
@@ -938,6 +1084,7 @@ class ButtonPropertyForm(QWidget):
         self.subform_audio_device = AudioDeviceSubform(params_container)
         self.subform_screenshot = ScreenshotSubform(params_container)
         self.subform_system = SystemSubform(params_container)
+        self.subform_soundboard = SoundboardSubform(params_container)
 
         # Подписка на сигналы изменения подформ
         self.subform_hotkey.hotkey_changed.connect(
@@ -967,6 +1114,9 @@ class ButtonPropertyForm(QWidget):
         self.subform_system.params_changed.connect(
             lambda p: self.property_changed.emit("action_params", p)
         )
+        self.subform_soundboard.params_changed.connect(
+            lambda p: self.property_changed.emit("action_params", p)
+        )
 
         self.params_stack.addWidget(self.subform_hotkey)         # Index 0
         self.params_stack.addWidget(self.subform_hotkey_switch)  # Index 1
@@ -978,9 +1128,66 @@ class ButtonPropertyForm(QWidget):
         self.params_stack.addWidget(self.subform_audio_device)   # Index 7
         self.params_stack.addWidget(self.subform_screenshot)     # Index 8
         self.params_stack.addWidget(self.subform_system)         # Index 9
+        self.params_stack.addWidget(self.subform_soundboard)     # Index 10
 
         fields_grid.addWidget(self.lbl_params_field, 2, 0, Qt.AlignVCenter)
         fields_grid.addWidget(params_container, 2, 1, 1, 2)
+
+        # Строка 3: Живой статус (Live Status) & Звук клика (sound_override)
+        self.lbl_status_field = QLabel(self)
+        self.lbl_status_field.setObjectName("lblStatusField")
+        self.lbl_status_field.setProperty("class", "InspectorFieldLabel")
+        self.lbl_status_field.setFixedWidth(FORM_LABEL_WIDTH)
+
+        row3_container = QWidget(self)
+        row3_container.setFixedHeight(INPUT_HEIGHT)
+        row3_layout = QHBoxLayout(row3_container)
+        row3_layout.setContentsMargins(0, 0, 0, 0)
+        row3_layout.setSpacing(6)
+
+        self.combo_status_source = QComboBox(row3_container)
+        self.combo_status_source.setFixedHeight(INPUT_HEIGHT)
+        self.combo_status_source.setCursor(Qt.PointingHandCursor)
+        for key in STATUS_SOURCE_KEYS:
+            self.combo_status_source.addItem(
+                t(f"deck.editor.inspector.status_sources.{key}"), key
+            )
+        self.combo_status_source.currentIndexChanged.connect(self._on_status_source_changed)
+
+        self.lbl_click_sound_field = QLabel(self)
+        self.lbl_click_sound_field.setObjectName("lblClickSoundField")
+        self.lbl_click_sound_field.setProperty("class", "InspectorFieldLabel")
+
+        self.combo_click_sound = QComboBox(row3_container)
+        self.combo_click_sound.setFixedHeight(INPUT_HEIGHT)
+        self.combo_click_sound.setCursor(Qt.PointingHandCursor)
+        for key in CLICK_SOUND_KEYS:
+            self.combo_click_sound.addItem(
+                t(f"deck.editor.inspector.fields.click_sound_{key}"), key
+            )
+        self.combo_click_sound.currentIndexChanged.connect(self._on_click_sound_changed)
+
+        self.btn_click_sound_browse = QPushButton("📁", row3_container)
+        self.btn_click_sound_browse.setFixedSize(INPUT_HEIGHT, INPUT_HEIGHT)
+        self.btn_click_sound_browse.setCursor(Qt.PointingHandCursor)
+        self.btn_click_sound_browse.clicked.connect(self._on_click_sound_browse_clicked)
+        self.btn_click_sound_browse.setVisible(False)
+
+        self.btn_click_sound_preview = QPushButton("▶", row3_container)
+        self.btn_click_sound_preview.setProperty("class", "InspectorTestButton")
+        self.btn_click_sound_preview.setFixedSize(INPUT_HEIGHT, INPUT_HEIGHT)
+        self.btn_click_sound_preview.setCursor(Qt.PointingHandCursor)
+        self.btn_click_sound_preview.clicked.connect(self._on_click_sound_preview_clicked)
+        self.btn_click_sound_preview.setVisible(False)
+
+        row3_layout.addWidget(self.combo_status_source, 1)
+        row3_layout.addWidget(self.lbl_click_sound_field)
+        row3_layout.addWidget(self.combo_click_sound, 1)
+        row3_layout.addWidget(self.btn_click_sound_browse)
+        row3_layout.addWidget(self.btn_click_sound_preview)
+
+        fields_grid.addWidget(self.lbl_status_field, 3, 0, Qt.AlignVCenter)
+        fields_grid.addWidget(row3_container, 3, 1, 1, 2)
 
         content_layout.addLayout(fields_grid)
         root_layout.addLayout(content_layout)
@@ -1022,9 +1229,57 @@ class ButtonPropertyForm(QWidget):
             self.set_category(category_text)
             self.edit_title.setText(dto.title)
 
+            # Сохранение и загрузка параметров типографики
+            self._current_font_size = dto.font_size if hasattr(dto, "font_size") else 11
+            self._current_font_color = dto.font_color if hasattr(dto, "font_color") else "#d4d4d8"
+            self._current_text_alignment = dto.text_alignment if hasattr(dto, "text_alignment") else "bottom"
+            self._current_hide_title = bool(dto.hide_title) if hasattr(dto, "hide_title") else False
+
             # Выбор цвета акцента
             accent_col = dto.color_accent or ACCENT_COLORS[0]
             self.accent_picker.set_color(accent_col)
+
+            # Загрузка живого статуса (Live Status)
+            src_val = dto.status_source or "none"
+            self.combo_status_source.blockSignals(True)
+            try:
+                found_s = False
+                for i in range(self.combo_status_source.count()):
+                    if self.combo_status_source.itemData(i) == src_val:
+                        self.combo_status_source.setCurrentIndex(i)
+                        found_s = True
+                        break
+                if not found_s:
+                    self.combo_status_source.setCurrentIndex(0)
+            finally:
+                self.combo_status_source.blockSignals(False)
+
+            # Загрузка индивидуального звука клика (sound_override)
+            snd_val = dto.sound_override
+            self.combo_click_sound.blockSignals(True)
+            try:
+                if snd_val == "muted":
+                    target_mode = "muted"
+                    self._sound_override_path = None
+                    self.btn_click_sound_browse.setVisible(False)
+                    self.btn_click_sound_preview.setVisible(False)
+                elif snd_val and snd_val != "default":
+                    target_mode = "custom"
+                    self._sound_override_path = snd_val
+                    self.btn_click_sound_browse.setVisible(True)
+                    self.btn_click_sound_preview.setVisible(True)
+                else:
+                    target_mode = "default"
+                    self._sound_override_path = None
+                    self.btn_click_sound_browse.setVisible(False)
+                    self.btn_click_sound_preview.setVisible(False)
+
+                for i in range(self.combo_click_sound.count()):
+                    if self.combo_click_sound.itemData(i) == target_mode:
+                        self.combo_click_sound.setCurrentIndex(i)
+                        break
+            finally:
+                self.combo_click_sound.blockSignals(False)
 
             # Сопоставление типа действия с элементом комбобокса
             raw_action = dto.action_type.strip().lower().replace(" ", "_")
@@ -1060,6 +1315,10 @@ class ButtonPropertyForm(QWidget):
                 raw_action = "multimedia"
             elif raw_action in ("open_website", "web"):
                 raw_action = "website"
+            elif raw_action in ("play_audio", "soundboard"):
+                raw_action = "play_audio"
+            elif raw_action in ("stop_audio", "soundboard_stop"):
+                raw_action = "stop_audio"
 
             target_idx = 0
             for i in range(self.combo_actions.count()):
@@ -1082,6 +1341,7 @@ class ButtonPropertyForm(QWidget):
             self.subform_audio_device.set_params(mapped_params)
             self.subform_screenshot.set_params(mapped_params)
             self.subform_system.set_params(mapped_params)
+            self.subform_soundboard.set_params(mapped_params)
 
             self.preview_tile.set_icon(dto.icon)
         finally:
@@ -1102,6 +1362,11 @@ class ButtonPropertyForm(QWidget):
         # Подписи полей формы
         self.lbl_title_field.setText(t("deck.editor.inspector.fields.title"))
         self.lbl_actions_field.setText(t("deck.editor.inspector.fields.actions"))
+        self.lbl_status_field.setText(t("deck.editor.inspector.fields.status_source"))
+        self.lbl_click_sound_field.setText(t("deck.editor.inspector.fields.click_sound"))
+        self.btn_font.setToolTip(t("deck.editor.font_popover.title"))
+        self.btn_click_sound_browse.setToolTip(t("deck.editor.inspector.fields.sound_file"))
+        self.btn_click_sound_preview.setToolTip(t("deck.editor.inspector.tooltips.test_action"))
 
         curr_action = self.combo_actions.itemData(self.combo_actions.currentIndex())
         if curr_action == "hotkey":
@@ -1121,6 +1386,30 @@ class ButtonPropertyForm(QWidget):
         finally:
             self.combo_actions.blockSignals(False)
 
+        # Источники статуса в комбобоксе
+        self.combo_status_source.blockSignals(True)
+        try:
+            for i in range(self.combo_status_source.count()):
+                key = self.combo_status_source.itemData(i)
+                if key:
+                    self.combo_status_source.setItemText(
+                        i, t(f"deck.editor.inspector.status_sources.{key}")
+                    )
+        finally:
+            self.combo_status_source.blockSignals(False)
+
+        # Варианты звука клика в комбобоксе
+        self.combo_click_sound.blockSignals(True)
+        try:
+            for i in range(self.combo_click_sound.count()):
+                key = self.combo_click_sound.itemData(i)
+                if key:
+                    self.combo_click_sound.setItemText(
+                        i, t(f"deck.editor.inspector.fields.click_sound_{key}")
+                    )
+        finally:
+            self.combo_click_sound.blockSignals(False)
+
         # Каскадный вызов локализации подформ и дочерних компонентов
         self.preview_tile.retranslate_ui()
         self.subform_hotkey.retranslate_ui()
@@ -1133,6 +1422,9 @@ class ButtonPropertyForm(QWidget):
         self.subform_audio_device.retranslate_ui()
         self.subform_screenshot.retranslate_ui()
         self.subform_system.retranslate_ui()
+        self.subform_soundboard.retranslate_ui()
+        if self._font_popover is not None:
+            self._font_popover.retranslate_ui()
 
     def _update_subform_visibility(self, action_key: Optional[str]) -> None:
         """Переключает активную страницу стэка подформ в зависимости от выбранного действия."""
@@ -1157,6 +1449,7 @@ class ButtonPropertyForm(QWidget):
             self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
         elif action_key == "close_window":
             self.params_stack.setCurrentIndex(6)
+            self.subform_no_params.lbl_hint.setText(t("deck.editor.inspector.hints.no_params_required"))
             self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
         elif action_key == "audio_device":
             self.params_stack.setCurrentIndex(7)
@@ -1167,9 +1460,90 @@ class ButtonPropertyForm(QWidget):
         elif action_key == "system":
             self.params_stack.setCurrentIndex(9)
             self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
+        elif action_key == "play_audio":
+            self.params_stack.setCurrentIndex(10)
+            self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
+        elif action_key == "stop_audio":
+            self.params_stack.setCurrentIndex(6)
+            self.subform_no_params.lbl_hint.setText(t("deck.editor.inspector.hints.stop_audio_hint"))
+            self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
         else:
             self.params_stack.setCurrentIndex(6)
+            self.subform_no_params.lbl_hint.setText(t("deck.editor.inspector.hints.no_params_required"))
             self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
+
+    def _show_font_popover(self) -> None:
+        """Открывает всплывающее меню кастомизации типографики (FontCustomizationPopover)."""
+        if self._font_popover is None:
+            self._font_popover = FontCustomizationPopover(parent=self.window())
+            self._font_popover.font_changed.connect(self._on_font_changed)
+
+        self._font_popover.set_state(
+            font_size=self._current_font_size,
+            font_color=self._current_font_color,
+            text_alignment=self._current_text_alignment,
+            hide_title=self._current_hide_title,
+        )
+        self._font_popover.show_at_widget(self.btn_font)
+
+    def _on_font_changed(self, data: dict) -> None:
+        """Обрабатывает изменение настроек шрифта из поповера и эмитит свойства."""
+        if "font_size" in data:
+            self._current_font_size = int(data["font_size"])
+            self.property_changed.emit("font_size", self._current_font_size)
+        if "font_color" in data:
+            self._current_font_color = str(data["font_color"])
+            self.property_changed.emit("font_color", self._current_font_color)
+        if "text_alignment" in data:
+            self._current_text_alignment = str(data["text_alignment"])
+            self.property_changed.emit("text_alignment", self._current_text_alignment)
+        if "hide_title" in data:
+            self._current_hide_title = bool(data["hide_title"])
+            self.property_changed.emit("hide_title", self._current_hide_title)
+
+    def _on_status_source_changed(self, index: int) -> None:
+        """Обрабатывает выбор источника динамического статуса."""
+        source_key = self.combo_status_source.itemData(index) or "none"
+        self.property_changed.emit("status_source", source_key)
+
+    def _on_click_sound_changed(self, index: int) -> None:
+        """Обрабатывает переключение режима звука клика (sound_override)."""
+        mode = self.combo_click_sound.itemData(index)
+        if mode == "muted":
+            self.btn_click_sound_browse.setVisible(False)
+            self.btn_click_sound_preview.setVisible(False)
+            self.property_changed.emit("sound_override", "muted")
+        elif mode == "custom":
+            self.btn_click_sound_browse.setVisible(True)
+            self.btn_click_sound_preview.setVisible(True)
+            val = self._sound_override_path if self._sound_override_path else ""
+            self.property_changed.emit("sound_override", val)
+        else:
+            self.btn_click_sound_browse.setVisible(False)
+            self.btn_click_sound_preview.setVisible(False)
+            self.property_changed.emit("sound_override", None)
+
+    def _on_click_sound_browse_clicked(self) -> None:
+        """Открывает диалог выбора кастомного аудиофайла для клика кнопки."""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self.window(),
+            t("deck.editor.inspector.fields.sound_file"),
+            "",
+            "Audio Files (*.wav *.mp3 *.ogg);;All Files (*.*)",
+        )
+        if file_path:
+            self._sound_override_path = file_path
+            self.property_changed.emit("sound_override", file_path)
+
+    def _on_click_sound_preview_clicked(self) -> None:
+        """Воспроизводит предварительный щелчок звука кнопки."""
+        from modules.deck.sound_engine import DeckSoundEngine
+
+        target = self._sound_override_path
+        if target and os.path.exists(target):
+            DeckSoundEngine.preview_sound(target, 1.0)
+        else:
+            DeckSoundEngine.play_tap()
 
     def _on_action_type_changed(self, index: int) -> None:
         """Обработчик пользовательского выбора типа действия в комбобоксе."""
@@ -1202,6 +1576,8 @@ class ButtonPropertyForm(QWidget):
 __all__ = [
     "ACCENT_COLORS",
     "ACTION_PRESET_KEYS",
+    "STATUS_SOURCE_KEYS",
+    "CLICK_SOUND_KEYS",
     "MEDIA_COMMAND_KEYS",
     "VOLUME_TARGET_KEYS",
     "VOLUME_ACTION_KEYS",
@@ -1219,5 +1595,6 @@ __all__ = [
     "AudioDeviceSubform",
     "ScreenshotSubform",
     "SystemSubform",
+    "SoundboardSubform",
     "ButtonPropertyForm",
 ]

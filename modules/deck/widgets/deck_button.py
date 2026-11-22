@@ -105,7 +105,14 @@ class DeckButtonWidget(QFrame):
         self.lbl_title.setWordWrap(True)
         self.lbl_title.setFocusPolicy(Qt.NoFocus)
         self.lbl_title.setProperty("class", "deck-btn-title")
-        self.lbl_title.setStyleSheet(f"font-size: {self.title_font_size}px;")
+        
+        font_size = self.button_config.font_size or self.title_font_size
+        font_color = self.button_config.font_color or ""
+        font_style = f"font-size: {font_size}px;"
+        if font_color:
+            font_style += f" color: {font_color};"
+        self.lbl_title.setStyleSheet(font_style)
+        self.lbl_title.setVisible(not self.button_config.hide_title)
         self._content_layout.addWidget(self.lbl_title)
 
         # Метка статуса (Live Dynamic Tiles)
@@ -116,6 +123,15 @@ class DeckButtonWidget(QFrame):
         self.lbl_status.setStyleSheet(f"font-size: {self.status_font_size}px;")
         self.lbl_status.setVisible(False)
         self._content_layout.addWidget(self.lbl_status)
+
+        # Выравнивание текста
+        if self.button_config.text_alignment == "top":
+            self._content_layout.removeWidget(self.lbl_title)
+            self._content_layout.removeWidget(self.lbl_icon)
+            self._content_layout.removeWidget(self.lbl_status)
+            self._content_layout.addWidget(self.lbl_title)
+            self._content_layout.addWidget(self.lbl_icon)
+            self._content_layout.addWidget(self.lbl_status)
 
         # Применение скругления через локальный стиль
         self._update_border_style()
@@ -237,6 +253,7 @@ class DeckButtonWidget(QFrame):
         status_text: Optional[str] = None,
         icon: Optional[str] = None,
         title: Optional[str] = None,
+        badge_color: Optional[str] = None,
     ) -> None:
         """Централизованное обновление динамического содержимого живого тайла."""
         if icon is not None:
@@ -248,6 +265,13 @@ class DeckButtonWidget(QFrame):
             if clean_status:
                 self.lbl_status.setText(clean_status)
                 self.lbl_status.setVisible(True)
+                if badge_color:
+                    self.lbl_status.setStyleSheet(
+                        f"font-size: {self.status_font_size}px; color: {badge_color}; "
+                        f"border: 1px solid {badge_color}; border-radius: 4px; padding: 1px 4px;"
+                    )
+                else:
+                    self.lbl_status.setStyleSheet(f"font-size: {self.status_font_size}px;")
             else:
                 self.lbl_status.setText("")
                 self.lbl_status.setVisible(False)
@@ -261,6 +285,30 @@ class DeckButtonWidget(QFrame):
             f"font-size: {self.icon_font_size}px; color: {color};"
         )
         self.lbl_title.setText(button_config.title or "")
+
+        font_size = button_config.font_size or self.title_font_size
+        font_color = button_config.font_color or ""
+        font_style = f"font-size: {font_size}px;"
+        if font_color:
+            font_style += f" color: {font_color};"
+        self.lbl_title.setStyleSheet(font_style)
+        self.lbl_title.setVisible(not button_config.hide_title)
+
+        if button_config.text_alignment == "top":
+            self._content_layout.removeWidget(self.lbl_title)
+            self._content_layout.removeWidget(self.lbl_icon)
+            self._content_layout.removeWidget(self.lbl_status)
+            self._content_layout.addWidget(self.lbl_title)
+            self._content_layout.addWidget(self.lbl_icon)
+            self._content_layout.addWidget(self.lbl_status)
+        else:
+            self._content_layout.removeWidget(self.lbl_title)
+            self._content_layout.removeWidget(self.lbl_icon)
+            self._content_layout.removeWidget(self.lbl_status)
+            self._content_layout.addWidget(self.lbl_icon)
+            self._content_layout.addWidget(self.lbl_title)
+            self._content_layout.addWidget(self.lbl_status)
+
         if button_config.status_source:
             self.lbl_status.setVisible(True)
         else:

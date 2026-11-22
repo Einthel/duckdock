@@ -43,6 +43,8 @@ class DeckSoundEngine(QObject):
         self._settings = sound_settings or SoundSettings()
         self._effects: Dict[str, QSoundEffect] = {}
         self._sound_paths: Dict[str, str] = {}
+        self._soundboard_pool: list[QSoundEffect] = []
+        self._preview_effect: Optional[QSoundEffect] = None
 
         self.apply_settings(self._settings)
 
@@ -175,10 +177,111 @@ class DeckSoundEngine(QObject):
 
     def play_tap(self, sound_override: Optional[str] = None) -> None:
         """Воспроизведение клика плитки (с поддержкой индивидуального sound_override кнопки)."""
-        if sound_override:
+        if sound_override == "muted":
+            return
+        if sound_override and sound_override != "default":
             self.play_sound(sound_override)
         else:
             self.play_sound(self.SOUND_TAP)
+
+    def play_soundboard(
+        self,
+        file_path: str,
+        volume: float = 1.0,
+        stop_others: bool = False,
+    ) -> bool:
+        """
+        Воспроизведение звуковой дорожки саундборда в неблокирующем режиме.
+        Поддерживает пул до 8 параллельных эффектов с авто-очисткой завершенных.
+        """
+        if not self.enabled or self.volume <= 0.0 or not file_path:
+            return False
+
+        abs_path = self.resolve_sound_path(file_path)
+        if not abs_path:
+            logger.warning("Soundboard file not found: '%s'", file_path)
+            return False
+
+        if stop_others:
+            self.stop_soundboard()
+
+        # Очистка эффектов, завершивших воспроизведение
+        self._soundboard_pool = [eff for eff in self._soundboard_pool if eff.isPlaying()]
+
+        # Ограничение размера пула (не более 8 одновременных звуков)
+        while len(self._soundboard_pool) >= 8:
+            old_eff = self._soundboard_pool.pop(0)
+            try:
+                old_eff.stop()
+            except Exception:
+                pass
+
+        try:
+            effect = QSoundEffect(self)
+            effect.setSource(QUrl.fromLocalFile(abs_path))
+            clamped_vol = max(0.0, min(1.0, float(volume))) * self.volume
+            effect.setVolume(clamped_vol)
+            effect.play()
+            self._soundboard_pool.append(effect)
+            return True
+        except Exception as exc:
+            logger.warning("Failed to play soundboard effect '%s': %s", abs_path, exc)
+            return False
+
+    def stop_soundboard(self) -> None:
+        """Мгновенно глушит все играющие эффекты саундборда и превью."""
+        for eff in self._soundboard_pool:
+            try:
+                if eff.isPlaying():
+                    eff.stop()
+            except Exception:
+                pass
+        self._soundboard_pool.clear()
+        self.stop_preview()
+
+    def preview_sound(self, file_path: str, volume: float = 1.0) -> bool:
+        """
+        Воспроизведение предпрослушки в конфигураторе DuckDeck Editor.
+        """
+        self.stop_preview()
+        if not file_path:
+            return False
+
+        abs_path = self.resolve_sound_path(file_path)
+        if not abs_path:
+            logger.warning("Preview sound file not found: '%s'", file_path)
+            return False
+
+        try:
+            effect = QSoundEffect(self)
+            effect.setSource(QUrl.fromLocalFile(abs_path))
+            clamped_vol = max(0.0, min(1.0, float(volume))) * self.volume
+            effect.setVolume(clamped_vol)
+            effect.play()
+            self._preview_effect = effect
+            return True
+        except Exception as exc:
+            logger.warning("Failed to preview sound '%s': %s", abs_path, exc)
+            return False
+
+    def stop_preview(self) -> None:
+        """Останавливает текущее воспроизведение предпрослушки."""
+        if self._preview_effect is not None:
+            try:
+                if self._preview_effect.isPlaying():
+                    self._preview_effect.stop()
+            except Exception:
+                pass
+            self._preview_effect = None
+
+    def is_preview_playing(self) -> bool:
+        """Возвращает True, если превью активно играет."""
+        if self._preview_effect is not None:
+            try:
+                return self._preview_effect.isPlaying()
+            except Exception:
+                pass
+        return False
 
     def play_page_switch(self) -> None:
         """Воспроизведение звука смены страницы или свайпа."""
@@ -202,6 +305,7 @@ class DeckSoundEngine(QObject):
 
     def cleanup(self) -> None:
         """Остановка и очистка всех звуковых эффектов."""
+        self.stop_soundboard()
         for effect in self._effects.values():
             try:
                 if effect.isPlaying():

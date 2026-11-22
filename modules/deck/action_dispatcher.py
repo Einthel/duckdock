@@ -28,6 +28,7 @@ from modules.deck.models import (
     OpenAppParams,
     OpenPathParams,
     ScreenshotParams,
+    SoundboardParams,
     SystemParams,
     TextMacroParams,
     VolumeControlParams,
@@ -45,6 +46,8 @@ class WorkerSignals(QObject):
     """
     started = Signal(str)              # button_id
     finished = Signal(str, bool, str)  # button_id, success, message
+    play_sound_requested = Signal(str, float, bool)  # file_path, volume, stop_others
+    stop_sound_requested = Signal()
 
     def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)
@@ -390,6 +393,25 @@ class ActionRunnable(QRunnable):
                     state_name = active_state.title or str(curr)
                     message = t("deck.notify.switch_state", state=state_name)
 
+            elif action_type == "play_audio":
+                pa_params: SoundboardParams = typed_params
+                f_path = (pa_params.file_path or self.action_config.params.get("file_path", "")).strip()
+                vol = pa_params.volume if hasattr(pa_params, "volume") else 1.0
+                stop_oth = pa_params.stop_others if hasattr(pa_params, "stop_others") else False
+                if not f_path:
+                    success = False
+                    message = t("deck.notify.empty_path")
+                else:
+                    self.signals.play_sound_requested.emit(f_path, vol, stop_oth)
+                    success = True
+                    import os
+                    message = t("deck.notify.sound_played", sound=os.path.basename(f_path))
+
+            elif action_type == "stop_audio":
+                self.signals.stop_sound_requested.emit()
+                success = True
+                message = t("deck.notify.soundboard_stopped")
+
             else:
                 success = False
                 message = t("deck.notify.unsupported_action", action=action_type)
@@ -423,6 +445,7 @@ class DeckActionDispatcher(QObject):
     def __init__(
         self,
         audio_manager: Optional[Any] = None,
+        sound_engine: Optional[Any] = None,
         debounce_ms: int = 250,
         thread_pool: Optional[QThreadPool] = None,
         parent: Optional[QObject] = None,
@@ -430,6 +453,7 @@ class DeckActionDispatcher(QObject):
     ):
         super().__init__(parent)
         self.audio_manager = audio_manager
+        self.sound_engine = sound_engine
         self.debounce_ms = debounce_ms
         self.thread_pool = thread_pool or QThreadPool.globalInstance()
         self._simulation_mode: bool = bool(simulation_mode)
@@ -437,6 +461,16 @@ class DeckActionDispatcher(QObject):
         # Защита от преждевременного удаления объектов сборщиком мусора Python (GC)
         self._active_tasks: Dict[str, Tuple[ActionRunnable, WorkerSignals]] = {}
         self.action_finished.connect(self._on_action_finished_cleanup)
+
+    def _on_play_sound_requested(self, file_path: str, volume: float, stop_others: bool) -> None:
+        """Слот воспроизведения звука саундборда в главном UI потоке."""
+        if self.sound_engine is not None:
+            self.sound_engine.play_soundboard(file_path, volume, stop_others)
+
+    def _on_stop_sound_requested(self) -> None:
+        """Слот остановки саундборда в главном UI потоке."""
+        if self.sound_engine is not None:
+            self.sound_engine.stop_soundboard()
 
     @property
     def simulation_mode(self) -> bool:
@@ -504,6 +538,8 @@ class DeckActionDispatcher(QObject):
         signals = WorkerSignals(self)
         signals.started.connect(self.action_started.emit)
         signals.finished.connect(self.action_finished.emit)
+        signals.play_sound_requested.connect(self._on_play_sound_requested)
+        signals.stop_sound_requested.connect(self._on_stop_sound_requested)
 
         runnable = ActionRunnable(
             button_id=button_id_str,
@@ -516,6 +552,66 @@ class DeckActionDispatcher(QObject):
         self._active_tasks[button_id_str] = (runnable, signals)
         self.thread_pool.start(runnable)
         return True
+
+    @classmethod
+    def execute_action(
+        cls,
+        action_config: DeckActionConfig,
+        audio_manager: Optional[Any] = None,
+        sound_engine: Optional[Any] = None,
+    ) -> Tuple[bool, str]:
+        """
+        Синхронный запуск действия кнопки (для быстрого тестирования '▶ Тест' из инспектора).
+        """
+        action_type = action_config.action_type
+        if action_type == "play_audio":
+            typed = action_config.get_typed_params()
+            f_path = (getattr(typed, "file_path", None) or action_config.params.get("file_path", "")).strip()
+            vol = getattr(typed, "volume", 1.0)
+            stop_oth = getattr(typed, "stop_others", False)
+            if not f_path:
+                return False, t("deck.notify.empty_path")
+            if sound_engine is not None:
+                success = sound_engine.play_soundboard(f_path, vol, stop_oth)
+            else:
+                from modules.deck.sound_engine import DeckSoundEngine
+                success = DeckSoundEngine().play_soundboard(f_path, vol, stop_oth)
+            import os
+            msg = t("deck.notify.sound_played", sound=os.path.basename(f_path)) if success else t("deck.notify.generic_error", error="file not found")
+            return success, msg
+
+        if action_type == "stop_audio":
+            if sound_engine is not None:
+                sound_engine.stop_soundboard()
+            return True, t("deck.notify.soundboard_stopped")
+
+        # Для остальных действий используем логику ActionRunnable
+        class SyncSignals(QObject):
+            started = Signal(str)
+            finished = Signal(str, bool, str)
+            play_sound_requested = Signal(str, float, bool)
+            stop_sound_requested = Signal()
+
+        sig = SyncSignals()
+        result = [False, ""]
+
+        def on_finished(bid, ok, msg):
+            result[0] = ok
+            result[1] = msg
+
+        sig.finished.connect(on_finished)
+        if sound_engine is not None:
+            sig.play_sound_requested.connect(sound_engine.play_soundboard)
+            sig.stop_sound_requested.connect(sound_engine.stop_soundboard)
+
+        runnable = ActionRunnable(
+            button_id="test_run",
+            action_config=action_config,
+            signals=sig,
+            audio_manager=audio_manager,
+        )
+        runnable.run()
+        return result[0], result[1]
 
 
 __all__ = [

@@ -98,6 +98,12 @@ class DeckConfigAdapter:
         elif action.action_type == "navigation":
             action_type_display = "Navigation"
             category_display = "Navigation"
+        elif action.action_type == "play_audio":
+            action_type_display = "Play Audio"
+            category_display = "Soundboard: Play Audio"
+        elif action.action_type == "stop_audio":
+            action_type_display = "Stop Audio"
+            category_display = "Soundboard: Stop Audio"
         else:
             action_type_display = str(action.action_type).capitalize()
             category_display = str(button_config.category).capitalize()
@@ -109,8 +115,10 @@ class DeckConfigAdapter:
             category=category_display,
             action_type=action_type_display,
             hotkey=hotkey_str,
-            font_size=11,
-            font_color="#d4d4d8",
+            font_size=getattr(button_config, "font_size", 11),
+            font_color=getattr(button_config, "font_color", "#d4d4d8"),
+            text_alignment=getattr(button_config, "text_alignment", "bottom"),
+            hide_title=getattr(button_config, "hide_title", False),
             color_accent=button_config.color_accent,
             action_params=action_params,
             status_source=button_config.status_source,
@@ -155,7 +163,13 @@ class DeckConfigAdapter:
         elif isinstance(toggle_action, dict):
             toggle_action = DeckActionConfig.model_validate(toggle_action)
 
-        # 5. Слияние с оригинальной конфигурацией
+        # 5. Извлечение параметров типографики
+        font_size = getattr(dto, "font_size", 11) or 11
+        font_color = getattr(dto, "font_color", "#d4d4d8") or "#d4d4d8"
+        text_alignment = getattr(dto, "text_alignment", "bottom") or "bottom"
+        hide_title = bool(getattr(dto, "hide_title", False))
+
+        # 6. Слияние с оригинальной конфигурацией
         if orig is not None:
             action = orig.action.model_copy(deep=True)
             category = orig.category
@@ -182,6 +196,10 @@ class DeckConfigAdapter:
                 icon=dto.icon if dto.icon else orig.icon,
                 icon_path=orig.icon_path,
                 icon_size=orig.icon_size,
+                font_size=font_size,
+                font_color=font_color,
+                text_alignment=text_alignment,
+                hide_title=hide_title,
                 color_accent=color_accent,
                 background_color=orig.background_color,
                 action=action,
@@ -190,7 +208,7 @@ class DeckConfigAdapter:
                 sound_override=sound_override,
             )
 
-        # 6. Создание нового слота с дефолтными атрибутами Pydantic v2
+        # 7. Создание нового слота с дефолтными атрибутами Pydantic v2
         btn_id = f"btn_slot_{dto.slot_index}"
         title = dto.title or ""
         icon = dto.icon or "⚡"
@@ -216,6 +234,10 @@ class DeckConfigAdapter:
             category=category,
             icon=icon,
             icon_size=48,
+            font_size=font_size,
+            font_color=font_color,
+            text_alignment=text_alignment,
+            hide_title=hide_title,
             color_accent=color_accent,
             background_color="#161b26",
             action=action,
@@ -750,9 +772,17 @@ class DeckConfigAdapter:
                 ),
                 "api",
             )
-        if action_type in ("play_audio", "stop_audio"):
+        if action_type == "play_audio":
             return (
-                DeckActionConfig(action_type=action_type, params={"sound_path": ""}),
+                DeckActionConfig(
+                    action_type="play_audio",
+                    params={"file_path": "", "volume": 1.0, "stop_others": False},
+                ),
+                "soundboard",
+            )
+        if action_type == "stop_audio":
+            return (
+                DeckActionConfig(action_type="stop_audio", params={}),
                 "soundboard",
             )
         if action_type in ("brightness", "sleep_display"):

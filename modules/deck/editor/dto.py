@@ -26,6 +26,8 @@ class ButtonSlotDTO:
     hotkey: str = ""
     font_size: int = 11
     font_color: str = "#d4d4d8"
+    text_alignment: str = "bottom"
+    hide_title: bool = False
     color_accent: str = "#38bdf8"
     action_params: dict[str, Any] = field(default_factory=dict)
     status_source: Optional[str] = None

@@ -27,6 +27,8 @@ ActionType = Literal[
     "screenshot",     # Скриншот основного монитора / окна
     "system",         # Системное действие (mute mic, lock, dimmer)
     "navigation",     # Переход на страницу/папку
+    "play_audio",     # Воспроизведение звука саундборда
+    "stop_audio",     # Остановка всех звуков саундборда
 ]
 
 ActionCategory = Literal[
@@ -161,6 +163,13 @@ class NavigationParams(BaseModel):
     target_page_id: str = Field(description="ID целевой страницы профиля")
 
 
+class SoundboardParams(BaseModel):
+    """Параметры действия воспроизведения аудио саундборда."""
+    file_path: str = Field(default="", description="Относительный или абсолютный путь к аудиофайлу")
+    volume: float = Field(default=1.0, ge=0.0, le=1.0, description="Громкость воспроизведения от 0.0 до 1.0")
+    stop_others: bool = Field(default=False, description="Остановить другие звуки саундборда перед запуском")
+
+
 class DeckActionConfig(BaseModel):
     """Типизированная конфигурация действия кнопки."""
     action_type: ActionType
@@ -182,6 +191,7 @@ class DeckActionConfig(BaseModel):
         ScreenshotParams,
         SystemParams,
         NavigationParams,
+        SoundboardParams,
         Dict[str, Any],
     ]:
         """Фабрика типизированных параметров действия."""
@@ -201,6 +211,8 @@ class DeckActionConfig(BaseModel):
             "screenshot": ScreenshotParams,
             "system": SystemParams,
             "navigation": NavigationParams,
+            "play_audio": SoundboardParams,
+            "stop_audio": SoundboardParams,
         }
         model_cls = mapping.get(self.action_type)
         if model_cls:
@@ -221,6 +233,12 @@ class DeckButtonConfig(BaseModel):
     icon: str = Field(default="⚡", description="Символ Unicode, SVG имя или fallback-глиф")
     icon_path: Optional[str] = Field(default=None, description="Относительный или абсолютный путь к файлу иконки")
     icon_size: int = Field(default=48, ge=16, le=128, description="Целевой размер отрисовки иконки в пикселях")
+    font_size: int = Field(default=11, ge=8, le=24, description="Размер шрифта заголовка в px")
+    font_color: str = Field(default="#d4d4d8", description="Цвет шрифта заголовка (HEX)")
+    text_alignment: Literal["bottom", "center", "top"] = Field(
+        default="bottom", description="Положение текста относительно иконки"
+    )
+    hide_title: bool = Field(default=False, description="Скрыть текст заголовка (режим чистой иконки)")
     color_accent: str = Field(default="#38bdf8", description="Неоновый цвет акцента границы/иконки")
     background_color: str = Field(default="#161b26", description="Цвет фона кнопки")
     action: DeckActionConfig = Field(description="Основное действие по нажатию")

@@ -130,7 +130,9 @@
     },
     "status": {
       "mic_muted": "Выключен",
-      "mic_unmuted": "Включен"
+      "mic_unmuted": "Включен",
+      "cpu_temp": "CPU: {temp}°C",
+      "gpu_temp": "GPU: {temp}°C"
     },
     "grid": {
       "page_indicator": "Страница {current} из {total}"
@@ -188,12 +190,25 @@
       "media_volume_up": "Медиа: Громкость +5%",
       "media_volume_down": "Медиа: Громкость -5%",
       "volume_updated": "Громкость: {percent}%",
-      "switch_state": "Переключено: {state}"
+      "switch_state": "Переключено: {state}",
+      "sound_played": "Воспроизведение: {sound}",
+      "soundboard_stopped": "Саундборд остановлен"
     },
     "feedback": {
       "switched": "Переключено"
     },
     "editor": {
+      "font_popover": {
+        "title": "Настройка типографики",
+        "font_size": "Размер шрифта",
+        "alignment": "Положение",
+        "align_top": "Сверху",
+        "align_center": "По центру",
+        "align_bottom": "Снизу",
+        "text_color": "Цвет текста",
+        "hide_title": "Скрыть заголовок",
+        "reset": "Сброс"
+      },
       "window": {
         "title": "Редактор кнопок и тачбара DuckDeck"
       },
@@ -244,11 +259,13 @@
       "inspector": {
         "placeholder": "Выберите кнопку для настройки действия.",
         "hints": {
-          "no_params_required": "Действие не требует дополнительных параметров"
+          "no_params_required": "Действие не требует дополнительных параметров",
+          "stop_audio_hint": "Мгновенно глушит все играющие эффекты саундборда"
         },
         "tooltips": {
           "delete_action": "Очистить действие кнопки",
           "test_action": "Протестировать действие",
+          "preview_sound": "Предпрослушать звук",
           "load_image": "Загрузить изображение",
           "icon_options": "Параметры иконки",
           "reset_settings": "Сбросить настройки секции"
@@ -273,7 +290,14 @@
           "audio_mode": "Режим:",
           "screenshot_target": "Область:",
           "copy_to_clipboard": "В буфер",
-          "system_command": "Команда:"
+          "system_command": "Команда:",
+          "sound_file": "Аудиофайл:",
+          "sound_volume": "Громкость:",
+          "click_sound": "Звук клика:",
+          "click_sound_default": "По умолчанию",
+          "click_sound_muted": "Без звука",
+          "click_sound_custom": "Выбрать файл...",
+          "status_source": "Живой статус:"
         },
         "hotkey": {
           "click_to_assign": "Нажмите для назначения",
@@ -293,6 +317,8 @@
           "audio_device": "Аудиоустройство",
           "screenshot": "Скриншот",
           "system": "Системная команда",
+          "play_audio": "Воспроизвести звук",
+          "stop_audio": "Остановить звуки",
           "open_application": "Запуск приложения",
           "media_control": "Управление медиа"
         },
@@ -327,6 +353,14 @@
           "toggle_mute": "Переключить Mute",
           "volume_up": "Громкость +5%",
           "volume_down": "Громкость -5%"
+        },
+        "status_sources": {
+          "none": "Отключен",
+          "mic_mute": "Микрофон (Mute)",
+          "audio_device": "Аудиоустройство",
+          "dimmer": "Ночной режим",
+          "cpu_temp": "Температура CPU",
+          "gpu_temp": "Температура GPU"
         },
         "touchbar": {
           "media_header": "Тачбар: Медиаплеер",

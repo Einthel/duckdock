@@ -455,6 +455,18 @@ QLabel#lblCellTitle {{
     border: none;
 }}
 
+QLabel.CellStatusBadge,
+QLabel[class="CellStatusBadge"],
+QLabel#lblCellStatus {{
+    font-size: 9px;
+    font-weight: 600;
+    color: {BORDER_FOCUS_NEON};
+    background-color: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    border-radius: 4px;
+    padding: 1px 3px;
+}}
+
 QFrame#editorGridCell:hover QLabel.CellTitleLabel,
 QFrame[editorGridCell="true"]:hover QLabel.CellTitleLabel,
 EditorGridCell:hover QLabel.CellTitleLabel,

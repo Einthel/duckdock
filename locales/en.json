@@ -128,7 +128,9 @@
     },
     "status": {
       "mic_muted": "Muted",
-      "mic_unmuted": "Unmuted"
+      "mic_unmuted": "Unmuted",
+      "cpu_temp": "CPU: {temp}°C",
+      "gpu_temp": "GPU: {temp}°C"
     },
     "grid": {
       "page_indicator": "Page {current} of {total}"
@@ -186,12 +188,25 @@
       "media_volume_up": "Media: Volume +5%",
       "media_volume_down": "Media: Volume -5%",
       "volume_updated": "Volume: {percent}%",
-      "switch_state": "Switched to: {state}"
+      "switch_state": "Switched to: {state}",
+      "sound_played": "Playing: {sound}",
+      "soundboard_stopped": "Soundboard stopped"
     },
     "feedback": {
       "switched": "Switched"
     },
     "editor": {
+      "font_popover": {
+        "title": "Typography Settings",
+        "font_size": "Font Size",
+        "alignment": "Position",
+        "align_top": "Top",
+        "align_center": "Center",
+        "align_bottom": "Bottom",
+        "text_color": "Text Color",
+        "hide_title": "Hide Title",
+        "reset": "Reset"
+      },
       "window": {
         "title": "DuckDeck Button & Touchbar Editor"
       },
@@ -242,11 +257,13 @@
       "inspector": {
         "placeholder": "Select a key to configure its action.",
         "hints": {
-          "no_params_required": "Action requires no additional parameters"
+          "no_params_required": "Action requires no additional parameters",
+          "stop_audio_hint": "Instantly mutes all active soundboard effects"
         },
         "tooltips": {
           "delete_action": "Clear button action",
           "test_action": "Test Run Action",
+          "preview_sound": "Preview Sound",
           "load_image": "Upload image",
           "icon_options": "Icon options",
           "reset_settings": "Reset section settings"
@@ -271,7 +288,14 @@
           "audio_mode": "Mode:",
           "screenshot_target": "Area:",
           "copy_to_clipboard": "To Clipboard",
-          "system_command": "Command:"
+          "system_command": "Command:",
+          "sound_file": "Audio File:",
+          "sound_volume": "Volume:",
+          "click_sound": "Click Sound:",
+          "click_sound_default": "Default",
+          "click_sound_muted": "Muted",
+          "click_sound_custom": "Custom File...",
+          "status_source": "Live Status:"
         },
         "hotkey": {
           "click_to_assign": "Click to assign",
@@ -291,6 +315,8 @@
           "audio_device": "Audio Device",
           "screenshot": "Screenshot",
           "system": "System Command",
+          "play_audio": "Play Sound",
+          "stop_audio": "Stop Audio",
           "open_application": "Open Application",
           "media_control": "Media Control"
         },
@@ -325,6 +351,14 @@
           "toggle_mute": "Toggle Mute",
           "volume_up": "Volume +5%",
           "volume_down": "Volume -5%"
+        },
+        "status_sources": {
+          "none": "None",
+          "mic_mute": "Microphone (Mute)",
+          "audio_device": "Audio Device",
+          "dimmer": "Night Dimmer",
+          "cpu_temp": "CPU Temperature",
+          "gpu_temp": "GPU Temperature"
         },
         "touchbar": {
           "media_header": "Touchbar: Media Player",

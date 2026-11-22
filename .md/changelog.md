@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-11-22
+
+### Added
+- **Кастомизация типографики и всплывающее меню шрифтов (Спринт 7.1, `FontCustomizationPopover`)**:
+  - Создан компонент `FontCustomizationPopover(QWidget)` с флагами `Qt.Popup | Qt.FramelessWindowHint`, `Qt.WA_ShowWithoutActivating` и `Qt.NoFocus`, строго сохраняющий инвариант Stealth Focus без отбора активности у основного 27" монитора.
+  - Настройка размера шрифта заголовка (9, 11, 13, 15 px), выравнивания (снизу, по центру, сверху), цветовых чипов (5 фирменных свотчей + Reset) и опции скрытия заголовка (`hide_title`).
+  - Расширение моделей `DeckButtonConfig` и `ButtonSlotDTO` полями `font_size`, `font_color`, `text_alignment`, `hide_title` с двусторонним мапингом в `DeckConfigAdapter`.
+  - Реактивное отображение типографики на ячейках холста редактора `EditorGridCell` и на 7" сенсорных плитках `DeckButtonWidget`.
+- **Саундборд и кастомизация звука клика кнопки (Спринт 7.2, `DeckSoundEngine` & `SoundboardSubform`)**:
+  - Расширение звукового движка `DeckSoundEngine` методами `play_soundboard(file_path, volume, stop_others)`, `stop_soundboard()`, `preview_sound()` и `stop_preview()`.
+  - Реализован пул воспроизведения дорожек саундборда до 8 параллельных эффектов с авто-очисткой завершенных.
+  - Поддержка действий каталога `play_audio` и `stop_audio`, модель параметров `SoundboardParams` и компактная подформа инспектора `SoundboardSubform` (28 px).
+  - Потокобезопасная маршрутизация аудио через сигналы `play_sound_requested` и `stop_sound_requested` из `ActionRunnable` в GUI-поток `DeckActionDispatcher`.
+  - Настройка индивидуального звука клика кнопки (`sound_override`: по умолчанию, без звука / muted, кастомный аудиофайл).
+- **Живые динамические тайлы Live Status Tiles (Спринт 7.3, `Live Tiles Engine`)**:
+  - Комбобокс `combo_status_source` в форме инспектора с источниками: `none`, `mic_mute`, `audio_device`, `dimmer`, `cpu_temp`, `gpu_temp`.
+  - Динамические бейджи статуса в `EditorGridCell` и `DeckButtonWidget.update_status()` с поддержкой цветового акцента `badge_color`.
+  - Подписка `DeckView` на шину событий `bus.sensors_updated` с цветовой градацией телеметрии: `<60°C` (изумрудный `#10b981`), `60-74°C` (янтарный `#f59e0b`), `>=75°C` (рубиновый `#ef4444` + значок тревоги `⚠️`).
+  - Гарантированная отписка от шины `bus.sensors_updated` при вызове `DeckView.cleanup()`.
+- **Локализация и автоматическое тестирование**:
+  - 100% паритет словарей локализации `locales/ru.json` и `locales/en.json` без хардкода строковых литералов в UI.
+  - Новые тестовые наборы: `test_deck_font_popover.py`, `test_deck_soundboard.py`, `test_deck_live_tiles.py`.
+  - Все 479 тестов репозитория имеют статус **100% PASS** (473 passed, 6 skipped).
+
 ## [0.6.1] - 2026-11-22
 
 ### Added

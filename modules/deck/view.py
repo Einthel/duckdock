@@ -232,6 +232,7 @@ class DeckView(TouchModuleView):
             bus.playback_device_changed.connect(self._on_playback_device_changed)
             bus.mic_mute_changed.connect(self._on_mic_mute_changed)
             bus.dimmer_opacity_changed.connect(self._on_dimmer_opacity_changed)
+            bus.sensors_updated.connect(self._on_sensors_updated)
             bus.deck_page_changed.connect(self._on_deck_page_changed)
             bus.deck_config_updated.connect(self._on_deck_config_updated)
             self._eventbus_connected = True
@@ -249,6 +250,10 @@ class DeckView(TouchModuleView):
                 pass
             try:
                 bus.dimmer_opacity_changed.disconnect(self._on_dimmer_opacity_changed)
+            except Exception:
+                pass
+            try:
+                bus.sensors_updated.disconnect(self._on_sensors_updated)
             except Exception:
                 pass
             try:
@@ -565,6 +570,47 @@ class DeckView(TouchModuleView):
         for btn in self.grid.get_buttons().values():
             if btn.button_config.status_source == "dimmer":
                 btn.update_status(status_text=status_text)
+
+    def _on_sensors_updated(self, data: dict) -> None:
+        """Обновление тайлов телеметрии с источниками 'cpu_temp' и 'gpu_temp'."""
+        if not isinstance(data, dict):
+            return
+
+        cpu_temp = data.get("cpu_temp")
+        gpu_temp = data.get("gpu_temp")
+
+        for btn in self.grid.get_buttons().values():
+            src = getattr(btn.button_config, "status_source", None)
+            if src == "cpu_temp" and cpu_temp is not None:
+                try:
+                    val = float(cpu_temp)
+                    if val < 60.0:
+                        color = "#10b981"
+                        prefix = ""
+                    elif val < 75.0:
+                        color = "#f59e0b"
+                        prefix = ""
+                    else:
+                        color = "#ef4444"
+                        prefix = "⚠️ "
+                    btn.update_status(status_text=f"{prefix}CPU: {int(round(val))}°C", badge_color=color)
+                except (ValueError, TypeError):
+                    pass
+            elif src == "gpu_temp" and gpu_temp is not None:
+                try:
+                    val = float(gpu_temp)
+                    if val < 60.0:
+                        color = "#10b981"
+                        prefix = ""
+                    elif val < 75.0:
+                        color = "#f59e0b"
+                        prefix = ""
+                    else:
+                        color = "#ef4444"
+                        prefix = "⚠️ "
+                    btn.update_status(status_text=f"{prefix}GPU: {int(round(val))}°C", badge_color=color)
+                except (ValueError, TypeError):
+                    pass
 
     def retranslate_ui(self) -> None:
         """Обновление локализованных надписей DeckView и дочерних панелей."""

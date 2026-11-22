@@ -209,9 +209,9 @@ flowchart TD
 
 ### `modules.deck` — Сенсорная макро-панель DuckDeck v0.4.1
 
-- `models.py`: Pydantic V2 модели конфигурации DuckDeck (`DeckRootConfig`, `DeckPageConfig`, `DeckButtonConfig`, `DeckActionConfig`, `SoundSettings`) и типизированные параметры действий.
-- `action_dispatcher.DeckActionDispatcher`: Асинхронный диспетчер задач в пуле `QThreadPool` с антидребезгом (250 мс), сторожевым таймером (5000 мс) и режимом заглушек `simulation_mode` (тактильный цикл кнопки и эмиссия в `deck_notification` без нагрузки на пул потоков).
-- `sound_engine.DeckSoundEngine`: Звуковой движок интерфейса (Zero-Latency Audio) на базе `PySide6.QtMultimedia.QSoundEffect` с предзагрузкой семплов в RAM (tap, page_switch, offline/error, online/success), регулировкой громкости и поддержкой индивидуального `sound_override`.
+- `models.py`: Pydantic V2 модели конфигурации DuckDeck (`DeckRootConfig`, `DeckPageConfig`, `DeckButtonConfig`, `DeckActionConfig`, `SoundSettings`, `SoundboardParams`) и типизированные параметры действий. Модель `DeckButtonConfig` расширена полями типографики (`font_size`, `font_color`, `text_alignment`, `hide_title`) и источником живого статуса `status_source`.
+- `action_dispatcher.DeckActionDispatcher`: Асинхронный диспетчер задач в пуле `QThreadPool` с антидребезгом (250 мс), сторожевым таймером (5000 мс), режимом заглушек `simulation_mode` и безопасной потоковой маршрутизацией звуков саундборда через сигналы `play_sound_requested` / `stop_sound_requested`.
+- `sound_engine.DeckSoundEngine`: Звуковой движок интерфейса (Zero-Latency Audio) на базе `PySide6.QtMultimedia.QSoundEffect` с предзагрузкой семплов в RAM (tap, page_switch, offline/error, online/success), регулировкой громкости, поддержкой индивидуального `sound_override`, неблокирующим саундбордом (`play_soundboard`, пул до 8 одновременных звуков, `stop_soundboard`) и предпрослушкой `preview_sound`.
 - `actions/`:
   - `hotkey_sender.py`: Аппаратные скан-коды `SendInput` (`KEYEVENTF_SCANCODE`) с восстановлением фокуса целевого окна.
   - `process_launcher.py`: Detached-запуск процессов и URL-схем (`CREATE_NO_WINDOW`, `DETACHED_PROCESS`).

@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import Optional
+from typing import Any, Optional
 
 from PySide6.QtCore import QPoint, Qt, Signal, QMimeData
 from PySide6.QtGui import (
@@ -56,6 +56,11 @@ class EditorGridCell(QFrame):
         self._icon = ""
         self._category = ""
         self._hotkey = ""
+        self._status_source = "none"
+        self._font_size = 11
+        self._font_color = "#d4d4d8"
+        self._text_alignment = "bottom"
+        self._hide_title = False
         self._drag_start_pos: Optional[QPoint] = None
 
         self.setObjectName("editorGridCell")
@@ -70,11 +75,11 @@ class EditorGridCell(QFrame):
         self._setup_ui()
 
     def _setup_ui(self) -> None:
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(2)
+        self._cell_layout = QVBoxLayout(self)
+        self._cell_layout.setContentsMargins(6, 6, 6, 6)
+        self._cell_layout.setSpacing(2)
 
-        # Верхняя строка: индекс слота [0]..[9]
+        # Верхняя строка: индекс слота [0]..[9] и бейдж статуса
         top_layout = QHBoxLayout()
         top_layout.setContentsMargins(0, 0, 0, 0)
         top_layout.setSpacing(0)
@@ -86,7 +91,14 @@ class EditorGridCell(QFrame):
         top_layout.addWidget(self.lbl_index, alignment=Qt.AlignLeft | Qt.AlignTop)
         top_layout.addStretch(1)
 
-        layout.addLayout(top_layout)
+        self.lbl_status = QLabel("", self)
+        self.lbl_status.setObjectName("lblCellStatus")
+        self.lbl_status.setProperty("class", "CellStatusBadge")
+        self.lbl_status.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        self.lbl_status.setVisible(False)
+        top_layout.addWidget(self.lbl_status, alignment=Qt.AlignRight | Qt.AlignTop)
+
+        self._cell_layout.addLayout(top_layout)
 
         # Центральная зона: иконка (26px)
         self.lbl_icon = QLabel("", self)
@@ -94,7 +106,7 @@ class EditorGridCell(QFrame):
         self.lbl_icon.setProperty("class", "CellIconLabel")
         self.lbl_icon.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         self.lbl_icon.setAlignment(Qt.AlignCenter)
-        layout.addWidget(self.lbl_icon, 1, alignment=Qt.AlignCenter)
+        self._cell_layout.addWidget(self.lbl_icon, 1, alignment=Qt.AlignCenter)
 
         # Нижняя зона: заголовок (11px)
         self.lbl_title = QLabel("", self)
@@ -102,7 +114,62 @@ class EditorGridCell(QFrame):
         self.lbl_title.setProperty("class", "CellTitleLabel")
         self.lbl_title.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         self.lbl_title.setAlignment(Qt.AlignCenter)
-        layout.addWidget(self.lbl_title, alignment=Qt.AlignCenter)
+        self._cell_layout.addWidget(self.lbl_title, alignment=Qt.AlignCenter)
+
+    def set_typography(
+        self,
+        font_size: int = 11,
+        font_color: str = "#d4d4d8",
+        text_alignment: str = "bottom",
+        hide_title: bool = False,
+    ) -> None:
+        """
+        Применяет пользовательские параметры шрифта и выравнивания к заголовку ячейки.
+        """
+        self._font_size = font_size
+        self._font_color = font_color
+        self._text_alignment = text_alignment
+        self._hide_title = hide_title
+
+        self.lbl_title.setStyleSheet(f"font-size: {font_size}px; color: {font_color};")
+        self.lbl_title.setVisible(not hide_title)
+
+        if text_alignment == "top":
+            self._cell_layout.removeWidget(self.lbl_title)
+            self._cell_layout.removeWidget(self.lbl_icon)
+            self._cell_layout.addWidget(self.lbl_title, alignment=Qt.AlignCenter)
+            self._cell_layout.addWidget(self.lbl_icon, 1, alignment=Qt.AlignCenter)
+        else:
+            self._cell_layout.removeWidget(self.lbl_title)
+            self._cell_layout.removeWidget(self.lbl_icon)
+            self._cell_layout.addWidget(self.lbl_icon, 1, alignment=Qt.AlignCenter)
+            self._cell_layout.addWidget(self.lbl_title, alignment=Qt.AlignCenter)
+
+    def update_status(
+        self,
+        status_text: Optional[str] = None,
+        icon: Optional[str] = None,
+        badge_color: Optional[str] = None,
+    ) -> None:
+        """
+        Централизованное обновление бейджа живого тайла ячейки.
+        """
+        if status_text is not None:
+            clean = status_text.strip()
+            if clean:
+                self.lbl_status.setText(clean)
+                self.lbl_status.setVisible(True)
+                if badge_color:
+                    self.lbl_status.setStyleSheet(
+                        f"font-size: 9px; font-weight: 600; color: {badge_color}; "
+                        f"background-color: rgba(15, 23, 42, 0.85); "
+                        f"border: 1px solid {badge_color}; border-radius: 4px; padding: 1px 3px;"
+                    )
+                else:
+                    self.lbl_status.setStyleSheet("")
+            else:
+                self.lbl_status.setText("")
+                self.lbl_status.setVisible(False)
 
     def set_selected(self, selected: bool) -> None:
         """
@@ -130,6 +197,11 @@ class EditorGridCell(QFrame):
         icon: str,
         category: str = "",
         hotkey: str = "",
+        status_source: str = "none",
+        font_size: int = 11,
+        font_color: str = "#d4d4d8",
+        text_alignment: str = "bottom",
+        hide_title: bool = False,
     ) -> None:
         """
         Задает отображаемые данные кнопки в ячейке.
@@ -138,6 +210,9 @@ class EditorGridCell(QFrame):
         self._icon = icon
         self._category = category
         self._hotkey = hotkey
+        self._status_source = status_source
+
+        self.set_typography(font_size, font_color, text_alignment, hide_title)
 
         if icon and os.path.isfile(icon):
             pixmap = QPixmap(icon)
@@ -160,6 +235,20 @@ class EditorGridCell(QFrame):
         self.lbl_title.setText(elided)
         self.setToolTip(f"{title} ({hotkey})" if hotkey else title)
 
+        # Отображение превью живого статуса
+        if status_source == "mic_mute":
+            self.update_status("🎙 LIVE")
+        elif status_source == "audio_device":
+            self.update_status("🔊 DEV")
+        elif status_source == "dimmer":
+            self.update_status("🌙 DIM")
+        elif status_source == "cpu_temp":
+            self.update_status("58°C", badge_color="#10b981")
+        elif status_source == "gpu_temp":
+            self.update_status("62°C", badge_color="#f59e0b")
+        else:
+            self.update_status("")
+
     def clear_button_data(self) -> None:
         """
         Сбрасывает данные кнопки, возвращая ячейку в пустое состояние.
@@ -168,12 +257,16 @@ class EditorGridCell(QFrame):
         self._icon = ""
         self._category = ""
         self._hotkey = ""
+        self._status_source = "none"
 
         self.lbl_icon.clear()
         self.lbl_title.setText("")
+        self.lbl_status.setText("")
+        self.lbl_status.setVisible(False)
+        self.set_typography(11, "#d4d4d8", "bottom", False)
         self.setToolTip("")
 
-    def get_button_data(self) -> dict[str, str]:
+    def get_button_data(self) -> dict[str, Any]:
         """
         Возвращает словарь текущих данных ячейки.
         """
@@ -182,6 +275,11 @@ class EditorGridCell(QFrame):
             "icon": self._icon,
             "category": self._category,
             "hotkey": self._hotkey,
+            "status_source": self._status_source,
+            "font_size": self._font_size,
+            "font_color": self._font_color,
+            "text_alignment": self._text_alignment,
+            "hide_title": self._hide_title,
         }
 
     def mousePressEvent(self, event: QMouseEvent) -> None:

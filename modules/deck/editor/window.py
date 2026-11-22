@@ -426,6 +426,11 @@ class DeckEditorWindow(QMainWindow):
                     self.canvas_widget.update_cell_preview(slot_idx, "title", cloned.title)
                     self.canvas_widget.update_cell_preview(slot_idx, "icon", cloned.icon)
                     self.canvas_widget.update_cell_preview(slot_idx, "category", cloned.category)
+                    self.canvas_widget.update_cell_preview(slot_idx, "font_size", getattr(cloned, "font_size", 11))
+                    self.canvas_widget.update_cell_preview(slot_idx, "font_color", getattr(cloned, "font_color", "#d4d4d8"))
+                    self.canvas_widget.update_cell_preview(slot_idx, "text_alignment", getattr(cloned, "text_alignment", "bottom"))
+                    self.canvas_widget.update_cell_preview(slot_idx, "hide_title", getattr(cloned, "hide_title", False))
+                    self.canvas_widget.update_cell_preview(slot_idx, "status_source", getattr(cloned, "status_source", "none"))
 
             if isinstance(self.inspector, KeyPropertyInspector):
                 if getattr(self.inspector, "_current_slot_index", None) == slot_idx:
@@ -456,6 +461,18 @@ class DeckEditorWindow(QMainWindow):
                     dto.color_accent = str(val) if val is not None else "#38bdf8"
                 elif prop_name == "action_params":
                     dto.action_params = dict(val) if isinstance(val, dict) else {}
+                elif prop_name == "font_size":
+                    dto.font_size = int(val) if val is not None else 11
+                elif prop_name == "font_color":
+                    dto.font_color = str(val) if val is not None else "#d4d4d8"
+                elif prop_name == "text_alignment":
+                    dto.text_alignment = str(val) if val is not None else "bottom"
+                elif prop_name == "hide_title":
+                    dto.hide_title = bool(val)
+                elif prop_name == "status_source":
+                    dto.status_source = str(val) if val is not None else "none"
+                elif prop_name == "sound_override":
+                    dto.sound_override = str(val) if val is not None else None
 
             if isinstance(self.canvas_widget, DeckCanvasWidget):
                 self.canvas_widget.update_cell_preview(slot_idx, prop_name, val)
@@ -1038,6 +1055,11 @@ class DeckEditorWindow(QMainWindow):
                     self.canvas_widget.update_cell_preview(idx, "title", dto.title)
                     self.canvas_widget.update_cell_preview(idx, "icon", dto.icon)
                     self.canvas_widget.update_cell_preview(idx, "category", dto.category)
+                    self.canvas_widget.update_cell_preview(idx, "font_size", getattr(dto, "font_size", 11))
+                    self.canvas_widget.update_cell_preview(idx, "font_color", getattr(dto, "font_color", "#d4d4d8"))
+                    self.canvas_widget.update_cell_preview(idx, "text_alignment", getattr(dto, "text_alignment", "bottom"))
+                    self.canvas_widget.update_cell_preview(idx, "hide_title", getattr(dto, "hide_title", False))
+                    self.canvas_widget.update_cell_preview(idx, "status_source", getattr(dto, "status_source", "none"))
 
             # Если была выделена кнопка, обновляем инспектор актуальными данными
             sel = self.canvas_widget.get_selected_target()

@@ -188,11 +188,26 @@ class DeckCanvasWidget(QWidget):
             data["category"] = str(val) if val is not None else ""
         elif prop == "hotkey":
             data["hotkey"] = str(val) if val is not None else ""
+        elif prop == "status_source":
+            data["status_source"] = str(val) if val is not None else "none"
+        elif prop == "font_size":
+            data["font_size"] = int(val) if val is not None else 11
+        elif prop == "font_color":
+            data["font_color"] = str(val) if val is not None else "#d4d4d8"
+        elif prop == "text_alignment":
+            data["text_alignment"] = str(val) if val is not None else "bottom"
+        elif prop == "hide_title":
+            data["hide_title"] = bool(val)
         cell.set_button_data(
             title=data.get("title", ""),
             icon=data.get("icon", ""),
             category=data.get("category", ""),
             hotkey=data.get("hotkey", ""),
+            status_source=data.get("status_source", "none"),
+            font_size=data.get("font_size", 11),
+            font_color=data.get("font_color", "#d4d4d8"),
+            text_alignment=data.get("text_alignment", "bottom"),
+            hide_title=data.get("hide_title", False),
         )
 
     def update_cell_icon(self, slot_index: int, icon_str: str) -> None:
