@@ -50,9 +50,12 @@ def editor_window(qapp):
     """Фикстура создания и гарантированного закрытия окна DeckEditorWindow."""
     initial_lang = I18nManager().current_language
     window = DeckEditorWindow()
+    window._skip_close_dialog = True
     window.show()
     qapp.processEvents()
     yield window
+    window._is_dirty = False
+    window._undo_stack.setClean()
     window.close()
     window.deleteLater()
     qapp.processEvents()

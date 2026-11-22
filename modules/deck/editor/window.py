@@ -7,11 +7,12 @@
 from __future__ import annotations
 
 import logging
+import os
 import sys
-from typing import Optional
+from typing import Any, Optional
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QCloseEvent, QGuiApplication, QKeySequence, QShortcut
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QCloseEvent, QGuiApplication, QKeySequence, QShortcut, QUndoStack
 from PySide6.QtWidgets import (
     QApplication,
     QFrame,
@@ -26,6 +27,12 @@ from PySide6.QtWidgets import (
 from core.event_bus import bus
 from core.i18n import t
 from modules.deck.editor.actions_registry import get_default_action_catalog
+from modules.deck.editor.commands import (
+    AssignActionCommand,
+    ClearSlotCommand,
+    SwapButtonsCommand,
+    UpdatePropertyCommand,
+)
 from modules.deck.editor.dto import (
     ButtonSlotDTO,
     TouchbarClockDTO,
@@ -65,14 +72,18 @@ class DeckEditorWindow(QMainWindow):
     - Правая часть: библиотека действий и каталог макросов (Action Library Drawer).
     """
 
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
+    def __init__(
+        self,
+        parent: Optional[QWidget] = None,
+        config_path: Optional[str] = None,
+    ) -> None:
         super().__init__(parent)
 
         self.resize(WINDOW_DEFAULT_SIZE[0], WINDOW_DEFAULT_SIZE[1])
         self.setMinimumSize(WINDOW_MIN_SIZE[0], WINDOW_MIN_SIZE[1])
 
         # Презентационная модель данных окна редактора
-        self.config_path: str = "config/deck_config.json"
+        self.config_path: str = config_path if config_path else "config/deck_config.json"
         self.active_page_id: str | int = "default"
         self._button_slots: dict[int, ButtonSlotDTO] = {
             i: ButtonSlotDTO(slot_index=i) for i in range(10)
@@ -83,6 +94,17 @@ class DeckEditorWindow(QMainWindow):
         self._is_syncing_page: bool = False
         self._current_page_index: int = 1
         self._is_dirty: bool = False
+        self._skip_close_dialog: bool = False
+        self._is_applying_command: bool = False
+        self.autosave_enabled: bool = False
+
+        # Стек истории Undo / Redo и дебаунсер автосохранения
+        self._undo_stack = QUndoStack(self)
+        self._undo_stack.cleanChanged.connect(self._on_undo_clean_changed)
+
+        self._autosave_timer = QTimer(self)
+        self._autosave_timer.setSingleShot(True)
+        self._autosave_timer.timeout.connect(self._on_autosave_timeout)
 
         self._init_ui()
         self.set_header_bar(EditorHeaderBar(self))
@@ -95,9 +117,18 @@ class DeckEditorWindow(QMainWindow):
         self._center_on_primary_screen()
         apply_editor_theme(self)
 
-        # Хоткей быстрого сохранения конфигурации Ctrl+S
+        # Хоткеи быстрого сохранения Ctrl+S и истории Undo/Redo
         self._save_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
         self._save_shortcut.activated.connect(self.save_configuration)
+
+        self._undo_shortcut = QShortcut(QKeySequence.Undo, self)
+        self._undo_shortcut.activated.connect(self._undo_stack.undo)
+
+        self._redo_shortcut = QShortcut(QKeySequence.Redo, self)
+        self._redo_shortcut.activated.connect(self._undo_stack.redo)
+
+        self._redo_shift_shortcut = QShortcut(QKeySequence("Ctrl+Shift+Z"), self)
+        self._redo_shift_shortcut.activated.connect(self._undo_stack.redo)
 
         self.retranslate_ui()
         bus.language_changed.connect(self._handle_language_changed)
@@ -198,12 +229,33 @@ class DeckEditorWindow(QMainWindow):
             mgr.set_language(lang_code, emit_signal=False)
         self.retranslate_ui()
 
+    def _on_undo_clean_changed(self, is_clean: bool) -> None:
+        """Реакция на изменение состояния чистоты UndoStack."""
+        self._is_dirty = not is_clean
+        self._update_window_title()
+        if self._is_dirty and getattr(self, "autosave_enabled", False):
+            self._autosave_timer.start(500)
+
+    def _on_autosave_timeout(self) -> None:
+        """Таймер автосохранения (дебаунсер 500 мс)."""
+        if self._is_dirty:
+            logger.info("Autosave triggered after debounce timeout.")
+            self.save_configuration()
+
+    def _update_window_title(self) -> None:
+        """Формирует заголовок окна с индикатором dirty-state (*)"""
+        base_title = t("deck.editor.window.title")
+        if self._is_dirty:
+            self.setWindowTitle(f"{base_title} *")
+        else:
+            self.setWindowTitle(base_title)
+
     def retranslate_ui(self) -> None:
         """
         Обновляет локализацию заголовка окна и каскадно инициирует retranslate_ui()
         у всех смонтированных дочерних компонентов.
         """
-        self.setWindowTitle(t("deck.editor.window.title"))
+        self._update_window_title()
 
         if self.header_bar is not None and hasattr(self.header_bar, "retranslate_ui") and callable(self.header_bar.retranslate_ui):
             try:
@@ -236,7 +288,30 @@ class DeckEditorWindow(QMainWindow):
                 logger.warning("Error retranslating action drawer: %s", exc)
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        """Безопасное отключение подписки на шину событий при закрытии окна."""
+        """Перехват закрытия окна: проверка dirty-state и диалог сохранения."""
+        if (
+            getattr(self, "_is_dirty", False)
+            and not getattr(self, "_skip_close_dialog", False)
+        ):
+            msg_box = QMessageBox(self)
+            msg_box.setWindowTitle(t("deck.editor.dialogs.unsaved_title"))
+            msg_box.setText(t("deck.editor.dialogs.unsaved_message"))
+            btn_save = msg_box.addButton(t("deck.editor.dialogs.save"), QMessageBox.AcceptRole)
+            btn_discard = msg_box.addButton(t("deck.editor.dialogs.discard"), QMessageBox.DestructiveRole)
+            btn_cancel = msg_box.addButton(t("deck.editor.dialogs.cancel"), QMessageBox.RejectRole)
+            msg_box.setDefaultButton(btn_save)
+            msg_box.exec()
+            clicked = msg_box.clickedButton()
+            if clicked == btn_save:
+                if not self.save_configuration():
+                    event.ignore()
+                    return
+            elif clicked == btn_discard:
+                pass
+            else:
+                event.ignore()
+                return
+
         try:
             bus.language_changed.disconnect(self._handle_language_changed)
         except (RuntimeError, TypeError):
@@ -299,6 +374,98 @@ class DeckEditorWindow(QMainWindow):
         if isinstance(widget, DeckCanvasWidget):
             widget.selection_changed.connect(self._on_canvas_selection_changed)
             widget.selection_cleared.connect(self._on_canvas_selection_cleared)
+            widget.action_dropped.connect(self._on_canvas_action_dropped)
+            widget.slot_dropped.connect(self._on_canvas_slot_dropped)
+
+    def _on_canvas_action_dropped(self, slot_idx: int, action_data: dict) -> None:
+        """Обработка сброса действия из библиотеки на ячейку холста."""
+        old_dto = self.get_slot_dto(slot_idx)
+        title_text = action_data.get("title", "")
+        category_key = action_data.get("category", "")
+        cat_name = t(category_key) if category_key else ""
+        category_text = f"{cat_name}: {title_text}" if cat_name else title_text
+
+        new_dto = old_dto.model_copy(deep=True)
+        new_dto.title = title_text
+        new_dto.icon = action_data.get("icon", "🖲️")
+        new_dto.category = category_text
+        new_dto.action_type = action_data.get("id", "")
+        new_dto.action_params = {}
+
+        cmd = AssignActionCommand(self, slot_idx, new_dto, old_dto)
+        self._undo_stack.push(cmd)
+
+    def _on_canvas_slot_dropped(self, src_slot: int, dst_slot: int, is_copy: bool) -> None:
+        """Обработка перетаскивания и сброса между слотами холста (Swap / Copy)."""
+        if src_slot == dst_slot:
+            return
+        cmd = SwapButtonsCommand(self, src_slot, dst_slot, is_copy=is_copy)
+        self._undo_stack.push(cmd)
+
+    def get_slot_dto(self, slot_idx: int) -> ButtonSlotDTO:
+        """Возвращает глубокую копию DTO кнопки слота холста."""
+        dto = self._button_slots.get(slot_idx)
+        if dto is not None:
+            return dto.model_copy(deep=True) if hasattr(dto, "model_copy") else ButtonSlotDTO(**dto.__dict__)
+        return ButtonSlotDTO(slot_index=slot_idx)
+
+    def apply_slot_dto(self, slot_idx: int, dto: ButtonSlotDTO, clear: bool = False) -> None:
+        """Применяет DTO к слоту, обновляя модель, превью ячейки холста и инспектор."""
+        self._is_applying_command = True
+        try:
+            cloned = dto.model_copy(deep=True) if hasattr(dto, "model_copy") else ButtonSlotDTO(**dto.__dict__)
+            cloned.slot_index = slot_idx
+            self._button_slots[slot_idx] = cloned
+
+            if isinstance(self.canvas_widget, DeckCanvasWidget):
+                if clear or (not cloned.title and not cloned.hotkey and (not cloned.icon or cloned.icon == "🖲️")):
+                    self.canvas_widget.clear_cell(slot_idx)
+                    if self.canvas_widget.get_selected_target() == ("button", slot_idx):
+                        self.canvas_widget.clear_selection()
+                else:
+                    self.canvas_widget.update_cell_preview(slot_idx, "title", cloned.title)
+                    self.canvas_widget.update_cell_preview(slot_idx, "icon", cloned.icon)
+                    self.canvas_widget.update_cell_preview(slot_idx, "category", cloned.category)
+
+            if isinstance(self.inspector, KeyPropertyInspector):
+                if getattr(self.inspector, "_current_slot_index", None) == slot_idx:
+                    if clear:
+                        self.inspector.show_placeholder()
+                    else:
+                        self.inspector.load_button_slot(slot_idx, cloned)
+        finally:
+            self._is_applying_command = False
+
+    def apply_property_value(self, slot_idx: int, prop_name: str, val: Any) -> None:
+        """Применяет изменение отдельного свойства кнопки к модели и UI."""
+        self._is_applying_command = True
+        try:
+            dto = self._button_slots.get(slot_idx)
+            if dto is not None:
+                if prop_name == "title":
+                    dto.title = str(val) if val is not None else ""
+                elif prop_name == "hotkey":
+                    dto.hotkey = str(val) if val is not None else ""
+                elif prop_name == "action_type":
+                    dto.action_type = str(val) if val is not None else ""
+                elif prop_name == "category":
+                    dto.category = str(val) if val is not None else ""
+                elif prop_name == "icon":
+                    dto.icon = str(val) if val is not None else ""
+                elif prop_name == "color_accent":
+                    dto.color_accent = str(val) if val is not None else "#38bdf8"
+                elif prop_name == "action_params":
+                    dto.action_params = dict(val) if isinstance(val, dict) else {}
+
+            if isinstance(self.canvas_widget, DeckCanvasWidget):
+                self.canvas_widget.update_cell_preview(slot_idx, prop_name, val)
+
+            if isinstance(self.inspector, KeyPropertyInspector):
+                if getattr(self.inspector, "_current_slot_index", None) == slot_idx:
+                    if dto is not None:
+                        self.inspector.load_button_slot(slot_idx, dto)
+        finally:
+            self._is_applying_command = False
 
     def _on_canvas_selection_changed(self, target_type: str, target_id: object) -> None:
         """
@@ -337,37 +504,28 @@ class DeckEditorWindow(QMainWindow):
     def _on_inspector_button_updated(self, slot_idx: int, prop: str, val: object) -> None:
         """
         Обрабатывает изменение свойств кнопки в инспекторе:
-        обновляет локальный DTO и транслирует точечное превью в ячейку холста.
+        создает команду UpdatePropertyCommand в QUndoStack.
         """
+        if self._is_applying_command:
+            return
         logger.info("Inspector button updated: slot=%s, prop=%s, val=%s", slot_idx, prop, val)
         dto = self._button_slots.get(slot_idx)
-        if dto is not None:
-            if prop == "title":
-                dto.title = str(val) if val is not None else ""
-            elif prop == "hotkey":
-                dto.hotkey = str(val) if val is not None else ""
-            elif prop == "action_type":
-                dto.action_type = str(val) if val is not None else ""
-            elif prop == "category":
-                dto.category = str(val) if val is not None else ""
-            elif prop == "icon":
-                dto.icon = str(val) if val is not None else ""
-            elif prop == "color_accent":
-                dto.color_accent = str(val) if val is not None else "#38bdf8"
-            elif prop == "action_params":
-                dto.action_params = dict(val) if isinstance(val, dict) else {}
-            self._is_dirty = True
-        if isinstance(self.canvas_widget, DeckCanvasWidget):
-            self.canvas_widget.update_cell_preview(slot_idx, prop, val)
+        old_val = getattr(dto, prop, None) if dto else None
+        if old_val == val:
+            return
+        cmd = UpdatePropertyCommand(self, slot_idx, prop, val, old_val)
+        self._undo_stack.push(cmd)
 
     def update_cell_icon(self, slot_idx: int, icon_str: str) -> None:
-        """Обновляет иконку слота в локальном DTO и ячейке холста."""
+        """Обновляет иконку слота через QUndoStack."""
+        if self._is_applying_command:
+            return
         dto = self._button_slots.get(slot_idx)
-        if dto is not None:
-            dto.icon = str(icon_str)
-            self._is_dirty = True
-        if isinstance(self.canvas_widget, DeckCanvasWidget):
-            self.canvas_widget.update_cell_icon(slot_idx, icon_str)
+        old_val = dto.icon if dto else ""
+        if old_val == icon_str:
+            return
+        cmd = UpdatePropertyCommand(self, slot_idx, "icon", icon_str, old_val)
+        self._undo_stack.push(cmd)
 
     def _on_inspector_touchbar_updated(self, sec_type: str, prop: str, val: object) -> None:
         """
@@ -386,22 +544,14 @@ class DeckEditorWindow(QMainWindow):
 
     def _on_inspector_slot_cleared(self, slot_idx: int) -> None:
         """
-        Обрабатывает удаление действия корзиной 🗑️:
-        сбрасывает данные слота, очищает превью кнопки и снимает выделение.
+        Обрабатывает удаление действия корзиной 🗑️ через ClearSlotCommand.
         """
+        if self._is_applying_command:
+            return
         logger.info("Inspector slot cleared: slot=%s", slot_idx)
-        self._button_slots[slot_idx] = ButtonSlotDTO(
-            slot_index=slot_idx,
-            title="",
-            icon="",
-            category="",
-            action_type="",
-            hotkey="",
-        )
-        self._is_dirty = True
-        if isinstance(self.canvas_widget, DeckCanvasWidget):
-            self.canvas_widget.clear_cell(slot_idx)
-            self.canvas_widget.clear_selection()
+        old_dto = self.get_slot_dto(slot_idx)
+        cmd = ClearSlotCommand(self, slot_idx, old_dto)
+        self._undo_stack.push(cmd)
 
     def set_pagination_bar(self, widget: QWidget) -> None:
         """Заменяет слот панели пагинации на указанный виджет."""
@@ -429,6 +579,10 @@ class DeckEditorWindow(QMainWindow):
                 self.save_configuration()
             except Exception as exc:
                 logger.warning("Auto-saving page configuration before page switch failed: %s", exc)
+
+        self._undo_stack.clear()
+        self._is_dirty = False
+        self._update_window_title()
 
         self._current_page_index = page_index
         from modules.deck.editor.adapter import DeckConfigAdapter
@@ -468,6 +622,11 @@ class DeckEditorWindow(QMainWindow):
                 self.save_configuration()
             except Exception as exc:
                 logger.warning("Auto-saving page configuration before remote page switch failed: %s", exc)
+
+        self._undo_stack.clear()
+        self._is_dirty = False
+        self._update_window_title()
+
         from modules.deck.editor.adapter import DeckConfigAdapter
         root_config = DeckConfigAdapter.load_deck_config(self.config_path)
 
@@ -610,6 +769,9 @@ class DeckEditorWindow(QMainWindow):
             )
             DeckConfigAdapter.save_deck_config_atomic(updated_root, self.config_path)
             bus.deck_config_updated.emit()
+            self._undo_stack.clear()
+            self._is_dirty = False
+            self._update_window_title()
             logger.info("Page %d ('%s') cleared.", page_index, page_id)
 
     def _on_pagination_delete_page_requested(self, page_index: int) -> None:
@@ -705,6 +867,7 @@ class DeckEditorWindow(QMainWindow):
             widget.button_updated.connect(self._on_inspector_button_updated)
             widget.touchbar_updated.connect(self._on_inspector_touchbar_updated)
             widget.slot_cleared.connect(self._on_inspector_slot_cleared)
+            widget.test_action_requested.connect(self._on_test_action_requested)
 
     def set_action_drawer(self, widget: QWidget) -> None:
         """Монтирует панель библиотеки действий в правую колонку сплиттера."""
@@ -730,8 +893,7 @@ class DeckEditorWindow(QMainWindow):
 
     def _on_action_drawer_action_picked(self, item_dto: object) -> None:
         """
-        Обрабатывает выбор действия в каталоге: если на холсте выделен слот кнопки,
-        назначает выбранное действие на эту кнопку, обновляет инспектор и превью ячейки.
+        Обрабатывает выбор действия в каталоге через AssignActionCommand.
         """
         if not hasattr(item_dto, "id") or not hasattr(item_dto, "icon"):
             return
@@ -742,37 +904,42 @@ class DeckEditorWindow(QMainWindow):
 
         if selected_target is not None and selected_target[0] == "button":
             slot_idx = int(selected_target[1])
-            dto = self._button_slots.setdefault(
-                slot_idx, ButtonSlotDTO(slot_index=slot_idx)
-            )
+            old_dto = self.get_slot_dto(slot_idx)
 
             title_text = item_dto.get_title() if hasattr(item_dto, "get_title") else ""
             category_key = getattr(item_dto, "category_key", "")
             cat_name = t(category_key) if category_key else ""
             category_text = f"{cat_name}: {title_text}" if cat_name else title_text
 
-            dto.title = title_text
-            dto.icon = getattr(item_dto, "icon", "🖲️")
-            dto.category = category_text
-            dto.action_type = getattr(item_dto, "id", "")
+            new_dto = old_dto.model_copy(deep=True)
+            new_dto.title = title_text
+            new_dto.icon = getattr(item_dto, "icon", "🖲️")
+            new_dto.category = category_text
+            new_dto.action_type = getattr(item_dto, "id", "")
+            new_dto.action_params = {}
 
             logger.info(
                 "Assigned action '%s' to slot %d: title='%s', icon='%s'",
-                dto.action_type,
+                new_dto.action_type,
                 slot_idx,
-                dto.title,
-                dto.icon,
+                new_dto.title,
+                new_dto.icon,
             )
 
-            # Обновление превью ячейки на холсте
-            if isinstance(self.canvas_widget, DeckCanvasWidget):
-                self.canvas_widget.update_cell_preview(slot_idx, "title", dto.title)
-                self.canvas_widget.update_cell_preview(slot_idx, "icon", dto.icon)
-                self.canvas_widget.update_cell_preview(slot_idx, "category", dto.category)
+            cmd = AssignActionCommand(self, slot_idx, new_dto, old_dto)
+            self._undo_stack.push(cmd)
 
-            # Обновление формы инспектора свойств
-            if isinstance(self.inspector, KeyPropertyInspector):
-                self.inspector.load_button_slot(slot_idx, dto)
+    def _on_test_action_requested(self, slot_idx: int) -> None:
+        """Безопасный тестовый запуск действия выбранной кнопки без потери фокуса."""
+        dto = self._button_slots.get(slot_idx)
+        if dto is None:
+            return
+        from modules.deck.editor.adapter import DeckConfigAdapter
+        from modules.deck.action_dispatcher import DeckActionDispatcher
+        btn_config = DeckConfigAdapter.dto_to_slot(dto)
+        if btn_config and btn_config.action:
+            logger.info("Executing test action for slot %d: %s", slot_idx, btn_config.action.action_type)
+            DeckActionDispatcher.execute_action(btn_config.action)
 
     # ==========================================================================
     # I/O и сохранение конфигурации (DeckConfigAdapter & EventBus)
@@ -812,7 +979,9 @@ class DeckEditorWindow(QMainWindow):
                     logger.warning("Error showing save success in header bar: %s", exc)
 
             # 5. Эмиссия глобального сигнала обновления конфигурации
+            self._undo_stack.setClean()
             self._is_dirty = False
+            self._update_window_title()
             bus.deck_config_updated.emit()
             logger.info("Deck configuration successfully saved and bus.deck_config_updated emitted.")
             return True
@@ -877,7 +1046,9 @@ class DeckEditorWindow(QMainWindow):
                 if slot_idx in self._button_slots:
                     self.inspector.load_button_slot(slot_idx, self._button_slots[slot_idx])
 
+        self._undo_stack.clear()
         self._is_dirty = False
+        self._update_window_title()
 
     # ==========================================================================
     # Свойства-алиасы для обратной и прямой совместимости

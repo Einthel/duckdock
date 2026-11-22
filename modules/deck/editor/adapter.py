@@ -630,17 +630,37 @@ class DeckConfigAdapter:
             "auto_software_vol",
             "master_volume_control",
             "mic_mute_control",
+            "mute_audio",
+            "volume_up",
+            "volume_down",
             "output_device_toggle",
         ):
             return "volume_control"
-        if raw in ("audio_device", "audio"):
+        if raw in ("audio_device", "audio", "toggle_device"):
             return "audio_device"
         if raw in ("screenshot", "screen"):
             return "screenshot"
+        if raw in ("system", "system_command"):
+            return "system"
         if raw in ("http_request", "api", "rest"):
             return "http_request"
         if raw in ("navigation", "page", "switch_page"):
             return "navigation"
+        if raw in (
+            "play_audio",
+            "stop_audio",
+            "brightness",
+            "sleep_display",
+            "create_folder",
+            "switch_profile",
+            "prev_page",
+            "next_page",
+            "goto_page",
+            "page_indicator",
+            "multi_action",
+            "multi_action_switch",
+        ):
+            return raw
         return "system"
 
     @classmethod
@@ -730,13 +750,25 @@ class DeckConfigAdapter:
                 ),
                 "api",
             )
-        if action_type == "navigation":
+        if action_type in ("play_audio", "stop_audio"):
             return (
-                DeckActionConfig(
-                    action_type="navigation",
-                    params={"target_page_id": "default"},
-                ),
-                "system",
+                DeckActionConfig(action_type=action_type, params={"sound_path": ""}),
+                "soundboard",
+            )
+        if action_type in ("brightness", "sleep_display"):
+            return (
+                DeckActionConfig(action_type=action_type, params={}),
+                "stream_deck",
+            )
+        if action_type in ("create_folder", "switch_profile", "prev_page", "next_page", "goto_page", "page_indicator", "navigation"):
+            return (
+                DeckActionConfig(action_type=action_type, params={"target_page_id": "default"}),
+                "navigation",
+            )
+        if action_type in ("multi_action", "multi_action_switch"):
+            return (
+                DeckActionConfig(action_type=action_type, params={"actions": []}),
+                "multi_action",
             )
         return (
             DeckActionConfig(

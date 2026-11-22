@@ -33,6 +33,11 @@ class ButtonSlotDTO:
     toggle_action: Optional[Any] = None
     original_config: Optional[Any] = None
 
+    def model_copy(self, *, deep: bool = True) -> ButtonSlotDTO:
+        """Создает копию DTO слота (совместимо с Pydantic model_copy)."""
+        import copy
+        return copy.deepcopy(self) if deep else copy.copy(self)
+
 
 @dataclass
 class TouchbarMediaDTO:

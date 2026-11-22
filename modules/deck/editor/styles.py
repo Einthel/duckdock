@@ -417,6 +417,14 @@ EditorGridCell[selected="true"]:hover {{
     border: 2px solid {BORDER_FOCUS_NEON};
 }}
 
+QFrame#editorGridCell[drag_hover="true"],
+QFrame[editorGridCell="true"][drag_hover="true"],
+EditorGridCell[drag_hover="true"] {{
+    background-color: {SURFACE_3_HOVER};
+    border: 2px dashed {BORDER_FOCUS_NEON};
+    border-radius: {GRID_CORNER_RADIUS}px;
+}}
+
 /* Лейблы ячейки сетки кнопок (CellIndexLabel, CellIconLabel, CellTitleLabel) */
 QLabel.CellIndexLabel,
 QLabel[class="CellIndexLabel"],
@@ -721,6 +729,54 @@ QPushButton[class="InspectorDeleteButton"]:pressed,
 InspectorDeleteButton:pressed {{
     background-color: #3b1d1d;
     color: #f87171;
+}}
+
+QPushButton.InspectorTestButton,
+QPushButton[class="InspectorTestButton"],
+QPushButton#btnInspectorTest,
+InspectorTestButton {{
+    min-width: 28px;
+    max-width: 28px;
+    min-height: 28px;
+    max-height: 28px;
+    background-color: transparent;
+    border: none;
+    border-radius: 6px;
+    color: #94a3b8;
+    font-size: 14px;
+    padding: 0px;
+}}
+
+QPushButton.InspectorTestButton:hover,
+QPushButton[class="InspectorTestButton"]:hover,
+QPushButton#btnInspectorTest:hover,
+InspectorTestButton:hover {{
+    background-color: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+}}
+
+QPushButton.InspectorTestButton:pressed,
+QPushButton[class="InspectorTestButton"]:pressed,
+QPushButton#btnInspectorTest:pressed,
+InspectorTestButton:pressed {{
+    background-color: rgba(16, 185, 129, 0.25);
+    color: #34d399;
+}}
+
+QFrame#inspectorNoParamsBanner,
+QFrame[class="InspectorNoParamsBanner"],
+InspectorNoParamsBanner {{
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 6px;
+}}
+
+QLabel.InspectorFieldHint,
+QLabel[class="InspectorFieldHint"],
+InspectorFieldHint {{
+    color: #94a3b8;
+    font-size: 12px;
+    background: transparent;
 }}
 
 /* Плитка превью иконки (KeyPreviewTile) */

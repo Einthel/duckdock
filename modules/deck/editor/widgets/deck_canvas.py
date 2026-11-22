@@ -46,6 +46,8 @@ class DeckCanvasWidget(QWidget):
 
     selection_changed = Signal(str, object)
     selection_cleared = Signal()
+    action_dropped = Signal(int, dict)
+    slot_dropped = Signal(int, int, bool)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
@@ -93,6 +95,8 @@ class DeckCanvasWidget(QWidget):
             slot_idx = col
             cell = EditorGridCell(slot_index=slot_idx, parent=self.grid_container)
             cell.cell_clicked.connect(self.select_button)
+            cell.action_dropped.connect(self.action_dropped.emit)
+            cell.slot_dropped.connect(self.slot_dropped.emit)
             self.grid_layout.addWidget(cell, 0, col)
             self.cells.append(cell)
 
@@ -101,6 +105,8 @@ class DeckCanvasWidget(QWidget):
             slot_idx = 5 + col
             cell = EditorGridCell(slot_index=slot_idx, parent=self.grid_container)
             cell.cell_clicked.connect(self.select_button)
+            cell.action_dropped.connect(self.action_dropped.emit)
+            cell.slot_dropped.connect(self.slot_dropped.emit)
             self.grid_layout.addWidget(cell, 1, col)
             self.cells.append(cell)
 

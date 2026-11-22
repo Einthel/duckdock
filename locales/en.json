@@ -241,8 +241,12 @@
       },
       "inspector": {
         "placeholder": "Select a key to configure its action.",
+        "hints": {
+          "no_params_required": "Action requires no additional parameters"
+        },
         "tooltips": {
           "delete_action": "Clear button action",
+          "test_action": "Test Run Action",
           "load_image": "Upload image",
           "icon_options": "Icon options",
           "reset_settings": "Reset section settings"
@@ -263,7 +267,11 @@
           "vol_target": "Target:",
           "vol_action": "Action:",
           "browse": "📂",
-          "color_accent": "Accent:"
+          "color_accent": "Accent:",
+          "audio_mode": "Mode:",
+          "screenshot_target": "Area:",
+          "copy_to_clipboard": "To Clipboard",
+          "system_command": "Command:"
         },
         "hotkey": {
           "click_to_assign": "Click to assign",
@@ -280,8 +288,24 @@
           "text_macro": "Text Macro",
           "multimedia": "Multimedia Control",
           "volume_control": "Volume Control",
+          "audio_device": "Audio Device",
+          "screenshot": "Screenshot",
+          "system": "System Command",
           "open_application": "Open Application",
           "media_control": "Media Control"
+        },
+        "audio_modes": {
+          "toggle": "Toggle",
+          "specific": "Specific"
+        },
+        "screenshot_targets": {
+          "primary_screen": "Primary Screen",
+          "active_window": "Active Window"
+        },
+        "system_commands": {
+          "toggle_dimmer": "Toggle Dimmer",
+          "lock_workstation": "Lock Workstation",
+          "sleep_display": "Sleep Display"
         },
         "media_commands": {
           "play_pause": "⏯️ Play / Pause",
@@ -373,6 +397,13 @@
           "open_folder": "Open Custom Icons Folder",
           "reset_icon": "Reset Icon"
         }
+      },
+      "dialogs": {
+        "unsaved_title": "Unsaved Changes",
+        "unsaved_message": "There are unsaved changes in DuckDeck configuration. Save before closing?",
+        "save": "Save",
+        "discard": "Don't Save",
+        "cancel": "Cancel"
       },
       "dialog": {
         "icon_library": {

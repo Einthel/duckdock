@@ -4,11 +4,13 @@
 """
 from __future__ import annotations
 
+import json
 from typing import Optional
 
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QMouseEvent
+from PySide6.QtCore import QPoint, Qt, Signal, QMimeData
+from PySide6.QtGui import QDrag, QMouseEvent
 from PySide6.QtWidgets import (
+    QApplication,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -76,6 +78,8 @@ class ActionItemWidget(QFrame):
         # Подсказка
         self.setToolTip(self.item_dto.get_title())
 
+        self._drag_start_pos: Optional[QPoint] = None
+
     def retranslate_ui(self) -> None:
         """Обновляет локализованное название действия и тултип."""
         title = self.item_dto.get_title()
@@ -92,7 +96,33 @@ class ActionItemWidget(QFrame):
     def mousePressEvent(self, event: QMouseEvent) -> None:
         """Обработка клика левой кнопкой мыши: эмиссия сигнала item_clicked."""
         if event.button() == Qt.LeftButton:
+            self._drag_start_pos = event.pos()
             self.item_clicked.emit(self.item_dto)
             event.accept()
             return
         super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        """Инициализация Drag-and-Drop при перемещении с зажатой ЛКМ."""
+        if (event.buttons() & Qt.LeftButton) and self._drag_start_pos is not None:
+            dist = (event.pos() - self._drag_start_pos).manhattanLength()
+            if dist >= QApplication.startDragDistance():
+                payload = {
+                    "id": self.item_dto.id,
+                    "title": self.item_dto.get_title(),
+                    "icon": self.item_dto.icon,
+                    "category": self.item_dto.category_key,
+                    "category_id": self.item_dto.category_id,
+                    "keywords": self.item_dto.keywords,
+                }
+                mime = QMimeData()
+                mime.setData("application/x-duckdeck-action", json.dumps(payload).encode("utf-8"))
+                drag = QDrag(self)
+                drag.setMimeData(mime)
+                pixmap = self.grab()
+                drag.setPixmap(pixmap)
+                drag.setHotSpot(event.pos())
+                drag.exec(Qt.CopyAction)
+                self._drag_start_pos = None
+                return
+        super().mouseMoveEvent(event)

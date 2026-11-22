@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-11-22
+
+### Added
+- **DuckDeck Editor Undo/Redo Engine & Safe UX (`modules/deck/editor/commands.py`, `window.py`)**:
+  - Атомарные команды `QUndoCommand`: `AssignActionCommand` (назначение действия из каталога), `ClearSlotCommand` (очистка корзиной), `SwapButtonsCommand` (обмен и копирование с зажатым `Ctrl`), `UpdatePropertyCommand` (реактивное изменение свойств).
+  - Стек истории `QUndoStack` с привязкой к хоткеям `Ctrl+Z`, `Ctrl+Y`, `Ctrl+Shift+Z`.
+  - Отслеживание несохраненных изменений (`Dirty State`): индикация звездочкой `*` в заголовке окна и сброс при сохранении.
+  - Интерактивный диалог подтверждения `closeEvent` (Сохранить / Не сохранять / Отмена) с флагом `_skip_close_dialog` для безопасного запуска в тестовых окружениях.
+  - Архитектурная гигиена памяти: автоматический сброс стека `_undo_stack.clear()` при смене страниц (локально или через `bus.deck_page_changed`), сбросе страницы и перезагрузке конфигурации.
+- **Нативный Drag-and-Drop на холсте конфигуратора (`widgets/grid_cell.py`, `widgets/action_item.py`, `widgets/deck_canvas.py`)**:
+  - Перенос действий из библиотеки на ячейки сетки через MIME-тип `"application/x-duckdeck-action"`.
+  - Перемещение и обмен слотов между ячейками и копирование слота с зажатым `Ctrl` через MIME-тип `"application/x-duckdeck-slot"`.
+  - Защитная валидация payload (Defensive Programming): строгая проверка типов (`isinstance(dict)`), обязательного ключа `id`, диапазона слотов `0 <= src_slot < 10` и предотвращение сброса на самого себя (`Self-Drop`).
+  - Визуальный отклик `drag_hover` с гарантированным снятием подсветки.
+- **Инфраструктурные исправления и тестовый раннер**:
+  - Устранена блокировка модального Event Loop Qt в `DeckEditorWindow.closeEvent()` при автоматическом прогоне тестов.
+  - Корректный сброс выделения активной ячейки холста при очистке слота.
+  - 100% покрытие новыми модульными тестами (`test_deck_editor_undo.py`, `test_deck_editor_dnd.py`).
+  - Все 455 тестов репозитория имеют статус **100% PASS** (0 failed, 6 skipped).
+  - 100% паритет словарей локализации RU/EN, подтвержденный AST-линтером.
+
 ## [0.6.0] - 2026-11-22
 
 ### Added

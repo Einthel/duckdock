@@ -54,6 +54,7 @@ class KeyPropertyInspector(QFrame):
     button_updated = Signal(int, str, object)
     touchbar_updated = Signal(str, str, object)
     slot_cleared = Signal(int)
+    test_action_requested = Signal(int)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
@@ -100,6 +101,7 @@ class KeyPropertyInspector(QFrame):
         self.button_form = ButtonPropertyForm(self.stack)
         self.button_form.property_changed.connect(self._on_button_property_changed)
         self.button_form.delete_requested.connect(self._on_button_delete_requested)
+        self.button_form.test_action_requested.connect(self.test_action_requested.emit)
         self.stack.addWidget(self.button_form)
 
         # ----------------------------------------------------------------------

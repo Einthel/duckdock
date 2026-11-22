@@ -5,13 +5,24 @@
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 from typing import Optional
 
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFontMetrics, QMouseEvent, QPixmap
+from PySide6.QtCore import QPoint, Qt, Signal, QMimeData
+from PySide6.QtGui import (
+    QDrag,
+    QDragEnterEvent,
+    QDragLeaveEvent,
+    QDragMoveEvent,
+    QDropEvent,
+    QFontMetrics,
+    QMouseEvent,
+    QPixmap,
+)
 from PySide6.QtWidgets import (
+    QApplication,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -35,6 +46,8 @@ class EditorGridCell(QFrame):
     """
 
     cell_clicked = Signal(int)
+    action_dropped = Signal(int, dict)
+    slot_dropped = Signal(int, int, bool)
 
     def __init__(self, slot_index: int, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
@@ -43,13 +56,16 @@ class EditorGridCell(QFrame):
         self._icon = ""
         self._category = ""
         self._hotkey = ""
+        self._drag_start_pos: Optional[QPoint] = None
 
         self.setObjectName("editorGridCell")
         self.setProperty("editorGridCell", "true")
         self.setProperty("selected", "false")
+        self.setProperty("drag_hover", "false")
         self.setFixedSize(GRID_CELL_SIZE, GRID_CELL_SIZE)
         self.setFocusPolicy(Qt.NoFocus)
         self.setCursor(Qt.PointingHandCursor)
+        self.setAcceptDrops(True)
 
         self._setup_ui()
 
@@ -173,7 +189,101 @@ class EditorGridCell(QFrame):
         Обработка клика мыши: эмиттирует cell_clicked(slot_index) при нажатии ЛКМ.
         """
         if event.button() == Qt.LeftButton:
+            self._drag_start_pos = event.pos()
             self.cell_clicked.emit(self.slot_index)
             event.accept()
         else:
             super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        """
+        Инициализация Drag-and-Drop слота холста.
+        """
+        if (event.buttons() & Qt.LeftButton) and self._drag_start_pos is not None:
+            dist = (event.pos() - self._drag_start_pos).manhattanLength()
+            if dist >= QApplication.startDragDistance():
+                if bool(self._title) or bool(self._icon) or bool(self._hotkey):
+                    mime = QMimeData()
+                    mime.setData("application/x-duckdeck-slot", str(self.slot_index).encode("utf-8"))
+                    drag = QDrag(self)
+                    drag.setMimeData(mime)
+                    pixmap = self.grab()
+                    drag.setPixmap(pixmap)
+                    drag.setHotSpot(event.pos())
+                    drag.exec(Qt.MoveAction | Qt.CopyAction)
+                    self._drag_start_pos = None
+                    return
+        super().mouseMoveEvent(event)
+
+    def dragEnterEvent(self, event: QDragEnterEvent) -> None:
+        """
+        Проверка входящего DND: поддержка действий каталога и перестановки слотов.
+        """
+        mime = event.mimeData()
+        if mime.hasFormat("application/x-duckdeck-action") or mime.hasFormat("application/x-duckdeck-slot"):
+            event.acceptProposedAction()
+            self.setProperty("drag_hover", "true")
+            self.style().unpolish(self)
+            self.style().polish(self)
+            self.update()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event: QDragMoveEvent) -> None:
+        """Подтверждение перемещения курсора над ячейкой."""
+        mime = event.mimeData()
+        if mime.hasFormat("application/x-duckdeck-action") or mime.hasFormat("application/x-duckdeck-slot"):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dragLeaveEvent(self, event: QDragLeaveEvent) -> None:
+        """Снятие подсветки ячейки при уходе курсора."""
+        self.setProperty("drag_hover", "false")
+        self.style().unpolish(self)
+        self.style().polish(self)
+        self.update()
+        event.accept()
+
+    def dropEvent(self, event: QDropEvent) -> None:
+        """
+        Обработка сброса действия или кнопки на целевую ячейку.
+        """
+        self.setProperty("drag_hover", "false")
+        self.style().unpolish(self)
+        self.style().polish(self)
+        self.update()
+
+        mime = event.mimeData()
+        if mime.hasFormat("application/x-duckdeck-action"):
+            raw_bytes = bytes(mime.data("application/x-duckdeck-action"))
+            try:
+                action_data = json.loads(raw_bytes.decode("utf-8"))
+                if not isinstance(action_data, dict) or not action_data.get("id"):
+                    logger.warning("Invalid action payload structure: %s", action_data)
+                    event.ignore()
+                    return
+                self.action_dropped.emit(self.slot_index, action_data)
+                event.acceptProposedAction()
+            except Exception as exc:
+                logger.warning("Failed to parse dropped action data: %s", exc)
+                event.ignore()
+        elif mime.hasFormat("application/x-duckdeck-slot"):
+            raw_bytes = bytes(mime.data("application/x-duckdeck-slot"))
+            try:
+                src_slot = int(raw_bytes.decode("utf-8"))
+                if not (0 <= src_slot < 10):
+                    logger.warning("Dropped slot index out of bounds: %d", src_slot)
+                    event.ignore()
+                    return
+                if src_slot == self.slot_index:
+                    event.ignore()
+                    return
+                is_copy = bool(event.modifiers() & Qt.ControlModifier)
+                self.slot_dropped.emit(src_slot, self.slot_index, is_copy)
+                event.acceptProposedAction()
+            except Exception as exc:
+                logger.warning("Failed to parse dropped slot data: %s", exc)
+                event.ignore()
+        else:
+            event.ignore()

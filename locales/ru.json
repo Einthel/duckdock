@@ -243,8 +243,12 @@
       },
       "inspector": {
         "placeholder": "Выберите кнопку для настройки действия.",
+        "hints": {
+          "no_params_required": "Действие не требует дополнительных параметров"
+        },
         "tooltips": {
           "delete_action": "Очистить действие кнопки",
+          "test_action": "Протестировать действие",
           "load_image": "Загрузить изображение",
           "icon_options": "Параметры иконки",
           "reset_settings": "Сбросить настройки секции"
@@ -265,7 +269,11 @@
           "vol_target": "Цель:",
           "vol_action": "Действие:",
           "browse": "📂",
-          "color_accent": "Акцент:"
+          "color_accent": "Акцент:",
+          "audio_mode": "Режим:",
+          "screenshot_target": "Область:",
+          "copy_to_clipboard": "В буфер",
+          "system_command": "Команда:"
         },
         "hotkey": {
           "click_to_assign": "Нажмите для назначения",
@@ -282,8 +290,24 @@
           "text_macro": "Текстовый макрос",
           "multimedia": "Управление медиа",
           "volume_control": "Регулятор громкости",
+          "audio_device": "Аудиоустройство",
+          "screenshot": "Скриншот",
+          "system": "Системная команда",
           "open_application": "Запуск приложения",
           "media_control": "Управление медиа"
+        },
+        "audio_modes": {
+          "toggle": "Переключение",
+          "specific": "Выбранное"
+        },
+        "screenshot_targets": {
+          "primary_screen": "Весь экран",
+          "active_window": "Активное окно"
+        },
+        "system_commands": {
+          "toggle_dimmer": "Ночной режим (Диммер)",
+          "lock_workstation": "Блокировка ПК",
+          "sleep_display": "Сон дисплея"
         },
         "media_commands": {
           "play_pause": "⏯️ Воспроизведение / Пауза",
@@ -375,6 +399,13 @@
           "open_folder": "Открыть папку пользовательских иконок",
           "reset_icon": "Сбросить иконку"
         }
+      },
+      "dialogs": {
+        "unsaved_title": "Несохраненные изменения",
+        "unsaved_message": "В конфигурации DuckDeck есть несохраненные изменения. Сохранить перед выходом?",
+        "save": "Сохранить",
+        "discard": "Не сохранять",
+        "cancel": "Отмена"
       },
       "dialog": {
         "icon_library": {

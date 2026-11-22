@@ -1,6 +1,6 @@
 # DuckDock / TouchWM: Архитектурная спецификация модулей
 
-> **Статус:** v0.6.0 (Спринт 5: E2E Тесты, DoD, Расширенные действия и релиз v0.6.0, 418 тестов 100% PASS)  
+> **Статус:** v0.6.1 (Спринт 6: QUndoStack, Drag-and-Drop, Защитная валидация, 455 тестов 100% PASS)  
 > **Целевая среда:** Windows 10/11 x64, 27" Primary (dGPU) + 7" 1024×600 JRP7813S Touchscreen (iGPU AMD Radeon Graphics).
 
 ---
@@ -89,6 +89,7 @@ flowchart TD
             EditorDrawer["widgets.action_drawer.ActionLibraryDrawer (Search + Accordion)"]
             EditorCatalog["icon_catalog.IconCatalog & IconCache (Bilingual Search)"]
             EditorIconDlg["widgets.icon_library_dialog.IconLibraryDialog (580x640)"]
+            EditorCommands["commands.* (QUndoStack & QUndoCommand)"]
             EditorDTO["dto.* (ButtonSlotDTO, Touchbar*DTO, ActionItemDTO)"]
             EditorDemo["demo_data & demo_launcher"]
             EditorMgr --> EditorWin
@@ -97,6 +98,7 @@ flowchart TD
             EditorWin --> EditorPaging
             EditorWin --> EditorInsp
             EditorWin --> EditorDrawer
+            EditorWin --> EditorCommands
             EditorInsp --> EditorIconDlg
             EditorIconDlg --> EditorCatalog
             EditorWin -.-> EditorAdapter

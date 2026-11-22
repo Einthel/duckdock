@@ -52,6 +52,7 @@ def e2e_window(qapp, qtbot):
     I18nManager().set_language("en", emit_signal=False)
 
     window = DeckEditorWindow()
+    window._skip_close_dialog = True
     load_demo_profile_into_window(window)
     window.show()
     qtbot.addWidget(window)
@@ -59,6 +60,8 @@ def e2e_window(qapp, qtbot):
 
     yield window
 
+    window._is_dirty = False
+    window._undo_stack.setClean()
     window.close()
     window.deleteLater()
     qapp.processEvents()
@@ -259,6 +262,9 @@ def test_deck_editor_e2e_full_journey(e2e_window, qtbot):
     # --------------------------------------------------------------------------
     # Сценарий 8: Горячее переключение языка Hot Reload (RU <-> EN)
     # --------------------------------------------------------------------------
+    window._undo_stack.setClean()
+    window._update_window_title()
+
     # 1. Переключение на русский язык
     bus.language_changed.emit("ru")
 

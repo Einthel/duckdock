@@ -426,6 +426,7 @@ def test_action_drawer_window_integration(qapp, qtbot):
        - Форма инспектора свойств переключена в режим кнопки и отображает новое название и иконку.
     """
     window = DeckEditorWindow()
+    window._skip_close_dialog = True
     window.show()
     qtbot.addWidget(window)
 
@@ -462,4 +463,6 @@ def test_action_drawer_window_integration(qapp, qtbot):
     assert window.inspector.button_form.edit_title.text() == website_item.item_dto.get_title()
     assert window.inspector.button_form.preview_tile.get_icon() == "🌐"
 
+    window._is_dirty = False
+    window._undo_stack.setClean()
     window.close()
