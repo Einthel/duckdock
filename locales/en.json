@@ -285,6 +285,35 @@
           "volume_down": "Volume Down",
           "toggle_device": "Toggle Device"
         }
+      },
+      "menu": {
+        "icon": {
+          "header": "Button Icon",
+          "set_from_file": "Choose from File...",
+          "open_library": "Open DuckDeck Icon Library...",
+          "open_folder": "Open Custom Icons Folder",
+          "reset_icon": "Reset Icon"
+        }
+      },
+      "dialog": {
+        "icon_library": {
+          "title": "DuckDeck Icon Library",
+          "search_placeholder": "Search by name or tags...",
+          "categories": {
+            "all": "All",
+            "system": "System",
+            "apps": "Applications",
+            "media": "Media & Streaming",
+            "glyphs": "Glyphs & Emoji",
+            "custom": "Custom Icons"
+          },
+          "add_custom": "+ Add Custom Icons...",
+          "zoom_tooltip": "Grid Zoom",
+          "btn_select": "Select",
+          "btn_cancel": "Cancel",
+          "no_results": "No icons found",
+          "files_filter": "Images (*.png *.svg *.ico *.jpg *.webp)"
+        }
       }
     }
   },

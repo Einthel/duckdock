@@ -14,6 +14,7 @@ from .header_bar import (
     ToolbarVLine,
 )
 from .hotkey_capture import HotkeyCaptureButton
+from .icon_library_dialog import IconLibraryDialog, IconTileWidget
 from .key_preview_tile import KeyPreviewTile
 from .pagination_bar import PageNavigationBar
 from .placeholders import (
@@ -54,6 +55,8 @@ __all__ = [
     "PageNavigationBar",
     "DeckCanvasWidget",
     "KeyPreviewTile",
+    "IconLibraryDialog",
+    "IconTileWidget",
     "HotkeyCaptureButton",
     "ButtonPropertyForm",
     "TouchbarMediaForm",

@@ -46,6 +46,8 @@ htmlcov/
 # Logs & OS
 *.log
 *.sys
+*.bak
+*.tmp
 Thumbs.db
 Desktop.ini
 .DS_Store

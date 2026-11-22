@@ -178,6 +178,10 @@ class DeckCanvasWidget(QWidget):
             hotkey=data.get("hotkey", ""),
         )
 
+    def update_cell_icon(self, slot_index: int, icon_str: str) -> None:
+        """Точечно обновляет иконку ячейки холста."""
+        self.update_cell_preview(slot_index, "icon", icon_str)
+
     def clear_cell(self, slot_index: int) -> None:
         """
         Сбрасывает данные ячейки холста в исходное пустое состояние.

@@ -514,7 +514,7 @@ flowchart TD
 
 #### 3.2. Пошаговый детальный план реализации Спринта 3 (@frontend-ui-designer, @ui-creator, @fullstack-builder)
 
-- [ ] **Шаг 3.1: Контекстное меню кнопки `v` в `KeyPreviewTile` и стили QMenu ([modules/deck/editor/widgets/key_preview_tile.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/key_preview_tile.py), [modules/deck/editor/styles.py](file:///d:/Projects_X/duckdock/modules/deck/editor/styles.py))**
+- [x] **Шаг 3.1: Контекстное меню кнопки `v` в `KeyPreviewTile` и стили QMenu ([modules/deck/editor/widgets/key_preview_tile.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/key_preview_tile.py), [modules/deck/editor/styles.py](file:///d:/Projects_X/duckdock/modules/deck/editor/styles.py))**
   - В `KeyPreviewTile`:
     - Реализовать метод `_show_icon_context_menu(self) -> None`:
       - Создание `QMenu` со стилями Dark Obsidian v2.
@@ -553,7 +553,7 @@ flowchart TD
       }
       ```
 
-- [ ] **Шаг 3.2: Декларативный каталог иконок и DTO `icon_catalog.py` ([modules/deck/editor/icon_catalog.py](file:///d:/Projects_X/duckdock/modules/deck/editor/icon_catalog.py))**
+- [x] **Шаг 3.2: Декларативный каталог иконок и DTO `icon_catalog.py` ([modules/deck/editor/icon_catalog.py](file:///d:/Projects_X/duckdock/modules/deck/editor/icon_catalog.py))**
   - Создать модуль `modules/deck/editor/icon_catalog.py`:
     - Классы данных DTO:
       - `IconEntryDTO`: `id: str`, `name: str`, `category: str`, `path_or_glyph: str`, `is_glyph: bool`, `keywords_ru: list[str]`, `keywords_en: list[str]`.
@@ -572,7 +572,7 @@ flowchart TD
       - Метод `scan_custom_icons() -> list[IconEntryDTO]`: сканирует директорию `resources/deck/custom_icons/` (поддерживает `.png`, `.svg`, `.ico`, `.jpg`, `.webp`) и автоматически регистрирует их в категории `custom`.
       - Метод `save_custom_icon(source_path: str) -> str`: копирует файл в `resources/deck/custom_icons/`, возвращает относительный путь.
 
-- [ ] **Шаг 3.3: Модальный диалог `IconLibraryDialog` ([modules/deck/editor/widgets/icon_library_dialog.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/icon_library_dialog.py))**
+- [x] **Шаг 3.3: Модальный диалог `IconLibraryDialog` ([modules/deck/editor/widgets/icon_library_dialog.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/icon_library_dialog.py))**
   - Реализовать класс `IconLibraryDialog(QDialog)`:
     - Конструктор `__init__(self, parent: Optional[QWidget] = None, current_icon: str = "")`:
       - `setFixedSize(580, 640)`, модальность `Qt.ApplicationModal`.
@@ -593,7 +593,7 @@ flowchart TD
     - Публичный метод `get_selected_icon() -> str`: возвращает путь к файлу или строку символа выбранной иконки.
     - Метод `retranslate_ui()`: реактивное обновление всех надписей и категорий.
 
-- [ ] **Шаг 3.4: Сквозная интеграция событий выбора иконки в инспекторе ([modules/deck/editor/widgets/button_property_form.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/button_property_form.py), [modules/deck/editor/window.py](file:///d:/Projects_X/duckdock/modules/deck/editor/window.py))**
+- [x] **Шаг 3.4: Сквозная интеграция событий выбора иконки в инспекторе ([modules/deck/editor/widgets/button_property_form.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/button_property_form.py), [modules/deck/editor/window.py](file:///d:/Projects_X/duckdock/modules/deck/editor/window.py))**
   - В `ButtonPropertyForm`:
     - Подключить сигнал `preview_tile.open_library_requested` к вызову модального диалога `IconLibraryDialog`.
     - При подтверждении выбора в диалоге (`dialog.exec() == QDialog.Accepted`):
@@ -606,7 +606,7 @@ flowchart TD
       - Обновить превью в соответствующей ячейке холста `self.canvas.update_cell_icon(slot_index, str(value))`.
       - Отметить наличие несохраненных изменений в `header_bar`.
 
-- [ ] **Шаг 3.5: Двуязычная локализация RU/EN со 100% паритетом ([locales/ru.json](file:///d:/Projects_X/duckdock/locales/ru.json), [locales/en.json](file:///d:/Projects_X/duckdock/locales/en.json))**
+- [x] **Шаг 3.5: Двуязычная локализация RU/EN со 100% паритетом ([locales/ru.json](file:///d:/Projects_X/duckdock/locales/ru.json), [locales/en.json](file:///d:/Projects_X/duckdock/locales/en.json))**
   - Добавить словарь `deck.editor.menu.icon`:
     - `header`: RU _"Иконка кнопки"_, EN _"Button Icon"_
     - `set_from_file`: RU _"Выбрать из файла..."_, EN _"Choose from File..."_
@@ -629,7 +629,7 @@ flowchart TD
     - `no_results`: RU _"Иконки не найдены"_, EN _"No icons found"_
     - `files_filter`: RU _"Изображения (_.png _.svg _.ico _.jpg _.webp)"_, EN _"Images (_.png _.svg _.ico _.jpg _.webp)"_
 
-- [ ] **Шаг 3.6: Модульные тесты и проверка линтера ([tests/unit/test_deck_icon_catalog.py](file:///d:/Projects_X/duckdock/tests/unit/test_deck_icon_catalog.py), [tests/unit/test_deck_icon_dialog.py](file:///d:/Projects_X/duckdock/tests/unit/test_deck_icon_dialog.py))**
+- [x] **Шаг 3.6: Модульные тесты и проверка линтера ([tests/unit/test_deck_icon_catalog.py](file:///d:/Projects_X/duckdock/tests/unit/test_deck_icon_catalog.py), [tests/unit/test_deck_icon_dialog.py](file:///d:/Projects_X/duckdock/tests/unit/test_deck_icon_dialog.py))**
   - Разработать `tests/unit/test_deck_icon_catalog.py`:
     - Тест загрузки встроенных категорий и иконок.
     - Тест кэширования `IconCache` (повторный запрос возвращает тот же `QPixmap`).
@@ -646,14 +646,14 @@ flowchart TD
 
 #### 3.3. Чек-лист верификации и Definition of Done (DoD) Спринта 3 (@bug-hunter)
 
-- [ ] Клик по кнопке `v` на плитке `KeyPreviewTile` открывает темное контекстное меню с 5 пунктами в стиле Dark Obsidian v2.
-- [ ] Клик по кнопке `+` или пункту меню «Открыть библиотеку» центрирует модальный диалог `IconLibraryDialog` (580×640 px) на 27" экране.
-- [ ] Живой поиск фильтрует иконки без лагов интерфейса как по русским, так и по английским ключевым словам.
-- [ ] Переключение категорий (Pills) корректно обновляет сетку и счетчики.
-- [ ] Одинарный клик подсвечивает иконку контуром `#38bdf8`, двойной клик сразу применяет её к активному слоту.
-- [ ] Добавление файлов через «Выбрать из файла...» безопасно копирует файл в `resources/deck/custom_icons/` и обновляет превью слота на холсте.
-- [ ] 100% паритет словарей локализации (`pytest tests/core/test_i18n_linter.py` завершается со статусом `PASS`).
-- [ ] Все новые тесты каталога и диалога проходят успешно (`pytest tests/unit/test_deck_icon_*.py`).
+- [x] Клик по кнопке `v` на плитке `KeyPreviewTile` открывает темное контекстное меню с 5 пунктами в стиле Dark Obsidian v2.
+- [x] Клик по кнопке `+` или пункту меню «Открыть библиотеку» центрирует модальный диалог `IconLibraryDialog` (580×640 px) на 27" экране.
+- [x] Живой поиск фильтрует иконки без лагов интерфейса как по русским, так и по английским ключевым словам.
+- [x] Переключение категорий (Pills) корректно обновляет сетку и счетчики.
+- [x] Одинарный клик подсвечивает иконку контуром `#38bdf8`, двойной клик сразу применяет её к активному слоту.
+- [x] Добавление файлов через «Выбрать из файла...» безопасно копирует файл в `resources/deck/custom_icons/` и обновляет превью слота на холсте.
+- [x] 100% паритет словарей локализации (`pytest tests/core/test_i18n_linter.py` завершается со статусом `PASS`).
+- [x] Все новые тесты каталога и диалога проходят успешно (`pytest tests/unit/test_deck_icon_*.py`).
 
 ---
 

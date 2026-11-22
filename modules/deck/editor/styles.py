@@ -1206,6 +1206,231 @@ SearchEmptyPlaceholder {{
     background: transparent;
     padding-top: 30px;
 }}
+
+/* ========================================================================== */
+/* QMenu (Контекстное меню Dark Obsidian v2)                                  */
+/* ========================================================================== */
+QMenu {{
+    background-color: {SURFACE_1_PANEL};
+    border: 1px solid {BORDER_SURFACE_2};
+    border-radius: 8px;
+    padding: 6px;
+}}
+
+QMenu::item {{
+    background-color: transparent;
+    color: {TEXT_PRIMARY_HIGH};
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-size: 13px;
+}}
+
+QMenu::item:selected {{
+    background-color: {SURFACE_3_HOVER};
+    color: {BORDER_FOCUS_NEON};
+}}
+
+QMenu::item:disabled {{
+    color: {TEXT_SLOT_INDEX};
+    font-weight: 600;
+    background-color: transparent;
+}}
+
+QMenu::separator {{
+    height: 1px;
+    background-color: {BORDER_SURFACE_2};
+    margin: 4px 6px;
+}}
+
+/* ========================================================================== */
+/* IconLibraryDialog (Модальный диалог библиотеки иконок 580x640)              */
+/* ========================================================================== */
+QDialog#iconLibraryDialog,
+QDialog.IconLibraryDialog,
+QDialog[class="IconLibraryDialog"] {{
+    background-color: {SURFACE_0_CANVAS};
+    border: 1px solid {BORDER_SURFACE_1};
+}}
+
+QFrame.IconLibraryHeader,
+QFrame#iconLibraryHeader {{
+    background-color: {SURFACE_1_PANEL};
+    border-bottom: 1px solid {BORDER_SURFACE_1};
+}}
+
+QLabel.IconLibraryTitle,
+QLabel#iconLibraryTitle {{
+    color: {TEXT_PRIMARY_HIGH};
+    font-size: 14px;
+    font-weight: 600;
+}}
+
+QLabel.IconLibraryBadge,
+QLabel#iconLibraryBadge {{
+    color: {BORDER_FOCUS_NEON};
+    background-color: {SURFACE_2_CARD};
+    border: 1px solid {BORDER_SURFACE_2};
+    border-radius: 10px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+}}
+
+QPushButton.IconLibraryCloseBtn,
+QPushButton#iconLibraryCloseBtn {{
+    background: transparent;
+    border: none;
+    color: {TEXT_SECONDARY_MED};
+    font-size: 14px;
+    border-radius: 4px;
+}}
+
+QPushButton.IconLibraryCloseBtn:hover,
+QPushButton#iconLibraryCloseBtn:hover {{
+    color: {TEXT_PRIMARY_HIGH};
+    background-color: {SURFACE_3_HOVER};
+}}
+
+/* Pills категорий */
+QPushButton.IconCategoryPill,
+QPushButton[class="IconCategoryPill"] {{
+    background-color: {SURFACE_2_CARD};
+    border: 1px solid {BORDER_SURFACE_2};
+    border-radius: 12px;
+    color: {TEXT_SECONDARY_MED};
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 500;
+}}
+
+QPushButton.IconCategoryPill:hover,
+QPushButton[class="IconCategoryPill"]:hover {{
+    background-color: {SURFACE_3_HOVER};
+    color: {TEXT_PRIMARY_HIGH};
+    border-color: {BORDER_HOVER};
+}}
+
+QPushButton.IconCategoryPill[selected="true"],
+QPushButton[class="IconCategoryPill"][selected="true"] {{
+    background-color: {SURFACE_3_HOVER};
+    color: {BORDER_FOCUS_NEON};
+    border: 1px solid {BORDER_FOCUS_NEON};
+    font-weight: 600;
+}}
+
+/* Сетка иконок и карточки IconTileWidget */
+QScrollArea#iconLibraryScrollArea {{
+    background-color: {SURFACE_0_CANVAS};
+    border: 1px solid {BORDER_SURFACE_1};
+    border-radius: 6px;
+}}
+
+QScrollArea#iconLibraryScrollArea QWidget#iconLibraryScrollContent {{
+    background-color: {SURFACE_0_CANVAS};
+}}
+
+QFrame.IconTileWidget,
+QFrame[class="IconTileWidget"] {{
+    background-color: {SURFACE_2_CARD};
+    border: 1px solid {BORDER_SURFACE_2};
+    border-radius: 8px;
+}}
+
+QFrame.IconTileWidget:hover,
+QFrame[class="IconTileWidget"]:hover {{
+    background-color: {SURFACE_3_HOVER};
+    border: 1px solid {BORDER_FOCUS_NEON};
+}}
+
+QFrame.IconTileWidget[selected="true"],
+QFrame[class="IconTileWidget"][selected="true"] {{
+    background-color: {SURFACE_3_HOVER};
+    border: 2px solid {BORDER_FOCUS_NEON};
+}}
+
+/* Footer диалога */
+QFrame.IconLibraryFooter,
+QFrame#iconLibraryFooter {{
+    background-color: {SURFACE_1_PANEL};
+    border-top: 1px solid {BORDER_SURFACE_1};
+}}
+
+QPushButton.IconZoomBtn,
+QPushButton[class="IconZoomBtn"] {{
+    background-color: {SURFACE_2_CARD};
+    border: 1px solid {BORDER_SURFACE_2};
+    border-radius: 4px;
+    color: {TEXT_SECONDARY_MED};
+    font-size: 11px;
+    font-weight: 600;
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+}}
+
+QPushButton.IconZoomBtn:hover,
+QPushButton[class="IconZoomBtn"]:hover {{
+    background-color: {SURFACE_3_HOVER};
+    color: {BORDER_FOCUS_NEON};
+    border-color: {BORDER_FOCUS_NEON};
+}}
+
+QPushButton.IconLibraryAddCustomBtn,
+QPushButton[class="IconLibraryAddCustomBtn"] {{
+    background: transparent;
+    border: none;
+    color: {BORDER_FOCUS_NEON};
+    font-size: 12px;
+    text-decoration: underline;
+    padding: 4px 8px;
+}}
+
+QPushButton.IconLibraryAddCustomBtn:hover,
+QPushButton[class="IconLibraryAddCustomBtn"]:hover {{
+    color: #7dd3fc;
+}}
+
+QPushButton.IconLibraryCancelBtn,
+QPushButton#iconLibraryCancelBtn {{
+    background-color: {SURFACE_2_CARD};
+    border: 1px solid {BORDER_SURFACE_2};
+    border-radius: 6px;
+    color: {TEXT_SECONDARY_MED};
+    padding: 6px 16px;
+    font-size: 12px;
+    font-weight: 500;
+}}
+
+QPushButton.IconLibraryCancelBtn:hover,
+QPushButton#iconLibraryCancelBtn:hover {{
+    background-color: {SURFACE_3_HOVER};
+    color: {TEXT_PRIMARY_HIGH};
+}}
+
+QPushButton.IconLibrarySelectBtn,
+QPushButton#iconLibrarySelectBtn {{
+    background-color: #0078d4;
+    border: 1px solid #0078d4;
+    border-radius: 6px;
+    color: #ffffff;
+    padding: 6px 18px;
+    font-size: 12px;
+    font-weight: 600;
+}}
+
+QPushButton.IconLibrarySelectBtn:hover,
+QPushButton#iconLibrarySelectBtn:hover {{
+    background-color: #0284c7;
+    border-color: #0284c7;
+}}
+
+QPushButton.IconLibrarySelectBtn:disabled,
+QPushButton#iconLibrarySelectBtn:disabled {{
+    background-color: {BORDER_SURFACE_1};
+    border-color: {BORDER_SURFACE_2};
+    color: {TEXT_SLOT_INDEX};
+}}
 """
 
 

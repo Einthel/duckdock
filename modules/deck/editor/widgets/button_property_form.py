@@ -10,6 +10,7 @@ from typing import Optional
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
+    QDialog,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -113,6 +114,8 @@ class ButtonPropertyForm(QWidget):
         self.preview_tile.icon_menu_clicked.connect(
             lambda: self.property_changed.emit("icon_menu", None)
         )
+        self.preview_tile.open_library_requested.connect(self._open_icon_library_dialog)
+        self.preview_tile.icon_selected.connect(self._on_icon_selected_directly)
         content_layout.addWidget(self.preview_tile)
 
         # Справа: сетка параметров (Title, Actions, Hotkey)
@@ -284,3 +287,22 @@ class ButtonPropertyForm(QWidget):
         preset_key = self.combo_actions.itemData(index)
         value_to_emit = preset_key if preset_key is not None else self.combo_actions.currentText()
         self.property_changed.emit("action_type", value_to_emit)
+
+    def _open_icon_library_dialog(self) -> None:
+        """
+        Открывает модальный диалог IconLibraryDialog для выбора иконки из каталога.
+        При подтверждении выбора обновляет превью-плитку и транслирует сигнал изменения.
+        """
+        from modules.deck.editor.widgets.icon_library_dialog import IconLibraryDialog
+
+        dialog = IconLibraryDialog(parent=self.window(), current_icon=self.preview_tile.get_icon())
+        if dialog.exec() == QDialog.Accepted:
+            selected_icon = dialog.get_selected_icon()
+            if selected_icon is not None:
+                self.preview_tile.set_icon(selected_icon)
+                self.property_changed.emit("icon", selected_icon)
+
+    def _on_icon_selected_directly(self, icon_str_or_path: str) -> None:
+        """Обрабатывает прямой выбор иконки из файла или сброс из контекстного меню."""
+        self.preview_tile.set_icon(icon_str_or_path)
+        self.property_changed.emit("icon", icon_str_or_path)

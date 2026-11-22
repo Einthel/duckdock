@@ -344,6 +344,14 @@ class DeckEditorWindow(QMainWindow):
         if isinstance(self.canvas_widget, DeckCanvasWidget):
             self.canvas_widget.update_cell_preview(slot_idx, prop, val)
 
+    def update_cell_icon(self, slot_idx: int, icon_str: str) -> None:
+        """Обновляет иконку слота в локальном DTO и ячейке холста."""
+        dto = self._button_slots.get(slot_idx)
+        if dto is not None:
+            dto.icon = str(icon_str)
+        if isinstance(self.canvas_widget, DeckCanvasWidget):
+            self.canvas_widget.update_cell_icon(slot_idx, icon_str)
+
     def _on_inspector_touchbar_updated(self, sec_type: str, prop: str, val: object) -> None:
         """
         Обрабатывает изменение настроек секции тачбара в инспекторе.
@@ -602,6 +610,11 @@ class DeckEditorWindow(QMainWindow):
     @header_bar_widget.setter
     def header_bar_widget(self, widget: QWidget) -> None:
         self.set_header_bar(widget)
+
+    @property
+    def canvas(self) -> QWidget:
+        """Алиас для виджета холста."""
+        return self.canvas_widget
 
     @property
     def canvas_slot(self) -> QWidget:

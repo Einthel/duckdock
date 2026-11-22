@@ -287,6 +287,35 @@
           "volume_down": "Уменьшить громкость",
           "toggle_device": "Переключить устройство"
         }
+      },
+      "menu": {
+        "icon": {
+          "header": "Иконка кнопки",
+          "set_from_file": "Выбрать из файла...",
+          "open_library": "Открыть библиотеку иконок DuckDeck...",
+          "open_folder": "Открыть папку пользовательских иконок",
+          "reset_icon": "Сбросить иконку"
+        }
+      },
+      "dialog": {
+        "icon_library": {
+          "title": "Библиотека иконок DuckDeck",
+          "search_placeholder": "Поиск по названию или тегам...",
+          "categories": {
+            "all": "Все",
+            "system": "Система",
+            "apps": "Приложения",
+            "media": "Медиа & Стриминг",
+            "glyphs": "Символы & Эмодзи",
+            "custom": "Пользовательские"
+          },
+          "add_custom": "+ Добавить свои иконки...",
+          "zoom_tooltip": "Масштаб сетки",
+          "btn_select": "Выбрать",
+          "btn_cancel": "Отмена",
+          "no_results": "Иконки не найдены",
+          "files_filter": "Изображения (*.png *.svg *.ico *.jpg *.webp)"
+        }
       }
     }
   },

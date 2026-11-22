@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.3] - 2026-11-22
+
+### Added
+- **DuckDeck Editor Icon Ecosystem (Спринт 3 из `.md/deck/edit_func.md`)**:
+  - **Контекстное меню быстрого доступа кнопки 'v' (`modules/deck/editor/widgets/key_preview_tile.py`)**:
+    - Интерактивное меню `QMenu` в стиле Dark Obsidian v2 под микро-кнопкой `btn_menu`.
+    - Пункты: неактивный заголовок `🎨 Иконка кнопки`, `📁 Выбрать из файла...` (системный `QFileDialog`, копирование в `resources/deck/custom_icons/` с генерацией безопасного пути), `📚 Открыть библиотеку иконок...` (`open_library_requested`), `📂 Открыть папку пользовательских иконок` (`os.startfile`), `🗑️ Сбросить иконку`.
+    - Новые сигналы `icon_selected = Signal(str)` и `open_library_requested = Signal()`.
+  - **Каталог иконок и кэш пиксмапов (`modules/deck/editor/icon_catalog.py`)**:
+    - Синглтон `IconCatalog` и потокобезопасный in-memory кэш `IconCache` с предмасштабированием `SmoothTransformation` (устранение задержек GUI при скроллинге).
+    - Встроенная библиотека иконок: категории `system`, `apps`, `media`, `glyphs` с рендерингом эмодзи/глифов через `QPainter` на прозрачном фоне.
+    - Автосканирование и безопасное копирование пользовательских иконок `resources/deck/custom_icons/` (`.png`, `.svg`, `.ico`, `.jpg`, `.webp`) с разрешением коллизий имен.
+    - Двуязычный полнотекстовый поиск (без учета регистра) по ключевым словам `keywords_ru` и `keywords_en`.
+  - **Модальный диалог библиотеки иконок (`modules/deck/editor/widgets/icon_library_dialog.py`)**:
+    - Диалог `IconLibraryDialog(QDialog)` (580×640 px, модальность `Qt.ApplicationModal`, центрирование на 27" экране).
+    - Шапка `HeaderBar` с локализованным заголовком, бейджем счетчика найденных иконок и кнопкой `✕`.
+    - Поле живого поиска `SearchBar` с кнопкой мгновенной очистки.
+    - Лента категорий (Pills Strip): кнопки-чипы со счетчиками для мгновенной фильтрации.
+    - Сетка карточек `IconTileWidget`: подсветка Surface 3 при наведении, неоновый контур `#38bdf8`, одинарный клик для выбора, двойной клик для немедленного подтверждения (`accept()`).
+    - Подвал `FooterBar`: переключатель зума сетки (`[-]` 36 px, `[=]` 48 px, `[+]` 60 px), кнопка добавления своих иконок, кнопки «Отмена» и «Выбрать».
+  - **Сквозная интеграция событий выбора иконки (`button_property_form.py`, `window.py`, `deck_canvas.py`)**:
+    - Вызов библиотеки из инспектора через кнопку `+` и меню `v`, трансляция выбранной иконки в форму, в DTO активного слота и моментальное обновление ячейки на холсте через `canvas.update_cell_icon()`.
+  - **Bilingual Localization-First (`locales/ru.json`, `locales/en.json`)**:
+    - Пространства `deck.editor.menu.icon` и `deck.editor.dialog.icon_library` со 100% паритетом RU/EN ключей и параметров.
+  - **Тестовое покрытие каталога и диалога (`tests/unit/test_deck_icon_catalog.py`, `test_deck_icon_dialog.py`)**:
+    - 12 новых тестов на синглтон, категории, двуязычный поиск, кэширование пиксмапов, сканирование папки, геометрию диалога, фильтрацию, зум, выбор и сигналы превью-плитки.
+    - Общий объём тестового набора увеличился до **376 passed (100% PASS)**.
+
 ## [0.5.2] - 2026-11-22
 
 ### Added
