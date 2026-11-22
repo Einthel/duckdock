@@ -11,7 +11,7 @@ import sys
 from typing import Optional
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QCloseEvent, QGuiApplication
+from PySide6.QtGui import QCloseEvent, QGuiApplication, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QFrame,
@@ -70,6 +70,8 @@ class DeckEditorWindow(QMainWindow):
         self.setMinimumSize(WINDOW_MIN_SIZE[0], WINDOW_MIN_SIZE[1])
 
         # Презентационная модель данных окна редактора
+        self.config_path: str = "config/deck_config.json"
+        self.active_page_id: str | int = "default"
         self._button_slots: dict[int, ButtonSlotDTO] = {
             i: ButtonSlotDTO(slot_index=i) for i in range(10)
         }
@@ -87,6 +89,10 @@ class DeckEditorWindow(QMainWindow):
         self.set_action_drawer(drawer)
         self._center_on_primary_screen()
         apply_editor_theme(self)
+
+        # Хоткей быстрого сохранения конфигурации Ctrl+S
+        self._save_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
+        self._save_shortcut.activated.connect(self.save_configuration)
 
         self.retranslate_ui()
         bus.language_changed.connect(self._handle_language_changed)
@@ -228,6 +234,11 @@ class DeckEditorWindow(QMainWindow):
             bus.language_changed.disconnect(self._handle_language_changed)
         except (RuntimeError, TypeError):
             pass
+        if hasattr(self.header_bar, "cleanup") and callable(self.header_bar.cleanup):
+            try:
+                self.header_bar.cleanup()
+            except Exception:
+                pass
         super().closeEvent(event)
 
     # ==========================================================================
@@ -249,6 +260,7 @@ class DeckEditorWindow(QMainWindow):
             widget.profile_changed.connect(self._on_header_profile_changed)
             widget.create_profile_requested.connect(self._on_header_create_profile_requested)
             widget.action_clicked.connect(self._on_header_action_clicked)
+            widget.save_requested.connect(self.save_configuration)
 
     def _on_header_device_changed(self, device_id: str) -> None:
         logger.info("Header device selected: %s", device_id)
@@ -378,11 +390,47 @@ class DeckEditorWindow(QMainWindow):
 
     def _on_pagination_page_changed(self, page_index: int) -> None:
         logger.info("Pagination page changed: %s", page_index)
+        self.active_page_id = page_index - 1
         if hasattr(self.canvas_widget, "set_page") and callable(self.canvas_widget.set_page):
             self.canvas_widget.set_page(page_index)
 
     def _on_pagination_add_page_requested(self) -> None:
         logger.info("Pagination add page requested")
+
+    def set_page(self, page_id: str | int) -> None:
+        """
+        Переключает активную страницу редактора (холст и панель пагинации).
+        Поддерживает форматы: int (1..8), str ('page_0', 'page_1', '1').
+        """
+        self.active_page_id = page_id
+        page_idx = 1
+        if isinstance(page_id, int):
+            page_idx = max(1, min(8, page_id))
+        elif isinstance(page_id, str):
+            if page_id.startswith("page_"):
+                try:
+                    num = int(page_id.split("_")[1])
+                    page_idx = max(1, min(8, num + 1))
+                except (ValueError, IndexError):
+                    page_idx = 1
+            else:
+                try:
+                    num = int(page_id)
+                    page_idx = max(1, min(8, num))
+                except ValueError:
+                    page_idx = 1
+
+        if self.pagination_bar is not None and hasattr(self.pagination_bar, "set_current_page"):
+            try:
+                self.pagination_bar.set_current_page(page_idx)
+            except Exception as exc:
+                logger.warning("Error setting pagination page: %s", exc)
+
+        if self.canvas_widget is not None and hasattr(self.canvas_widget, "set_page"):
+            try:
+                self.canvas_widget.set_page(page_idx)
+            except Exception as exc:
+                logger.warning("Error setting canvas page: %s", exc)
 
     def set_inspector_widget(self, widget: QWidget) -> None:
         """Заменяет слот инспектора свойств на указанный виджет."""
@@ -466,6 +514,76 @@ class DeckEditorWindow(QMainWindow):
             # Обновление формы инспектора свойств
             if isinstance(self.inspector, KeyPropertyInspector):
                 self.inspector.load_button_slot(slot_idx, dto)
+
+    # ==========================================================================
+    # I/O и сохранение конфигурации (DeckConfigAdapter & EventBus)
+    # ==========================================================================
+
+    def save_configuration(self) -> bool:
+        """
+        Сохраняет конфигурацию слотов кнопок через DeckConfigAdapter.
+        Атомарно пишет в self.config_path, вызывает анимацию успеха
+        в header_bar и эмитирует bus.deck_config_updated.
+        """
+        try:
+            from modules.deck.editor.adapter import DeckConfigAdapter
+
+            # 1. Загрузка исходного DeckRootConfig из файла
+            root_config = DeckConfigAdapter.load_deck_config(self.config_path)
+
+            # 2. Применение текущих слотов self._button_slots к активной странице
+            page_id = getattr(self, "active_page_id", "default")
+            updated_root = DeckConfigAdapter.apply_slots_to_page(
+                root_config=root_config,
+                page_id_or_index=page_id,
+                slots=self._button_slots,
+            )
+
+            # 3. Атомарное сохранение файла
+            saved = DeckConfigAdapter.save_deck_config_atomic(updated_root, self.config_path)
+            if not saved:
+                logger.error("Failed to atomically save deck configuration to '%s'", self.config_path)
+                return False
+
+            # 4. Анимация успеха кнопки на тулбаре
+            if self.header_bar is not None and hasattr(self.header_bar, "show_save_success"):
+                try:
+                    self.header_bar.show_save_success()
+                except Exception as exc:
+                    logger.warning("Error showing save success in header bar: %s", exc)
+
+            # 5. Эмиссия глобального сигнала обновления конфигурации
+            bus.deck_config_updated.emit()
+            logger.info("Deck configuration successfully saved and bus.deck_config_updated emitted.")
+            return True
+
+        except Exception as exc:
+            logger.error("Unexpected error in save_configuration: %s", exc, exc_info=True)
+            return False
+
+    def load_configuration(
+        self,
+        config_path: Optional[str] = None,
+        page_id: Optional[Union[str, int]] = None,
+    ) -> None:
+        """
+        Загружает слоты кнопок из файла конфигурации через DeckConfigAdapter.
+        """
+        if config_path:
+            self.config_path = config_path
+        if page_id is not None:
+            self.active_page_id = page_id
+
+        from modules.deck.editor.adapter import DeckConfigAdapter
+        root_config = DeckConfigAdapter.load_deck_config(self.config_path)
+        slots = DeckConfigAdapter.load_page_slots(root_config, self.active_page_id)
+        self._button_slots = slots
+
+        if isinstance(self.canvas_widget, DeckCanvasWidget):
+            for idx, dto in slots.items():
+                self.canvas_widget.update_cell_preview(idx, "title", dto.title)
+                self.canvas_widget.update_cell_preview(idx, "icon", dto.icon)
+                self.canvas_widget.update_cell_preview(idx, "category", dto.category)
 
     # ==========================================================================
     # Свойства-алиасы для обратной и прямой совместимости

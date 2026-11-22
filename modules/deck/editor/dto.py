@@ -5,7 +5,7 @@ DTO-структуры данных для редактора DuckDeck (KeyPrope
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Optional
 
 from core.i18n import t
 
@@ -14,6 +14,8 @@ from core.i18n import t
 class ButtonSlotDTO:
     """
     Модель данных слота макро-кнопки сетки (0..9).
+    Содержит презентационные поля и сохраняет расширенные свойства Pydantic v2
+    (color_accent, status_source, sound_override, toggle_action, original_config).
     """
 
     slot_index: int
@@ -24,6 +26,11 @@ class ButtonSlotDTO:
     hotkey: str = ""
     font_size: int = 11
     font_color: str = "#d4d4d8"
+    color_accent: str = "#38bdf8"
+    status_source: Optional[str] = None
+    sound_override: Optional[str] = None
+    toggle_action: Optional[Any] = None
+    original_config: Optional[Any] = None
 
 
 @dataclass

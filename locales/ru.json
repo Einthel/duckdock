@@ -147,7 +147,9 @@
       "media_waiting": "Ожидание медиа...",
       "media_default": "YouTube Music",
       "ready": "Готов к работе",
-      "settings_in_dev": "Настройки Deck (в разработке v0.5.0)"
+      "opening_editor": "Запуск редактора на основном экране...",
+      "settings_in_dev": "Настройки Deck (в разработке v0.5.0)",
+      "config_reloaded": "Конфигурация DuckDeck успешно обновлена"
     },
     "notify": {
       "hotkey_success": "Хоткей {keys}",
@@ -177,6 +179,9 @@
         "title": "Редактор кнопок и тачбара DuckDeck"
       },
       "header": {
+        "save": "Сохранить",
+        "saved": "Сохранено!",
+        "save_tooltip": "Сохранить конфигурацию (Ctrl+S)",
         "devices": {
           "touch_2x5_strip": "DuckDeck Touch (2x5 + Strip)",
           "classic_3x5": "Classic Stream Deck (3x5)"

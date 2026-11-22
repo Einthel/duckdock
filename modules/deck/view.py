@@ -232,6 +232,7 @@ class DeckView(TouchModuleView):
             bus.mic_mute_changed.connect(self._on_mic_mute_changed)
             bus.dimmer_opacity_changed.connect(self._on_dimmer_opacity_changed)
             bus.deck_page_changed.connect(self._on_deck_page_changed)
+            bus.deck_config_updated.connect(self._on_deck_config_updated)
             self._eventbus_connected = True
 
     def _unsubscribe_eventbus(self) -> None:
@@ -251,6 +252,10 @@ class DeckView(TouchModuleView):
                 pass
             try:
                 bus.deck_page_changed.disconnect(self._on_deck_page_changed)
+            except Exception:
+                pass
+            try:
+                bus.deck_config_updated.disconnect(self._on_deck_config_updated)
             except Exception:
                 pass
             self._eventbus_connected = False
@@ -388,6 +393,42 @@ class DeckView(TouchModuleView):
             return
         if page_id != self.active_page_id:
             self.set_active_page(page_id, emit_signal=False, animated_dots=True)
+
+    def _on_deck_config_updated(self) -> None:
+        """
+        Реакция на сигнал bus.deck_config_updated (горячая перезагрузка конфигурации).
+        In-place обновляет кнопки 2x5 текущей страницы без мерцания,
+        синхронизирует живые тайлы и транслирует статус в тикер интерактивной панели.
+        """
+        logger.info("Received bus.deck_config_updated: reloading deck configuration in-place")
+        try:
+            self.root_config = DeckConfigLoader.load_from_file(self.config_path)
+            if not self.root_config.pages:
+                self.root_config = DeckConfigLoader.get_default_config()
+
+            if hasattr(self, "interactive_panel"):
+                page_ids = [p.id for p in self.root_config.pages]
+                self.interactive_panel.set_page_ids(page_ids)
+
+            target_page = None
+            for p in self.root_config.pages:
+                if p.id == self.active_page_id:
+                    target_page = p
+                    break
+            if target_page is None and self.root_config.pages:
+                target_page = self.root_config.pages[0]
+                self.active_page_id = target_page.id
+
+            if target_page:
+                if hasattr(self.grid, "update_page"):
+                    self.grid.update_page(target_page)
+                else:
+                    self.grid.load_page(target_page)
+
+            self._sync_live_tiles()
+            self.set_status(t("deck.interactive.config_reloaded"))
+        except Exception as exc:
+            logger.error("Error in _on_deck_config_updated: %s", exc)
 
     def _on_dot_page_selected(self, page_idx: int) -> None:
         """Обработка нажатия на точку в DotPagingWidget."""

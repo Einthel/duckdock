@@ -41,6 +41,7 @@ class EventBus(QObject):
     # Макро-колодка DuckDeck (Спринт 6)
     deck_notification = Signal(str)  # трансляция сообщений в тикер панели
     deck_page_changed = Signal(str)  # синхронизация смены активного профиля / страницы
+    deck_config_updated = Signal()   # горячая перезагрузка конфигурации макро-панели DuckDeck
 
     # Локализация и интернационализация (i18n)
     language_changed = Signal(str)  # код активного языка ("ru", "en")

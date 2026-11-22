@@ -118,6 +118,39 @@ class DeckGrid(QWidget):
         """Получить виджет кнопки по ее ID."""
         return self._buttons.get(button_id)
 
+    def update_page(self, page_config: DeckPageConfig) -> bool:
+        """
+        Обновляет кнопки текущей страницы in-place без пересоздания виджетов и мерцания.
+        Возвращает True, если кнопки были успешно обновлены in-place,
+        или False, если была выполнена полная перезагрузка сетки (load_page).
+        """
+        if not self._buttons:
+            self.load_page(page_config)
+            return True
+
+        # Если количество кнопок изменилось, выполняем перестройку
+        if len(self._buttons) != len(page_config.buttons):
+            self.load_page(page_config)
+            return False
+
+        updated: Dict[str, DeckButtonWidget] = {}
+        for btn_cfg in page_config.buttons:
+            btn_widget = self._buttons.get(btn_cfg.id)
+            if btn_widget is None:
+                for existing_w in self._buttons.values():
+                    if getattr(existing_w.button_config, "slot_index", None) == btn_cfg.slot_index:
+                        btn_widget = existing_w
+                        break
+            if btn_widget is None:
+                self.load_page(page_config)
+                return False
+
+            btn_widget.update_config(btn_cfg)
+            updated[btn_cfg.id] = btn_widget
+
+        self._buttons = updated
+        return True
+
     def get_buttons(self) -> Dict[str, DeckButtonWidget]:
         """Возвращает словарь всех активных кнопок сетки."""
         return self._buttons.copy()

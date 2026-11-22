@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from .actions_registry import get_default_action_catalog
+from .adapter import DeckConfigAdapter
 from .demo_data import get_demo_editor_profile, load_demo_profile_into_window
 from .dto import (
     ActionCategoryDTO,
@@ -54,9 +55,12 @@ if TYPE_CHECKING:
     )
     from .widgets.touchbar_section import TouchbarSectionWidget
     from .widgets.touchbar_strip import EditorTouchbarStrip
+    from .manager import DeckEditorManager
     from .window import DeckEditorWindow
 
 __all__ = [
+    "DeckConfigAdapter",
+    "DeckEditorManager",
     "DeckEditorWindow",
     "DeviceComboBox",
     "EditorHeaderBar",
@@ -104,6 +108,9 @@ __all__ = [
 
 
 def __getattr__(name: str) -> Any:
+    if name == "DeckEditorManager":
+        from .manager import DeckEditorManager
+        return DeckEditorManager
     if name == "DeckEditorWindow":
         from .window import DeckEditorWindow
         return DeckEditorWindow

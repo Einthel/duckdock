@@ -175,6 +175,12 @@ class DotPagingWidget(QWidget):
     def current_page(self) -> int:
         return self._current_page
 
+    def get_current_page_id(self) -> Optional[str]:
+        """Возвращает строковый ID текущей страницы или 'page_X'."""
+        if self._page_ids and 0 <= self._current_page < len(self._page_ids):
+            return self._page_ids[self._current_page]
+        return f"page_{self._current_page}"
+
     def paintEvent(self, event: Any) -> None:
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
@@ -444,6 +450,12 @@ class DeckCenterSection(QFrame):
     def get_current_page(self) -> int:
         return self.dots.current_page()
 
+    def get_current_page_id(self) -> Optional[str]:
+        """Возвращает строковый ID активной страницы из виджета пагинации."""
+        if hasattr(self, "dots") and hasattr(self.dots, "get_current_page_id"):
+            return self.dots.get_current_page_id()
+        return None
+
     def cleanup(self) -> None:
         """Остановка таймеров секции и анимаций."""
         if hasattr(self, "_timer") and self._timer.isActive():
@@ -684,8 +696,30 @@ class DeckRightSection(QFrame):
         self._ticker_timer.setInterval(3000)
         self._ticker_timer.timeout.connect(self._reset_ticker)
 
+    def _get_current_page_id(self) -> Optional[str]:
+        """Получает идентификатор текущей страницы от родительской панели."""
+        parent = self.parent()
+        if parent is not None and hasattr(parent, "get_current_page_id") and callable(parent.get_current_page_id):
+            return parent.get_current_page_id()
+        return None
+
     def _on_settings_clicked(self) -> None:
-        self.show_notification(t("deck.interactive.settings_in_dev"))
+        """
+        Запуск окна конфигуратора DeckEditorWindow через DeckEditorManager.
+        Инварианты:
+          - Отложенный импорт (отсутствие циклических зависимостей).
+          - Stealth Focus (parent=None, без перехвата фокуса у тачскрина).
+          - Окно центрируется на основном мониторе 27" dGPU.
+        """
+        page_id = self._get_current_page_id()
+        try:
+            from modules.deck.editor.manager import DeckEditorManager
+
+            DeckEditorManager.open_editor(page_id=page_id)
+            self.show_notification(t("deck.interactive.opening_editor"))
+        except Exception as exc:
+            logger.error("Failed to open Deck Editor via DeckEditorManager: %s", exc)
+            self.show_notification(t("deck.interactive.settings_in_dev"))
 
     def _subscribe_eventbus(self) -> None:
         if not self._eventbus_connected:
@@ -808,6 +842,21 @@ class DeckInteractivePanel(TouchModuleView):
 
     def get_current_page(self) -> int:
         return self.center_section.get_current_page()
+
+    def get_current_page_id(self) -> Optional[str]:
+        """Возвращает строковый ID активной страницы DuckDeck."""
+        if hasattr(self, "center_section") and hasattr(self.center_section, "get_current_page_id"):
+            return self.center_section.get_current_page_id()
+        return None
+
+    def set_status(self, message: str) -> None:
+        """Трансляция статуса/уведомления в бегущую строку/тикер правой секции."""
+        if hasattr(self, "right_section") and hasattr(self.right_section, "show_notification"):
+            self.right_section.show_notification(message)
+
+    def show_notification(self, message: str) -> None:
+        """Алиас для set_status."""
+        self.set_status(message)
 
     def retranslate_ui(self) -> None:
         """Каскадная ретрансляция всех трех секций."""

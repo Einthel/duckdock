@@ -1,6 +1,6 @@
 # DuckDock / TouchWM: Архитектурная спецификация модулей
 
-> **Статус:** v0.5.1 (Спринт 1: Рефакторинг дизайн-системы Dark Obsidian v2 и устранение багов верстки конфигуратора, 329 тестов 100% PASS)  
+> **Статус:** v0.5.2 (Спринт 2: Singleton ⚙, I/O и Hot Reload макро-панели, 364 теста 100% PASS)  
 > **Целевая среда:** Windows 10/11 x64, 27" Primary (dGPU) + 7" 1024×600 JRP7813S Touchscreen (iGPU AMD Radeon Graphics).
 
 ---
@@ -79,19 +79,23 @@ flowchart TD
         end
 
         subgraph ModDeckEditor ["modules.deck.editor (WYSIWYG Configurator)"]
+            EditorMgr["manager.DeckEditorManager (Singleton, 27'' Primary)"]
             EditorWin["DeckEditorWindow (QMainWindow, 1080x740)"]
-            EditorHBar["widgets.header_bar.EditorHeaderBar (52px)"]
+            EditorAdapter["adapter.DeckConfigAdapter (Atomic I/O & Mapping)"]
+            EditorHBar["widgets.header_bar.EditorHeaderBar (52px & Save Button)"]
             EditorCanvas["widgets.deck_canvas.DeckCanvasWidget (2x5 Grid + 3-Section Touchbar)"]
             EditorPaging["widgets.pagination_bar.PageNavigationBar (36px)"]
             EditorInsp["widgets.property_inspector.KeyPropertyInspector (Stacked 0..4)"]
             EditorDrawer["widgets.action_drawer.ActionLibraryDrawer (Search + Accordion)"]
             EditorDTO["dto.* (ButtonSlotDTO, Touchbar*DTO, ActionItemDTO)"]
             EditorDemo["demo_data & demo_launcher"]
+            EditorMgr --> EditorWin
             EditorWin --> EditorHBar
             EditorWin --> EditorCanvas
             EditorWin --> EditorPaging
             EditorWin --> EditorInsp
             EditorWin --> EditorDrawer
+            EditorWin -.-> EditorAdapter
             EditorWin -.-> EditorDTO
             EditorDemo -.-> EditorWin
         end
@@ -130,6 +134,9 @@ flowchart TD
     TW -.->|Signal: sensors_updated| Bus
     TW -.->|Signal: snapshot_ready| TView
     DeckDisp -.->|Request device toggle| Bus
+    DeckPanel -.->|Click ⚙ -> open_editor| EditorMgr
+    EditorWin -.->|Save / Ctrl+S: emit deck_config_updated| Bus
+    Bus -.->|Signal: deck_config_updated (Hot Reload)| DeckView
     Bus -.->|playback_device_changed| AView
     Bus -.->|playback_device_changed| DeckView
     Bus -.->|Signal: language_changed| EditorWin
@@ -216,6 +223,14 @@ flowchart TD
 
 ### `modules.deck.editor` — Визуальный конфигуратор DuckDeck (WYSIWYG Configurator)
 
+- `manager.py` (`DeckEditorManager`):
+  - Потокобезопасный синглтон-менеджер жизненного цикла окна конфигуратора (`open_editor()`, `get_instance()`, `close_editor()`).
+  - Центрирование окна (1080×740) в доступной рабочей области `primaryScreen` (27" dGPU).
+  - Сохранение архитектурного инварианта Stealth Focus: `parent=None`, независимое top-level окно ОС, не передающее фокус тачскрину.
+- `adapter.py` (`DeckConfigAdapter`):
+  - Двусторонний адаптер трансляции моделей Pydantic v2 (`DeckRootConfig`, `DeckButtonConfig`) и презентационных `ButtonSlotDTO` со 100% сохранением расширенных полей (`status_source`, `color_accent`, `sound_override`, `toggle_action`).
+  - Методы `load_page_slots()` и `apply_slots_to_page()` с полной изоляцией многостраничной структуры (Pages 1..N).
+  - Атомарное сохранение `save_deck_config_atomic()`: безопасная запись в `.tmp` со сбросом системных буферов (`os.fsync`), создание `.bak` и атомарная замена через `os.replace()`.
 - `window.py` (`DeckEditorWindow(QMainWindow)`):
   - Главное окно конфигуратора (1080×740, min 960×640), центрирование на основном 27" экране.
   - Двухпанельная компоновка на базе `QSplitter(Qt.Horizontal)` с пропорцией 70/30 (рабочая область 756 px / каталог действий 324 px, `childrenCollapsible=False`).
@@ -275,7 +290,7 @@ flowchart TD
   - `manager.py` (`I18nManager`): Потокобезопасный синглтон с предзагрузкой словарей `locales/*.json` в плоскую хэш-таблицу dot-notation ($O(1)$ поиск), симметричным fallback-каскадом (RU <-> EN -> raw_key) и защищенным форматтером `SafeFormatter`.
   - `plural.py`: Вычисление грамматических форм множественных чисел для RU (`one`, `few`, `many`) и EN (`one`, `other`).
   - Экспорт функций быстрого доступа `t(key, **kwargs)` и `tp(key, count, **kwargs)`.
-- `event_bus.py`: Централизованная шина сигналов Qt `bus` (навигация, громкость, телеметрия, медиа, язык: `language_changed`, DuckDeck: `deck_notification`, `deck_page_changed`).
+- `event_bus.py`: Централизованная шина сигналов Qt `bus` (навигация, громкость, телеметрия, медиа, язык: `language_changed`, DuckDeck: `deck_notification`, `deck_page_changed`, `deck_config_updated`).
 - `focus_guardian.py`: Защита от перехвата фокуса и восстановление курсора мыши (`WS_EX_NOACTIVATE`, `SetWinEventHook`).
 - `mouse_barrier.py`: Аппаратный барьер курсора мыши (`ClipCursor`) для предотвращения случайного вылета на второй экран.
 - `touch_filter.py`: Перехват сенсорных касаний и движок двухпальцевого вертикального свайпа (Swipe Engine).

@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.2] - 2026-11-22
+
+### Added
+- **DuckDeck Editor Core & I/O Integration (Спринт 2 из `.md/deck/edit_func.md`)**:
+  - **Singleton-менеджер жизненного цикла (`modules/deck/editor/manager.py`)**:
+    - Класс `DeckEditorManager` (потокобезопасный синглтон с методами `open_editor()`, `get_instance()`, `close_editor()`).
+    - Автоматическое центрирование окна конфигуратора (1080×740) в рабочей области `primaryScreen` (27" dGPU).
+    - Сохранение архитектурного инварианта Stealth Focus: окно создается без родителя (`parent=None`, `isWindow() == True`), не передает клавиатурный фокус на 7" тачскрин.
+  - **Интеграция кнопки настроек ⚙ (`modules/deck/widgets/interactive_panel.py`)**:
+    - Замена плейсхолдера в `_on_settings_clicked()` на вызов `DeckEditorManager.open_editor(page_id=...)` с отложенным импортом.
+    - Тактильная нотификация в бегущей строке: `"Запуск редактора на основном экране..."` / `"Opening editor on primary display..."`.
+  - **Двусторонний адаптер данных `DeckConfigAdapter` (`modules/deck/editor/adapter.py`)**:
+    - Конвертация `slot_to_dto()` и `dto_to_slot()` со 100% сохранением расширенных полей Pydantic v2 (`status_source`, `color_accent`, `sound_override`, `toggle_action`).
+    - Изоляция многостраничной структуры: `load_page_slots()` и `apply_slots_to_page()` предотвращают взаимную утечку данных между страницами (Pages 1..N).
+    - Атомарное сохранение `save_deck_config_atomic()`: безопасная запись через временный файл `.tmp` со сбросом системных буферов (`os.fsync`), создание бэкапа `.bak` и атомарная замена `os.replace()`. Защита от повреждения файла при сбоях ввода-вывода.
+  - **Кнопка сохранения и хоткей Ctrl+S (`widgets/header_bar.py`, `window.py`)**:
+    - Кнопка «💾 Сохранить» в `EditorHeaderBar` со стилями Dark Obsidian v2.
+    - Динамическая тактильная индикация успеха сохранения (`"✓ Сохранено!"`, изумрудный цвет, таймер отката 2000 мс).
+    - Привязка системного хоткея `QShortcut("Ctrl+S")` в `DeckEditorWindow` с вызовом адаптера и генерацией события шины.
+  - **Реактивный Hot Reload макро-панели (`core/event_bus.py`, `modules/deck/view.py`)**:
+    - Регистрация глобального сигнала `bus.deck_config_updated`.
+    - Подписка `DeckView` с бесшовным in-place обновлением существующих тайлов 2×5 без пересоздания виджетов и мерцания холста.
+    - Вывод статуса `"Конфигурация DuckDeck успешно обновлена"` в тикер интерактивной панели.
+    - Гарантированная отписка от шины при `cleanup()` без утечек памяти.
+  - **Тестовое покрытие I/O и регрессионный сьют (`tests/unit/test_deck_editor_io.py`)**:
+    - 10 комплексных тестов на жизненный цикл Singleton, инварианты Stealth Focus, 100% fidelity DTO/Config, изоляцию страниц, атомарность I/O и реактивность шины.
+    - Общий объём тестового набора увеличен до **364 passed (100% PASS)**.
+
 ## [0.5.1] - 2026-11-22
 
 ### Added

@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from typing import Optional, Sequence
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QFrame,
@@ -268,11 +268,15 @@ class EditorHeaderBar(QFrame):
     profile_changed = Signal(str)
     create_profile_requested = Signal()
     action_clicked = Signal(str)
+    save_requested = Signal()
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.setObjectName("editorHeaderBar")
         self.setFixedHeight(HEADER_HEIGHT)
+
+        self._save_timer: Optional[QTimer] = None
+        self._is_saved_state: bool = False
 
         self._init_ui()
 
@@ -298,6 +302,23 @@ class EditorHeaderBar(QFrame):
 
         # Растягиваемый спейсер
         layout.addStretch(1)
+
+        # Кнопка сохранения конфигурации
+        self.btn_save = QPushButton(self)
+        self.btn_save.setObjectName("btnSaveConfig")
+        self.btn_save.setProperty("class", "HeaderSaveButton")
+        self.btn_save.setProperty("state", "normal")
+        self.btn_save.setCursor(Qt.PointingHandCursor)
+        self.btn_save.setFocusPolicy(Qt.NoFocus)
+        self.btn_save.setFixedHeight(32)
+        self.btn_save.setText(f"💾 {t('deck.editor.header.save')}")
+        self.btn_save.setToolTip(t("deck.editor.header.save_tooltip"))
+        self.btn_save.clicked.connect(self.save_requested.emit)
+        layout.addWidget(self.btn_save)
+
+        # Вертикальный разделитель перед сервисными кнопками
+        self.v_line_save = ToolbarVLine(self)
+        layout.addWidget(self.v_line_save)
 
         # Сервисные кнопки
         self.btn_notifications = HeaderIconButton(
@@ -334,10 +355,57 @@ class EditorHeaderBar(QFrame):
             btn.action_triggered.connect(self.action_clicked.emit)
             layout.addWidget(btn)
 
+    def show_save_success(self) -> None:
+        """
+        Отображает визуальный отклик успешного сохранения:
+        зеленый изумрудный акцент, иконку '✓' и текст 'Сохранено!'.
+        Через 2000 мс автоматически возвращает исходное состояние.
+        """
+        self._is_saved_state = True
+        self.btn_save.setText(f"✓ {t('deck.editor.header.saved')}")
+        self.btn_save.setProperty("state", "success")
+        self.btn_save.style().unpolish(self.btn_save)
+        self.btn_save.style().polish(self.btn_save)
+
+        if self._save_timer is not None and self._save_timer.isActive():
+            self._save_timer.stop()
+
+        if self._save_timer is None:
+            self._save_timer = QTimer(self)
+            self._save_timer.setSingleShot(True)
+            self._save_timer.timeout.connect(self._reset_save_state)
+
+        self._save_timer.start(2000)
+
+    def _reset_save_state(self) -> None:
+        """Сброс кнопки сохранения в штатное состояние."""
+        self._is_saved_state = False
+        self.btn_save.setText(f"💾 {t('deck.editor.header.save')}")
+        self.btn_save.setProperty("state", "normal")
+        self.btn_save.style().unpolish(self.btn_save)
+        self.btn_save.style().polish(self.btn_save)
+
+    def cleanup(self) -> None:
+        """Освобождение ресурсов и безопасная остановка таймеров."""
+        if self._save_timer is not None:
+            if self._save_timer.isActive():
+                self._save_timer.stop()
+            self._save_timer.deleteLater()
+            self._save_timer = None
+
+    def closeEvent(self, event) -> None:
+        self.cleanup()
+        super().closeEvent(event)
+
     def retranslate_ui(self) -> None:
         """Каскадное обновление локализации всех компонентов тулбара."""
         self.device_combo.retranslate_ui()
         self.profile_combo.retranslate_ui()
+        if getattr(self, "_is_saved_state", False):
+            self.btn_save.setText(f"✓ {t('deck.editor.header.saved')}")
+        else:
+            self.btn_save.setText(f"💾 {t('deck.editor.header.save')}")
+        self.btn_save.setToolTip(t("deck.editor.header.save_tooltip"))
         self.btn_notifications.retranslate_ui()
         self.btn_store.retranslate_ui()
         self.btn_settings.retranslate_ui()

@@ -127,6 +127,12 @@ def test_header_bar_initialization(header_bar):
     assert isinstance(header_bar.v_line, ToolbarVLine)
     assert isinstance(header_bar.profile_combo, ProfileComboBox)
 
+    # Кнопка сохранения
+    assert hasattr(header_bar, "btn_save")
+    assert header_bar.btn_save.objectName() == "btnSaveConfig"
+    assert "💾" in header_bar.btn_save.text()
+    assert isinstance(header_bar.v_line_save, ToolbarVLine)
+
     # Сервисные кнопки
     assert isinstance(header_bar.btn_notifications, HeaderIconButton)
     assert isinstance(header_bar.btn_store, HeaderIconButton)
@@ -326,6 +332,10 @@ def test_header_bar_retranslate_ui(header_bar):
     assert header_bar.profile_combo.itemText(new_prof_idx) == t("deck.editor.header.profiles.new_profile")
     assert header_bar.profile_combo.itemText(new_prof_idx) == "+ Новый профиль..."
 
+    # Проверка кнопки сохранения в RU
+    assert "Сохранить" in header_bar.btn_save.text()
+    assert header_bar.btn_save.toolTip() == "Сохранить конфигурацию (Ctrl+S)"
+
     # Проверка тултипов сервисных кнопок в RU
     assert header_bar.btn_notifications.toolTip() == "Уведомления и лог макросов"
     assert header_bar.btn_store.toolTip() == "Магазин расширений и иконок"
@@ -348,8 +358,50 @@ def test_header_bar_retranslate_ui(header_bar):
     assert header_bar.profile_combo.itemText(0) == "Default Profile"
     assert header_bar.profile_combo.itemText(new_prof_idx) == "+ New Profile..."
 
+    # Проверка кнопки сохранения в EN
+    assert "Save" in header_bar.btn_save.text()
+    assert header_bar.btn_save.toolTip() == "Save configuration (Ctrl+S)"
+
     # Проверка тултипов сервисных кнопок в EN
     assert header_bar.btn_notifications.toolTip() == "Notifications & Macro Log"
     assert header_bar.btn_store.toolTip() == "Extensions & Icons Store"
     assert header_bar.btn_settings.toolTip() == "DuckDeck Editor Settings"
     assert header_bar.btn_account.toolTip() == "User Profile"
+
+
+def test_header_save_button_signals_and_feedback(header_bar, qtbot):
+    """
+    Проверка кнопки сохранения:
+      - Клик по кнопке эмитирует сигнал save_requested.
+      - Вызов show_save_success() переводит кнопку в состояние 'success' с текстом '✓ ...'.
+      - Истечение таймера возвращает кнопку в исходное состояние.
+    """
+    save_calls = []
+    header_bar.save_requested.connect(lambda: save_calls.append(True))
+
+    qtbot.mouseClick(header_bar.btn_save)
+    assert len(save_calls) == 1
+
+    header_bar.show_save_success()
+    assert "✓" in header_bar.btn_save.text()
+    assert header_bar.btn_save.property("state") == "success"
+    assert header_bar._save_timer is not None
+    assert header_bar._save_timer.isActive() is True
+
+    # Имитируем срабатывание таймера
+    header_bar._reset_save_state()
+    assert "💾" in header_bar.btn_save.text()
+    assert header_bar.btn_save.property("state") == "normal"
+
+
+def test_header_save_timer_cleanup(header_bar):
+    """
+    Проверка безопасной остановки и удаления таймера в cleanup():
+      - Отсутствие утечек таймеров при закрытии/очистке виджета.
+    """
+    header_bar.show_save_success()
+    assert header_bar._save_timer is not None
+    assert header_bar._save_timer.isActive() is True
+
+    header_bar.cleanup()
+    assert header_bar._save_timer is None

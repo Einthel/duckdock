@@ -270,7 +270,7 @@ sequenceDiagram
 
 #### 2.2. Пошаговый детальный план реализации Спринта 2 (@fullstack-builder, @frontend-ui-designer)
 
-- [ ] **Шаг 2.1: Singleton-менеджер `DeckEditorManager` ([modules/deck/editor/manager.py](file:///d:/Projects_X/duckdock/modules/deck/editor/manager.py))**
+- [x] **Шаг 2.1: Singleton-менеджер `DeckEditorManager` ([modules/deck/editor/manager.py](file:///d:/Projects_X/duckdock/modules/deck/editor/manager.py))**
   - Реализовать класс `DeckEditorManager`:
     - Потокобезопасный синглтон-паттерн управления окном редактора.
     - Атрибут `_editor_window: Optional[DeckEditorWindow] = None`.
@@ -284,7 +284,7 @@ sequenceDiagram
     - Метод `close_editor() -> None`: закрытие окна с освобождением ресурсов.
   - Сохранение инварианта фокуса: вызов менеджера не нарушает атрибуты `WS_EX_NOACTIVATE` главного окна DuckDock.
 
-- [ ] **Шаг 2.2: Подключение вызова по кнопке ⚙ в `DeckInteractivePanel` ([modules/deck/widgets/interactive_panel.py](file:///d:/Projects_X/duckdock/modules/deck/widgets/interactive_panel.py))**
+- [x] **Шаг 2.2: Подключение вызова по кнопке ⚙ в `DeckInteractivePanel` ([modules/deck/widgets/interactive_panel.py](file:///d:/Projects_X/duckdock/modules/deck/widgets/interactive_panel.py))**
   - В методе `_on_settings_clicked(self) -> None`:
     - Исключить заглушку `self.show_notification(t("deck.interactive.settings_in_dev"))`.
     - Выполнить отложенный (lazy) импорт: `from modules.deck.editor.manager import DeckEditorManager`.
@@ -294,7 +294,7 @@ sequenceDiagram
     - RU: `"deck.interactive.opening_editor": "Запуск редактора на основном экране..."`
     - EN: `"deck.interactive.opening_editor": "Opening editor on primary display..."`
 
-- [ ] **Шаг 2.3: Двусторонний адаптер `DeckConfigAdapter` ([modules/deck/editor/adapter.py](file:///d:/Projects_X/duckdock/modules/deck/editor/adapter.py))**
+- [x] **Шаг 2.3: Двусторонний адаптер `DeckConfigAdapter` ([modules/deck/editor/adapter.py](file:///d:/Projects_X/duckdock/modules/deck/editor/adapter.py))**
   - Класс `DeckConfigAdapter`:
     - Метод `slot_to_dto(button_config: DeckButtonConfig) -> ButtonSlotDTO`:
       - Трансляция `slot_index`, `title`, `icon`, `color_accent`.
@@ -315,7 +315,7 @@ sequenceDiagram
       - Атомарная замена `os.replace(f"{file_path}.tmp", file_path)`.
       - Логирование успешного сохранения и обработка исключений `IOError`, `ValidationError` с откатом.
 
-- [ ] **Шаг 2.4: Кнопка «Сохранить» в `EditorHeaderBar` и хоткей `Ctrl+S` ([modules/deck/editor/widgets/header_bar.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/header_bar.py), [modules/deck/editor/window.py](file:///d:/Projects_X/duckdock/modules/deck/editor/window.py))**
+- [x] **Шаг 2.4: Кнопка «Сохранить» в `EditorHeaderBar` и хоткей `Ctrl+S` ([modules/deck/editor/widgets/header_bar.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/header_bar.py), [modules/deck/editor/window.py](file:///d:/Projects_X/duckdock/modules/deck/editor/window.py))**
   - В `EditorHeaderBar`:
     - Добавить стилизованную кнопку действия `self.btn_save = QPushButton(self)`.
     - Стилизация Dark Obsidian v2:
@@ -332,7 +332,7 @@ sequenceDiagram
       - Эмиссия глобального сигнала `bus.deck_config_updated.emit()`.
       - Отображение статуса в консоли и тултипе.
 
-- [ ] **Шаг 2.5: Реактивный `bus.deck_config_updated` Hot Reload ([core/event_bus.py](file:///d:/Projects_X/duckdock/core/event_bus.py), [modules/deck/view.py](file:///d:/Projects_X/duckdock/modules/deck/view.py))**
+- [x] **Шаг 2.5: Реактивный `bus.deck_config_updated` Hot Reload ([core/event_bus.py](file:///d:/Projects_X/duckdock/core/event_bus.py), [modules/deck/view.py](file:///d:/Projects_X/duckdock/modules/deck/view.py))**
   - В [core/event_bus.py](file:///d:/Projects_X/duckdock/core/event_bus.py):
     - Зарегистрировать сигнал `deck_config_updated = Signal()` с аннотацией: _"Сигнал горячей перезагрузки конфигурации макро-панели DuckDeck"_.
   - В [modules/deck/view.py](file:///d:/Projects_X/duckdock/modules/deck/view.py):
@@ -346,7 +346,7 @@ sequenceDiagram
     - RU: `"deck.interactive.config_reloaded": "Конфигурация DuckDeck успешно обновлена"`
     - EN: `"deck.interactive.config_reloaded": "DuckDeck configuration reloaded"`
 
-- [ ] **Шаг 2.6: Модульные тесты интеграции, атомарности I/O и регрессионный прогон ([tests/unit/test_deck_editor_io.py](file:///d:/Projects_X/duckdock/tests/unit/test_deck_editor_io.py))**
+- [x] **Шаг 2.6: Модульные тесты интеграции, атомарности I/O и регрессионный прогон ([tests/unit/test_deck_editor_io.py](file:///d:/Projects_X/duckdock/tests/unit/test_deck_editor_io.py))**
   - Разработать набор тестов `tests/unit/test_deck_editor_io.py`:
     - Тестирование `DeckEditorManager`: проверка Singleton, повторный вызов не создает второго окна, `activateWindow()` вызывается, корректное закрытие.
     - Тестирование `DeckConfigAdapter`:

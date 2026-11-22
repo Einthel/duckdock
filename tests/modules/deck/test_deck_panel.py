@@ -552,7 +552,11 @@ def test_deck_right_section_sensors_and_ticker_reactivity(qapp):
 
         # 3. Кнопка настроек ⚙
         sec.btn_settings.click()
-        assert "Настройки Deck" in sec.lbl_ticker.text()
+        assert (
+            "Запуск редактора" in sec.lbl_ticker.text()
+            or "Opening editor" in sec.lbl_ticker.text()
+            or "Настройки Deck" in sec.lbl_ticker.text()
+        )
 
     finally:
         sec.cleanup()

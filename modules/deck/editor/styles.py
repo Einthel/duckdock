@@ -338,6 +338,52 @@ ToolbarVLine {{
     margin: 0px 4px;
 }}
 
+/* QPushButton.HeaderSaveButton (Dark Obsidian v2 Save Button) */
+QPushButton[class="HeaderSaveButton"],
+QPushButton.HeaderSaveButton,
+QPushButton#btnSaveConfig {{
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    color: {TEXT_PRIMARY_HIGH};
+    font-size: 13px;
+    font-weight: 600;
+    padding: 4px 14px;
+    min-height: 24px;
+    height: 32px;
+}}
+
+QPushButton[class="HeaderSaveButton"]:hover,
+QPushButton.HeaderSaveButton:hover,
+QPushButton#btnSaveConfig:hover {{
+    background-color: #334155;
+    border: 1px solid {BORDER_FOCUS_NEON};
+    color: #ffffff;
+}}
+
+QPushButton[class="HeaderSaveButton"]:pressed,
+QPushButton.HeaderSaveButton:pressed,
+QPushButton#btnSaveConfig:pressed {{
+    background-color: #0f172a;
+    border-color: #0284c7;
+}}
+
+QPushButton[class="HeaderSaveButton"][state="success"],
+QPushButton.HeaderSaveButton[state="success"],
+QPushButton#btnSaveConfig[state="success"] {{
+    background-color: #059669;
+    border: 1px solid #10b981;
+    color: #ffffff;
+}}
+
+QPushButton[class="HeaderSaveButton"][state="success"]:hover,
+QPushButton.HeaderSaveButton[state="success"]:hover,
+QPushButton#btnSaveConfig[state="success"]:hover {{
+    background-color: #10b981;
+    border: 1px solid #34d399;
+    color: #ffffff;
+}}
+
 /* ========================================================================== */
 /* EditorGridCell (Холст: ячейки кнопок 96x96, Dark Obsidian v2)               */
 /* ========================================================================== */

@@ -252,6 +252,21 @@ class DeckButtonWidget(QFrame):
                 self.lbl_status.setText("")
                 self.lbl_status.setVisible(False)
 
+    def update_config(self, button_config: DeckButtonConfig) -> None:
+        """Обновляет конфигурацию кнопки in-place без пересоздания виджета."""
+        self.button_config = button_config
+        self.lbl_icon.setText(button_config.icon or "")
+        color = button_config.color_accent or "#38bdf8"
+        self.lbl_icon.setStyleSheet(
+            f"font-size: {self.icon_font_size}px; color: {color};"
+        )
+        self.lbl_title.setText(button_config.title or "")
+        if button_config.status_source:
+            self.lbl_status.setVisible(True)
+        else:
+            self.lbl_status.setVisible(False)
+            self.lbl_status.setText("")
+
     # ---------------------------------------------------------
     # Сенсорные и мышиные события (Stealth / Anti-Sticky Hover)
     # ---------------------------------------------------------
