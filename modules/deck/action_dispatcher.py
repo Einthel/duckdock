@@ -17,13 +17,21 @@ from modules.deck.actions.process_launcher import launch_process
 from modules.deck.actions.screen_capture import capture_screen
 from modules.deck.models import (
     AudioDeviceParams,
+    CloseWindowParams,
     DeckActionConfig,
     HotkeyParams,
+    HotkeySwitchParams,
     HttpRequestParams,
     LaunchParams,
+    MultimediaParams,
     NavigationParams,
+    OpenAppParams,
+    OpenPathParams,
     ScreenshotParams,
     SystemParams,
+    TextMacroParams,
+    VolumeControlParams,
+    WebsiteParams,
 )
 from core.event_bus import bus
 from core.i18n import t
@@ -196,6 +204,191 @@ class ActionRunnable(QRunnable):
                 params: NavigationParams = typed_params
                 success = True
                 message = t("deck.notify.page_navigated", page=params.target_page_id)
+
+            elif action_type == "website":
+                wb_params: WebsiteParams = typed_params
+                url = wb_params.url.strip()
+                if not url:
+                    success = False
+                    message = t("deck.notify.empty_url")
+                else:
+                    if not (url.startswith("http://") or url.startswith("https://")):
+                        url = "https://" + url
+                    try:
+                        import os
+                        os.startfile(url)
+                        success = True
+                        message = t("deck.notify.website_opened", url=url)
+                    except Exception:
+                        import webbrowser
+                        webbrowser.open(url)
+                        success = True
+                        message = t("deck.notify.website_opened", url=url)
+
+            elif action_type == "open_path":
+                p_params: OpenPathParams = typed_params
+                import os
+                target_path = os.path.expandvars(p_params.path.strip())
+                if not target_path:
+                    success = False
+                    message = t("deck.notify.empty_path")
+                elif not os.path.exists(target_path):
+                    success = False
+                    message = t("deck.notify.path_not_found", path=target_path)
+                else:
+                    os.startfile(target_path)
+                    success = True
+                    message = t("deck.notify.path_opened", path=target_path)
+
+            elif action_type == "open_app":
+                oa_params: OpenAppParams = typed_params
+                import os
+                import subprocess
+                exe = os.path.expandvars(oa_params.executable.strip())
+                if not exe:
+                    success = False
+                    message = t("deck.notify.empty_executable")
+                else:
+                    cmd_args = [exe] + list(oa_params.args)
+                    cwd = os.path.expandvars(oa_params.working_dir) if oa_params.working_dir else None
+                    subprocess.Popen(cmd_args, cwd=cwd, shell=False)
+                    success = True
+                    message = t("deck.notify.app_launched", app=os.path.basename(exe))
+
+            elif action_type == "close_window":
+                cw_params: CloseWindowParams = typed_params
+                target = cw_params.target
+                try:
+                    hwnd = ctypes.windll.user32.GetForegroundWindow()
+                    if hwnd:
+                        ctypes.windll.user32.PostMessageW(hwnd, 0x0010, 0, 0)  # WM_CLOSE
+                        success = True
+                        message = t("deck.notify.window_closed")
+                    else:
+                        success = False
+                        message = t("deck.notify.no_active_window")
+                except Exception as cw_err:
+                    success = False
+                    message = t("deck.notify.generic_error", error=str(cw_err))
+
+            elif action_type == "text_macro":
+                tm_params: TextMacroParams = typed_params
+                macro_text = tm_params.text
+                if macro_text:
+                    try:
+                        import win32clipboard
+                        win32clipboard.OpenClipboard()
+                        try:
+                            win32clipboard.EmptyClipboard()
+                            win32clipboard.SetClipboardText(macro_text, win32clipboard.CF_UNICODETEXT)
+                        finally:
+                            win32clipboard.CloseClipboard()
+                    except Exception as clip_err:
+                        logger.debug(f"win32clipboard copy error: {clip_err}")
+
+                    send_hotkey(["ctrl", "v"])
+                    time.sleep(0.02)
+
+                if tm_params.send_enter:
+                    send_hotkey(["enter"])
+
+                success = True
+                message = t("deck.notify.macro_pasted")
+
+            elif action_type == "multimedia":
+                mm_params: MultimediaParams = typed_params
+                vk_map = {
+                    "play_pause": 0xCD,  # VK_MEDIA_PLAY_PAUSE
+                    "next_track": 0xB0,  # VK_MEDIA_NEXT_TRACK
+                    "prev_track": 0xB1,  # VK_MEDIA_PREV_TRACK
+                    "stop": 0xB2,        # VK_MEDIA_STOP
+                    "mute": 0xAD,        # VK_VOLUME_MUTE
+                    "volume_up": 0xAF,   # VK_VOLUME_UP
+                    "volume_down": 0xAE, # VK_VOLUME_DOWN
+                }
+                vk_code = vk_map.get(mm_params.command, 0xCD)
+                user32 = ctypes.windll.user32
+                user32.keybd_event(vk_code, 0, 0, 0)
+                time.sleep(0.01)
+                user32.keybd_event(vk_code, 0, 2, 0)  # KEYEVENTF_KEYUP
+                success = True
+                message = t(f"deck.notify.media_{mm_params.command}")
+
+            elif action_type == "volume_control":
+                vc_params: VolumeControlParams = typed_params
+                if vc_params.target == "microphone":
+                    if self.audio_manager is not None:
+                        is_muted = self.audio_manager.toggle_mic_mute()
+                    else:
+                        from modules.audio.service import AudioManager
+                        is_muted = AudioManager().toggle_mic_mute()
+                    success = True
+                    message = t("deck.notify.mic_muted") if is_muted else t("deck.notify.mic_unmuted")
+                elif vc_params.target == "master":
+                    if vc_params.command == "toggle_mute":
+                        if self.audio_manager is not None:
+                            is_muted = self.audio_manager.toggle_master_mute()
+                        else:
+                            from modules.audio.service import AudioManager
+                            is_muted = AudioManager().toggle_master_mute()
+                        success = True
+                        message = t("deck.notify.audio_muted") if is_muted else t("deck.notify.audio_unmuted")
+                    elif vc_params.command in ("volume_up", "volume_down"):
+                        delta = vc_params.step_percent if vc_params.command == "volume_up" else -vc_params.step_percent
+                        if self.audio_manager is not None and hasattr(self.audio_manager, "step_master_volume"):
+                            vol = self.audio_manager.step_master_volume(delta)
+                        else:
+                            from modules.audio.platform.endpoint_volume import EndpointVolume
+                            ev = EndpointVolume()
+                            vol = ev.step_volume(delta / 100.0)
+                        success = True
+                        pct = int(vol * 100) if isinstance(vol, float) else 50
+                        message = t("deck.notify.volume_updated", percent=pct)
+                    else:
+                        success = True
+                        message = t("deck.notify.volume_updated", percent=50)
+                else:  # focus_app
+                    try:
+                        from modules.audio.platform.session_volume import get_foreground_session_volume
+                        sess = get_foreground_session_volume()
+                        if sess:
+                            if vc_params.command == "toggle_mute":
+                                is_m = sess.toggle_mute()
+                                message = t("deck.notify.audio_muted") if is_m else t("deck.notify.audio_unmuted")
+                            else:
+                                delta = (vc_params.step_percent if vc_params.command == "volume_up" else -vc_params.step_percent) / 100.0
+                                vol = sess.step_volume(delta)
+                                message = t("deck.notify.volume_updated", percent=int(vol * 100))
+                            success = True
+                        else:
+                            if self.audio_manager is not None:
+                                is_m = self.audio_manager.toggle_master_mute()
+                            else:
+                                from modules.audio.service import AudioManager
+                                is_m = AudioManager().toggle_master_mute()
+                            success = True
+                            message = t("deck.notify.audio_muted") if is_m else t("deck.notify.audio_unmuted")
+                    except Exception as sess_err:
+                        logger.debug(f"Focus app volume error: {sess_err}")
+                        success = True
+                        message = t("deck.notify.volume_updated", percent=50)
+
+            elif action_type == "hotkey_switch":
+                hs_params: HotkeySwitchParams = typed_params
+                curr = getattr(hs_params, "current_state", 1)
+                active_state = hs_params.state_1 if curr == 1 else hs_params.state_2
+                next_state = 2 if curr == 1 else 1
+                hs_params.current_state = next_state
+                if isinstance(self.action_config.params, dict):
+                    self.action_config.params["current_state"] = next_state
+                if active_state.keys:
+                    success = send_hotkey(active_state.keys)
+                    state_name = active_state.title or str(curr)
+                    message = t("deck.notify.switch_state", state=state_name)
+                else:
+                    success = True
+                    state_name = active_state.title or str(curr)
+                    message = t("deck.notify.switch_state", state=state_name)
 
             else:
                 success = False

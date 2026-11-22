@@ -167,7 +167,26 @@
       "page_navigated": "Navigated to page: {page}",
       "unknown_cmd": "Unknown command: {cmd}",
       "unsupported_action": "Unsupported action type: {action}",
-      "generic_error": "Error: {error}"
+      "generic_error": "Error: {error}",
+      "website_opened": "Website opened: {url}",
+      "empty_url": "Website URL is empty",
+      "path_opened": "Path opened: {path}",
+      "empty_path": "Path is empty",
+      "path_not_found": "Path not found: {path}",
+      "app_launched": "Launched: {app}",
+      "empty_executable": "Executable is empty",
+      "window_closed": "Window closed",
+      "no_active_window": "No active window",
+      "macro_pasted": "Text macro pasted",
+      "media_play_pause": "Media: Play/Pause",
+      "media_next_track": "Media: Next Track",
+      "media_prev_track": "Media: Previous Track",
+      "media_stop": "Media: Stop",
+      "media_mute": "Media: Mute",
+      "media_volume_up": "Media: Volume +5%",
+      "media_volume_down": "Media: Volume -5%",
+      "volume_updated": "Volume: {percent}%",
+      "switch_state": "Switched to: {state}"
     },
     "feedback": {
       "switched": "Switched"
@@ -200,7 +219,19 @@
       "canvas": {
         "pagination": {
           "home_tooltip": "Home Page",
-          "add_tooltip": "Create New Page"
+          "add_tooltip": "Create New Page",
+          "page_tooltip": "Page {number}",
+          "context_menu_rename": "Rename Page",
+          "context_menu_duplicate": "Duplicate Page",
+          "context_menu_delete": "Delete Page",
+          "context_menu_clear": "Clear Page",
+          "rename_dialog_title": "Rename Page",
+          "rename_dialog_label": "Enter page name:",
+          "delete_confirm_title": "Delete Page",
+          "delete_confirm_message": "Are you sure you want to delete page '{name}'?",
+          "clear_confirm_title": "Clear Page",
+          "clear_confirm_message": "Are you sure you want to clear all buttons on page '{name}'?",
+          "duplicate_suffix": "(Copy)"
         },
         "touchbar": {
           "media_title": "Media Player",
@@ -219,7 +250,20 @@
         "fields": {
           "title": "Title:",
           "actions": "Actions:",
-          "hotkey": "Hotkey:"
+          "hotkey": "Hotkey:",
+          "params": "Params:",
+          "url": "Website URL:",
+          "path": "Path:",
+          "executable": "Application:",
+          "state_1": "State 1:",
+          "state_2": "State 2:",
+          "media_command": "Command:",
+          "macro_text": "Text:",
+          "send_enter": "↵ Enter",
+          "vol_target": "Target:",
+          "vol_action": "Action:",
+          "browse": "📂",
+          "color_accent": "Accent:"
         },
         "hotkey": {
           "click_to_assign": "Click to assign",
@@ -228,9 +272,35 @@
         "actions_presets": {
           "preset_actions": "Preset Actions",
           "hotkey": "Hotkey",
+          "hotkey_switch": "Hotkey Switch",
+          "website": "Website",
+          "open_app": "Launch Application",
+          "open_path": "Open Folder / File",
+          "close_window": "Close Window",
+          "text_macro": "Text Macro",
+          "multimedia": "Multimedia Control",
+          "volume_control": "Volume Control",
           "open_application": "Open Application",
-          "media_control": "Media Control",
-          "text_macro": "Text Macro"
+          "media_control": "Media Control"
+        },
+        "media_commands": {
+          "play_pause": "⏯️ Play / Pause",
+          "next_track": "⏭️ Next Track",
+          "prev_track": "⏮️ Previous Track",
+          "stop": "⏹️ Stop",
+          "mute": "🔇 Mute Audio",
+          "volume_up": "🔊 Volume +5%",
+          "volume_down": "🔉 Volume -5%"
+        },
+        "volume_targets": {
+          "focus_app": "Active Application (in focus)",
+          "master": "Master Volume",
+          "microphone": "Microphone (Input)"
+        },
+        "volume_actions": {
+          "toggle_mute": "Toggle Mute",
+          "volume_up": "Volume +5%",
+          "volume_down": "Volume -5%"
         },
         "touchbar": {
           "media_header": "Touchbar: Media Player",
@@ -277,9 +347,18 @@
           "brightness": "Brightness",
           "sleep_display": "Sleep Display",
           "hotkey": "Hotkey",
-          "open_app": "Open Application",
+          "hotkey_switch": "Hotkey Switch",
+          "open_app": "Launch Application",
           "open_website": "Open Website",
+          "website": "Open Website",
+          "open_path": "Open Path / File",
+          "close_window": "Close Active Window",
           "text_macro": "Text Macro",
+          "multimedia": "Multimedia Control",
+          "auto_software_vol": "Active App Volume",
+          "master_volume_control": "Master Volume",
+          "mic_mute_control": "Microphone Mute",
+          "output_device_toggle": "Switch Audio Device",
           "mute_audio": "Mute Audio",
           "volume_up": "Volume Up",
           "volume_down": "Volume Down",

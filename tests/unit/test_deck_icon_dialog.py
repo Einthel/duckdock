@@ -119,3 +119,32 @@ def test_key_preview_tile_signals_and_menu(qapp):
     tile._reset_icon()
     assert tile.get_icon() == ""
     assert selected_icons == [""]
+
+
+# Aliases & Step 5.2 Specific Tests
+test_icon_dialog_initialization_and_modal_state = test_icon_library_dialog_initialization
+test_icon_dialog_search_input_updates_grid = test_icon_library_dialog_search_filter
+test_icon_dialog_zoom_slider = test_icon_library_dialog_zoom
+test_icon_dialog_selection_and_signal = test_icon_library_dialog_selection
+
+
+def test_icon_dialog_retranslate_ui(qapp):
+    """Смена языка обновляет заголовок, плейсхолдер и кнопки диалога."""
+    from core.i18n import I18nManager
+    mgr = I18nManager()
+    orig = mgr.current_language
+    try:
+        dialog = IconLibraryDialog()
+        mgr.set_language("ru", emit_signal=False)
+        dialog.retranslate_ui()
+        assert dialog.windowTitle() == "Библиотека иконок DuckDeck"
+        assert dialog.btn_select.text() == "Выбрать"
+
+        mgr.set_language("en", emit_signal=False)
+        dialog.retranslate_ui()
+        assert dialog.windowTitle() == "DuckDeck Icon Library"
+        assert dialog.btn_select.text() == "Select"
+        dialog.close()
+    finally:
+        mgr.set_language(orig, emit_signal=False)
+

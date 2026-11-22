@@ -205,6 +205,7 @@ def test_pagination_bar_page_switch(qtbot):
       - Клик по кнопке Add (+) через qtbot генерирует сигнал add_page_requested.
     """
     bar = PageNavigationBar()
+    bar.set_page_count(5)
     received_pages: List[int] = []
     add_requested_count = 0
 

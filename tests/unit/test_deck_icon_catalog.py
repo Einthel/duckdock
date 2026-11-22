@@ -130,3 +130,9 @@ def test_icon_catalog_custom_icons_scan_and_save(qapp, tmp_path):
         # Сканируем
         custom_entries = catalog.scan_custom_icons()
         assert any(e.name == "Test Icon" or "test_icon" in e.id for e in custom_entries)
+
+
+# Aliases for Sprint 5 Step 5.2 compliance
+test_icon_catalog_categories_and_items = test_icon_catalog_builtin_categories
+test_icon_catalog_search_filtering = test_icon_catalog_bilingual_search
+

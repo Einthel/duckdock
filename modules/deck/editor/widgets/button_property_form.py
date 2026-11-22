@@ -1,22 +1,28 @@
 """
 Форма инспектора свойств кнопки (ButtonPropertyForm).
 Включает шапку с категорией и корзиной 🗑️, плитку превью иконки (84x84 px),
-поля Title, Actions (пресеты) и Hotkey. Поддерживает in-place retranslate без потери данных.
+палитру акцентных цветов ColorAccentPicker (5 неоновых свотчей), поля Title, Actions (пресеты)
+и динамический стек подформ параметров QStackedLayout (Hotkey, Hotkey Switch, Path/URL, Multimedia, Text Macro, Volume Control).
+Строго соблюдает бюджет высоты 220 px и инвариант In-place Retranslate без потери данных.
 """
 from __future__ import annotations
 
-from typing import Optional
+import os
+from typing import Any, Optional
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDialog,
+    QFileDialog,
     QFrame,
     QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
+    QStackedLayout,
     QVBoxLayout,
     QWidget,
 )
@@ -24,6 +30,7 @@ from PySide6.QtWidgets import (
 from core.i18n import t
 from modules.deck.editor.dto import ButtonSlotDTO
 from modules.deck.editor.styles import (
+    BORDER_SURFACE_2,
     FORM_LABEL_WIDTH,
     INPUT_HEIGHT,
     INSPECTOR_HEIGHT,
@@ -31,14 +38,479 @@ from modules.deck.editor.styles import (
 from modules.deck.editor.widgets.hotkey_capture import HotkeyCaptureButton
 from modules.deck.editor.widgets.key_preview_tile import KeyPreviewTile
 
-# Пресеты типов действий в выпадающем списке
-ACTION_PRESET_KEYS = [
-    "preset_actions",
-    "hotkey",
-    "open_application",
-    "media_control",
-    "text_macro",
+# Список 5 фирменных неоновых цветов
+ACCENT_COLORS = [
+    "#38bdf8",  # Cyan
+    "#10b981",  # Emerald
+    "#f59e0b",  # Amber
+    "#f43f5e",  # Rose
+    "#a855f7",  # Violet
 ]
+
+# Ключи пресетов действий в комбобоксе
+ACTION_PRESET_KEYS = [
+    "hotkey",
+    "hotkey_switch",
+    "website",
+    "open_app",
+    "open_path",
+    "close_window",
+    "text_macro",
+    "multimedia",
+    "volume_control",
+]
+
+# Команды мультимедиа
+MEDIA_COMMAND_KEYS = [
+    "play_pause",
+    "next_track",
+    "prev_track",
+    "stop",
+    "mute",
+    "volume_up",
+    "volume_down",
+]
+
+# Цели регулировки звука
+VOLUME_TARGET_KEYS = [
+    "focus_app",
+    "master",
+    "microphone",
+]
+
+# Действия со звуком
+VOLUME_ACTION_KEYS = [
+    "toggle_mute",
+    "volume_up",
+    "volume_down",
+]
+
+
+class ColorAccentPicker(QWidget):
+    """
+    Горизонтальный стрип выбора акцентного цвета кнопки из 5 круглых свотчей (20x20 px).
+    """
+
+    color_selected = Signal(str)
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self.setObjectName("colorAccentPicker")
+        self.setFixedHeight(28)
+
+        self._current_color: str = ACCENT_COLORS[0]
+        self._buttons: list[QPushButton] = []
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 2, 0, 2)
+        layout.setSpacing(6)
+        layout.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+
+        for col in ACCENT_COLORS:
+            btn = QPushButton(self)
+            btn.setProperty("class", "ColorAccentSwatch")
+            btn.setFixedSize(20, 20)
+            btn.setCursor(Qt.PointingHandCursor)
+            btn.setStyleSheet(
+                f"background-color: {col}; border-radius: 10px; border: 1px solid {BORDER_SURFACE_2};"
+            )
+            btn.clicked.connect(lambda checked=False, c=col: self._on_color_clicked(c))
+            layout.addWidget(btn)
+            self._buttons.append(btn)
+
+        self.set_color(self._current_color)
+
+    def get_color(self) -> str:
+        return self._current_color
+
+    def set_color(self, hex_color: str) -> None:
+        target = hex_color.lower().strip() if hex_color else ACCENT_COLORS[0]
+        matched = False
+        for btn, col in zip(self._buttons, ACCENT_COLORS):
+            is_active = (col.lower() == target)
+            if is_active:
+                matched = True
+                self._current_color = col
+                btn.setProperty("selected", "true")
+                btn.setStyleSheet(f"background-color: {col}; border-radius: 10px; border: 2px solid #ffffff;")
+            else:
+                btn.setProperty("selected", "false")
+                btn.setStyleSheet(f"background-color: {col}; border-radius: 10px; border: 1px solid {BORDER_SURFACE_2};")
+            btn.style().unpolish(btn)
+            btn.style().polish(btn)
+
+        if not matched and self._buttons:
+            self._current_color = ACCENT_COLORS[0]
+            self._buttons[0].setProperty("selected", "true")
+            self._buttons[0].setStyleSheet(
+                f"background-color: {ACCENT_COLORS[0]}; border-radius: 10px; border: 2px solid #ffffff;"
+            )
+
+    def _on_color_clicked(self, hex_color: str) -> None:
+        self.set_color(hex_color)
+        self.color_selected.emit(self._current_color)
+
+
+class HotkeySubform(QWidget):
+    """Подформа 0: Одиночный захват горячей клавиши."""
+
+    hotkey_changed = Signal(str)
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self.setFixedHeight(INPUT_HEIGHT)
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        self.btn_hotkey = HotkeyCaptureButton(self)
+        self.btn_hotkey.hotkey_changed.connect(self.hotkey_changed.emit)
+        layout.addWidget(self.btn_hotkey)
+
+    def get_hotkey(self) -> str:
+        return self.btn_hotkey.get_hotkey()
+
+    def set_hotkey(self, hotkey: str) -> None:
+        self.btn_hotkey.set_hotkey(hotkey)
+
+    def retranslate_ui(self) -> None:
+        self.btn_hotkey.retranslate_ui()
+
+
+class HotkeySwitchSubform(QWidget):
+    """Подформа 1: Двухпозиционный переключатель хоткеев (State 1 ⇄ State 2)."""
+
+    params_changed = Signal(dict)
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self.setFixedHeight(INPUT_HEIGHT)
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+
+        self.lbl_s1 = QLabel(self)
+        self.lbl_s1.setProperty("class", "InspectorFieldLabel")
+        self.btn_s1 = HotkeyCaptureButton(self)
+
+        self.lbl_arrow = QLabel("⇄", self)
+        self.lbl_arrow.setProperty("class", "InspectorFieldLabel")
+        self.lbl_arrow.setAlignment(Qt.AlignCenter)
+
+        self.lbl_s2 = QLabel(self)
+        self.lbl_s2.setProperty("class", "InspectorFieldLabel")
+        self.btn_s2 = HotkeyCaptureButton(self)
+
+        self.btn_s1.hotkey_changed.connect(self._emit_params)
+        self.btn_s2.hotkey_changed.connect(self._emit_params)
+
+        layout.addWidget(self.lbl_s1)
+        layout.addWidget(self.btn_s1, 1)
+        layout.addWidget(self.lbl_arrow)
+        layout.addWidget(self.lbl_s2)
+        layout.addWidget(self.btn_s2, 1)
+
+        self.retranslate_ui()
+
+    def _emit_params(self) -> None:
+        s1_keys = [k.strip() for k in self.btn_s1.get_hotkey().split("+") if k.strip()]
+        s2_keys = [k.strip() for k in self.btn_s2.get_hotkey().split("+") if k.strip()]
+        params = {
+            "state_1": {"title": "State 1", "keys": s1_keys},
+            "state_2": {"title": "State 2", "keys": s2_keys},
+            "current_state": 1,
+        }
+        self.params_changed.emit(params)
+
+    def set_params(self, params: dict[str, Any]) -> None:
+        self.btn_s1.blockSignals(True)
+        self.btn_s2.blockSignals(True)
+        try:
+            s1 = params.get("state_1", {})
+            s2 = params.get("state_2", {})
+            k1 = s1.get("keys", []) if isinstance(s1, dict) else getattr(s1, "keys", [])
+            k2 = s2.get("keys", []) if isinstance(s2, dict) else getattr(s2, "keys", [])
+            self.btn_s1.set_hotkey(" + ".join(k1) if k1 else "")
+            self.btn_s2.set_hotkey(" + ".join(k2) if k2 else "")
+        finally:
+            self.btn_s1.blockSignals(False)
+            self.btn_s2.blockSignals(False)
+
+    def retranslate_ui(self) -> None:
+        self.lbl_s1.setText(t("deck.editor.inspector.fields.state_1"))
+        self.lbl_s2.setText(t("deck.editor.inspector.fields.state_2"))
+        self.btn_s1.retranslate_ui()
+        self.btn_s2.retranslate_ui()
+
+
+class PathUrlSubform(QWidget):
+    """Подформа 2: Поле ввода URL или пути к приложению/папке с кнопкой обзора 📂."""
+
+    params_changed = Signal(dict)
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self.setFixedHeight(INPUT_HEIGHT)
+        self._mode: str = "website"  # "website", "open_app", "open_path"
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+
+        self.edit_input = QLineEdit(self)
+        self.edit_input.setProperty("class", "InspectorLineEdit")
+        self.edit_input.setFixedHeight(INPUT_HEIGHT)
+        self.edit_input.textEdited.connect(self._on_text_edited)
+        self.edit_path = self.edit_input
+
+        self.btn_browse = QPushButton(self)
+        self.btn_browse.setProperty("class", "InspectorBrowseButton")
+        self.btn_browse.setFixedSize(INPUT_HEIGHT, INPUT_HEIGHT)
+        self.btn_browse.setCursor(Qt.PointingHandCursor)
+        self.btn_browse.clicked.connect(self._on_browse_clicked)
+
+        layout.addWidget(self.edit_input, 1)
+        layout.addWidget(self.btn_browse)
+
+        self.retranslate_ui()
+
+    def get_path_or_url(self) -> str:
+        return self.edit_input.text()
+
+    def set_path_or_url(self, text: str) -> None:
+        self.edit_input.setText(text)
+        self._on_text_edited(text)
+
+    def set_mode(self, mode: str) -> None:
+        self._mode = mode
+        if mode == "website":
+            self.edit_input.setPlaceholderText("https://...")
+            self.btn_browse.setVisible(False)
+        elif mode == "open_app":
+            self.edit_input.setPlaceholderText("C:\\Program Files\\...")
+            self.btn_browse.setVisible(True)
+        else:  # open_path
+            self.edit_input.setPlaceholderText("C:\\Folder\\Document.pdf")
+            self.btn_browse.setVisible(True)
+
+    def _on_text_edited(self, text: str) -> None:
+        if self._mode == "website":
+            self.params_changed.emit({"url": text})
+        elif self._mode == "open_app":
+            self.params_changed.emit({"executable": text, "args": []})
+        else:
+            self.params_changed.emit({"path": text})
+
+    def _on_browse_clicked(self) -> None:
+        if self._mode == "open_app":
+            file_path, _ = QFileDialog.getOpenFileName(
+                self,
+                t("deck.editor.inspector.fields.executable"),
+                os.path.expandvars("%ProgramFiles%"),
+                "Executable (*.exe *.bat *.cmd);;All Files (*.*)",
+            )
+            if file_path:
+                self.edit_input.setText(file_path)
+                self._on_text_edited(file_path)
+        elif self._mode == "open_path":
+            file_path, _ = QFileDialog.getOpenFileName(
+                self,
+                t("deck.editor.inspector.fields.path"),
+                os.path.expanduser("~"),
+                "All Files (*.*)",
+            )
+            if file_path:
+                self.edit_input.setText(file_path)
+                self._on_text_edited(file_path)
+
+    def set_params(self, params: dict[str, Any]) -> None:
+        self.edit_input.blockSignals(True)
+        try:
+            if self._mode == "website":
+                self.edit_input.setText(params.get("url", ""))
+            elif self._mode == "open_app":
+                self.edit_input.setText(params.get("executable", params.get("path", "")))
+            else:
+                self.edit_input.setText(params.get("path", ""))
+        finally:
+            self.edit_input.blockSignals(False)
+
+    def retranslate_ui(self) -> None:
+        self.btn_browse.setText(t("deck.editor.inspector.fields.browse"))
+
+
+class MultimediaSubform(QWidget):
+    """Подформа 3: Выбор мультимедийной команды Windows."""
+
+    params_changed = Signal(dict)
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self.setFixedHeight(INPUT_HEIGHT)
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        self.combo_cmd = QComboBox(self)
+        self.combo_cmd.setFixedHeight(INPUT_HEIGHT)
+        self.combo_cmd.setCursor(Qt.PointingHandCursor)
+        for key in MEDIA_COMMAND_KEYS:
+            self.combo_cmd.addItem(t(f"deck.editor.inspector.media_commands.{key}"), key)
+        self.combo_cmd.currentIndexChanged.connect(self._on_cmd_changed)
+
+        layout.addWidget(self.combo_cmd)
+        self.retranslate_ui()
+
+    def _on_cmd_changed(self, index: int) -> None:
+        cmd_key = self.combo_cmd.itemData(index) or MEDIA_COMMAND_KEYS[0]
+        self.params_changed.emit({"command": cmd_key})
+
+    def set_params(self, params: dict[str, Any]) -> None:
+        cmd = params.get("command", MEDIA_COMMAND_KEYS[0])
+        self.combo_cmd.blockSignals(True)
+        try:
+            for i in range(self.combo_cmd.count()):
+                if self.combo_cmd.itemData(i) == cmd:
+                    self.combo_cmd.setCurrentIndex(i)
+                    break
+        finally:
+            self.combo_cmd.blockSignals(False)
+
+    def retranslate_ui(self) -> None:
+        self.combo_cmd.blockSignals(True)
+        try:
+            for i in range(self.combo_cmd.count()):
+                key = self.combo_cmd.itemData(i)
+                if key:
+                    self.combo_cmd.setItemText(i, t(f"deck.editor.inspector.media_commands.{key}"))
+        finally:
+            self.combo_cmd.blockSignals(False)
+
+
+class TextMacroSubform(QWidget):
+    """Подформа 4: Поле ввода текстового шаблона + чекбокс Enter."""
+
+    params_changed = Signal(dict)
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self.setFixedHeight(INPUT_HEIGHT)
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+
+        self.edit_text = QLineEdit(self)
+        self.edit_text.setProperty("class", "InspectorLineEdit")
+        self.edit_text.setFixedHeight(INPUT_HEIGHT)
+        self.edit_text.textEdited.connect(self._emit_params)
+
+        self.chk_enter = QCheckBox(self)
+        self.chk_enter.setCursor(Qt.PointingHandCursor)
+        self.chk_enter.stateChanged.connect(self._emit_params)
+
+        layout.addWidget(self.edit_text, 1)
+        layout.addWidget(self.chk_enter)
+
+        self.retranslate_ui()
+
+    def _emit_params(self) -> None:
+        self.params_changed.emit({
+            "text": self.edit_text.text(),
+            "send_enter": self.chk_enter.isChecked(),
+        })
+
+    def set_params(self, params: dict[str, Any]) -> None:
+        self.edit_text.blockSignals(True)
+        self.chk_enter.blockSignals(True)
+        try:
+            self.edit_text.setText(params.get("text", ""))
+            self.chk_enter.setChecked(bool(params.get("send_enter", False)))
+        finally:
+            self.edit_text.blockSignals(False)
+            self.chk_enter.blockSignals(False)
+
+    def retranslate_ui(self) -> None:
+        self.chk_enter.setText(t("deck.editor.inspector.fields.send_enter"))
+
+
+class VolumeSubform(QWidget):
+    """Подформа 5: Управление громкостью (Цель + Действие)."""
+
+    params_changed = Signal(dict)
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self.setFixedHeight(INPUT_HEIGHT)
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+
+        self.combo_target = QComboBox(self)
+        self.combo_target.setFixedHeight(INPUT_HEIGHT)
+        self.combo_target.setCursor(Qt.PointingHandCursor)
+        for key in VOLUME_TARGET_KEYS:
+            self.combo_target.addItem(t(f"deck.editor.inspector.volume_targets.{key}"), key)
+        self.combo_target.currentIndexChanged.connect(self._emit_params)
+
+        self.combo_action = QComboBox(self)
+        self.combo_action.setFixedHeight(INPUT_HEIGHT)
+        self.combo_action.setCursor(Qt.PointingHandCursor)
+        for key in VOLUME_ACTION_KEYS:
+            self.combo_action.addItem(t(f"deck.editor.inspector.volume_actions.{key}"), key)
+        self.combo_action.currentIndexChanged.connect(self._emit_params)
+
+        layout.addWidget(self.combo_target, 1)
+        layout.addWidget(self.combo_action, 1)
+
+        self.retranslate_ui()
+
+    def _emit_params(self) -> None:
+        t_key = self.combo_target.itemData(self.combo_target.currentIndex()) or VOLUME_TARGET_KEYS[0]
+        a_key = self.combo_action.itemData(self.combo_action.currentIndex()) or VOLUME_ACTION_KEYS[0]
+        self.params_changed.emit({
+            "target": t_key,
+            "command": a_key,
+            "step_percent": 5,
+        })
+
+    def set_params(self, params: dict[str, Any]) -> None:
+        t_key = params.get("target", VOLUME_TARGET_KEYS[0])
+        a_key = params.get("command", VOLUME_ACTION_KEYS[0])
+        self.combo_target.blockSignals(True)
+        self.combo_action.blockSignals(True)
+        try:
+            for i in range(self.combo_target.count()):
+                if self.combo_target.itemData(i) == t_key:
+                    self.combo_target.setCurrentIndex(i)
+                    break
+            for i in range(self.combo_action.count()):
+                if self.combo_action.itemData(i) == a_key:
+                    self.combo_action.setCurrentIndex(i)
+                    break
+        finally:
+            self.combo_target.blockSignals(False)
+            self.combo_action.blockSignals(False)
+
+    def retranslate_ui(self) -> None:
+        self.combo_target.blockSignals(True)
+        self.combo_action.blockSignals(True)
+        try:
+            for i in range(self.combo_target.count()):
+                k = self.combo_target.itemData(i)
+                if k:
+                    self.combo_target.setItemText(i, t(f"deck.editor.inspector.volume_targets.{k}"))
+            for i in range(self.combo_action.count()):
+                k = self.combo_action.itemData(i)
+                if k:
+                    self.combo_action.setItemText(i, t(f"deck.editor.inspector.volume_actions.{k}"))
+        finally:
+            self.combo_target.blockSignals(False)
+            self.combo_action.blockSignals(False)
 
 
 class ButtonPropertyForm(QWidget):
@@ -62,8 +534,8 @@ class ButtonPropertyForm(QWidget):
 
         # Главный вертикальный лэйаут формы
         root_layout = QVBoxLayout(self)
-        root_layout.setContentsMargins(12, 8, 12, 8)
-        root_layout.setSpacing(6)
+        root_layout.setContentsMargins(12, 10, 12, 10)
+        root_layout.setSpacing(8)
 
         # ----------------------------------------------------------------------
         # 1. Шапка формы (Header Row: категория слева, корзина справа)
@@ -97,13 +569,19 @@ class ButtonPropertyForm(QWidget):
         root_layout.addWidget(separator)
 
         # ----------------------------------------------------------------------
-        # 2. Содержимое формы (Content Row: превью-плитка 84x84 + сетка полей)
+        # 2. Содержимое формы: Колонка превью (Превью 84x84 + ColorAccentPicker)
+        #    и Сетка параметров (Title, Actions, Dynamic Params Subforms)
         # ----------------------------------------------------------------------
         content_layout = QHBoxLayout()
         content_layout.setContentsMargins(0, 2, 0, 2)
         content_layout.setSpacing(12)
 
-        # Слева: интерактивная плитка превью иконки (84x84 px)
+        # Левая колонка: Превью-плитка + Стрип выбора цвета акцента
+        left_preview_layout = QVBoxLayout()
+        left_preview_layout.setContentsMargins(0, 0, 0, 0)
+        left_preview_layout.setSpacing(6)
+        left_preview_layout.setAlignment(Qt.AlignTop)
+
         self.preview_tile = KeyPreviewTile(self)
         self.preview_tile.tile_clicked.connect(
             lambda: self.property_changed.emit("icon_clicked", None)
@@ -116,12 +594,18 @@ class ButtonPropertyForm(QWidget):
         )
         self.preview_tile.open_library_requested.connect(self._open_icon_library_dialog)
         self.preview_tile.icon_selected.connect(self._on_icon_selected_directly)
-        content_layout.addWidget(self.preview_tile)
+        left_preview_layout.addWidget(self.preview_tile)
 
-        # Справа: сетка параметров (Title, Actions, Hotkey)
+        self.accent_picker = ColorAccentPicker(self)
+        self.accent_picker.color_selected.connect(self._on_color_accent_changed)
+        left_preview_layout.addWidget(self.accent_picker)
+
+        content_layout.addLayout(left_preview_layout)
+
+        # Справа: сетка параметров (Title, Actions, Params Stack)
         fields_grid = QGridLayout()
         fields_grid.setContentsMargins(0, 0, 0, 0)
-        fields_grid.setVerticalSpacing(6)
+        fields_grid.setVerticalSpacing(8)
         fields_grid.setHorizontalSpacing(8)
 
         # Строка 0: Title
@@ -168,19 +652,55 @@ class ButtonPropertyForm(QWidget):
         fields_grid.addWidget(self.lbl_actions_field, 1, 0, Qt.AlignVCenter)
         fields_grid.addWidget(self.combo_actions, 1, 1, 1, 2)
 
-        # Строка 2: Hotkey (кнопка интерактивного захвата)
-        self.lbl_hotkey_field = QLabel(self)
-        self.lbl_hotkey_field.setObjectName("lblHotkeyField")
-        self.lbl_hotkey_field.setProperty("class", "InspectorFieldLabel")
-        self.lbl_hotkey_field.setFixedWidth(FORM_LABEL_WIDTH)
+        # Строка 2: Params (Динамический стек подформ в одну строку 28 px)
+        self.lbl_params_field = QLabel(self)
+        self.lbl_params_field.setObjectName("lblParamsField")
+        self.lbl_params_field.setProperty("class", "InspectorFieldLabel")
+        self.lbl_params_field.setFixedWidth(FORM_LABEL_WIDTH)
+        self.lbl_hotkey_field = self.lbl_params_field  # Backward compatibility shim
 
-        self.btn_hotkey = HotkeyCaptureButton(self)
-        self.btn_hotkey.hotkey_changed.connect(
+        params_container = QWidget(self)
+        params_container.setFixedHeight(INPUT_HEIGHT)
+        self.params_stack = QStackedLayout(params_container)
+        self.params_stack.setContentsMargins(0, 0, 0, 0)
+
+        # Подформы 0..5
+        self.subform_hotkey = HotkeySubform(params_container)
+        self.subform_hotkey_switch = HotkeySwitchSubform(params_container)
+        self.subform_path_url = PathUrlSubform(params_container)
+        self.subform_multimedia = MultimediaSubform(params_container)
+        self.subform_text_macro = TextMacroSubform(params_container)
+        self.subform_volume = VolumeSubform(params_container)
+
+        # Подписка на сигналы изменения подформ
+        self.subform_hotkey.hotkey_changed.connect(
             lambda hk: self.property_changed.emit("hotkey", hk)
         )
+        self.subform_hotkey_switch.params_changed.connect(
+            lambda p: self.property_changed.emit("action_params", p)
+        )
+        self.subform_path_url.params_changed.connect(
+            lambda p: self.property_changed.emit("action_params", p)
+        )
+        self.subform_multimedia.params_changed.connect(
+            lambda p: self.property_changed.emit("action_params", p)
+        )
+        self.subform_text_macro.params_changed.connect(
+            lambda p: self.property_changed.emit("action_params", p)
+        )
+        self.subform_volume.params_changed.connect(
+            lambda p: self.property_changed.emit("action_params", p)
+        )
 
-        fields_grid.addWidget(self.lbl_hotkey_field, 2, 0, Qt.AlignVCenter)
-        fields_grid.addWidget(self.btn_hotkey, 2, 1, 1, 2)
+        self.params_stack.addWidget(self.subform_hotkey)         # Index 0
+        self.params_stack.addWidget(self.subform_hotkey_switch)  # Index 1
+        self.params_stack.addWidget(self.subform_path_url)       # Index 2
+        self.params_stack.addWidget(self.subform_multimedia)     # Index 3
+        self.params_stack.addWidget(self.subform_text_macro)     # Index 4
+        self.params_stack.addWidget(self.subform_volume)         # Index 5
+
+        fields_grid.addWidget(self.lbl_params_field, 2, 0, Qt.AlignVCenter)
+        fields_grid.addWidget(params_container, 2, 1, 1, 2)
 
         content_layout.addLayout(fields_grid)
         root_layout.addLayout(content_layout)
@@ -188,26 +708,23 @@ class ButtonPropertyForm(QWidget):
         # Эластичный спейсер для плотной фиксации в пределах 220 px
         root_layout.addStretch(1)
 
+        # Обратная совместимость для существующих тестов, читающих btn_hotkey
+        self.btn_hotkey = self.subform_hotkey.btn_hotkey
+
         # Начальная инициализация локализованных строк
         self.retranslate_ui()
 
     def set_category(self, category: str) -> None:
-        """
-        Устанавливает отображаемое имя категории/типа в шапке формы.
-        """
+        """Устанавливает отображаемое имя категории/типа в шапке формы."""
         self._current_category_raw = category
         self.lbl_category.setText(category)
 
     def get_category(self) -> str:
-        """
-        Возвращает текущую строку категории.
-        """
+        """Возвращает текущую строку категории."""
         return self._current_category_raw
 
     def get_slot_index(self) -> int:
-        """
-        Возвращает индекс текущего редактируемого слота кнопки.
-        """
+        """Возвращает индекс текущего редактируемого слота кнопки."""
         return self._slot_index
 
     def load_slot_data(self, dto: ButtonSlotDTO) -> None:
@@ -225,25 +742,38 @@ class ButtonPropertyForm(QWidget):
             self.set_category(category_text)
             self.edit_title.setText(dto.title)
 
+            # Выбор цвета акцента
+            accent_col = dto.color_accent or ACCENT_COLORS[0]
+            self.accent_picker.set_color(accent_col)
+
             # Сопоставление типа действия с элементом комбобокса
-            target_action = dto.action_type.strip().lower()
-            target_key_matched = False
+            raw_action = dto.action_type.strip().lower().replace(" ", "_")
+            if raw_action in ("open_application", "launch"):
+                raw_action = "open_app"
+            elif raw_action in ("media_control", "media"):
+                raw_action = "multimedia"
+            elif raw_action in ("open_website", "web"):
+                raw_action = "website"
+
+            target_idx = 0
             for i in range(self.combo_actions.count()):
-                data_val = str(self.combo_actions.itemData(i)).lower()
-                text_val = self.combo_actions.itemText(i).lower()
-                if (
-                    target_action == data_val
-                    or target_action == text_val
-                    or target_action.replace(" ", "_") == data_val
-                ):
-                    self.combo_actions.setCurrentIndex(i)
-                    target_key_matched = True
+                val = str(self.combo_actions.itemData(i)).lower()
+                if raw_action == val:
+                    target_idx = i
                     break
 
-            if not target_key_matched and self.combo_actions.count() > 0:
-                self.combo_actions.setCurrentIndex(0)
+            self.combo_actions.setCurrentIndex(target_idx)
+            self._update_subform_visibility(self.combo_actions.itemData(target_idx))
 
-            self.btn_hotkey.set_hotkey(dto.hotkey)
+            # Загрузка параметров в подформы
+            params = dict(dto.action_params) if dto.action_params else {}
+            self.subform_hotkey.set_hotkey(dto.hotkey)
+            self.subform_hotkey_switch.set_params(params)
+            self.subform_path_url.set_params(params)
+            self.subform_multimedia.set_params(params)
+            self.subform_text_macro.set_params(params)
+            self.subform_volume.set_params(params)
+
             self.preview_tile.set_icon(dto.icon)
         finally:
             self.edit_title.blockSignals(False)
@@ -253,16 +783,20 @@ class ButtonPropertyForm(QWidget):
     def retranslate_ui(self) -> None:
         """
         Обновляет локализованные подписи полей, тултипы и элементы пресетов действий.
-        Строго сохраняет введенный пользователем текст в edit_title и назначенный хоткей.
+        Строго сохраняет введенный пользователем текст в edit_title и параметры подформ.
         (In-place Retranslate Invariant).
         """
-        # Тултип кнопки удаления
         self.btn_delete.setToolTip(t("deck.editor.inspector.tooltips.delete_action"))
 
         # Подписи полей формы
         self.lbl_title_field.setText(t("deck.editor.inspector.fields.title"))
         self.lbl_actions_field.setText(t("deck.editor.inspector.fields.actions"))
-        self.lbl_hotkey_field.setText(t("deck.editor.inspector.fields.hotkey"))
+
+        curr_action = self.combo_actions.itemData(self.combo_actions.currentIndex())
+        if curr_action == "hotkey":
+            self.lbl_params_field.setText(t("deck.editor.inspector.fields.hotkey"))
+        else:
+            self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
 
         # Пресеты в комбобоксе: обновление текстов по сохраненному userData ключу
         self.combo_actions.blockSignals(True)
@@ -276,23 +810,53 @@ class ButtonPropertyForm(QWidget):
         finally:
             self.combo_actions.blockSignals(False)
 
-        # Каскадный вызов локализации дочерних интерактивных компонентов
+        # Каскадный вызов локализации подформ и дочерних компонентов
         self.preview_tile.retranslate_ui()
-        self.btn_hotkey.retranslate_ui()
+        self.subform_hotkey.retranslate_ui()
+        self.subform_hotkey_switch.retranslate_ui()
+        self.subform_path_url.retranslate_ui()
+        self.subform_multimedia.retranslate_ui()
+        self.subform_text_macro.retranslate_ui()
+        self.subform_volume.retranslate_ui()
+
+    def _update_subform_visibility(self, action_key: Optional[str]) -> None:
+        """Переключает активную страницу стэка подформ в зависимости от выбранного действия."""
+        if action_key == "hotkey":
+            self.params_stack.setCurrentIndex(0)
+            self.lbl_params_field.setText(t("deck.editor.inspector.fields.hotkey"))
+        elif action_key == "hotkey_switch":
+            self.params_stack.setCurrentIndex(1)
+            self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
+        elif action_key in ("website", "open_app", "open_path"):
+            self.params_stack.setCurrentIndex(2)
+            self.subform_path_url.set_mode(action_key)
+            self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
+        elif action_key == "multimedia":
+            self.params_stack.setCurrentIndex(3)
+            self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
+        elif action_key == "text_macro":
+            self.params_stack.setCurrentIndex(4)
+            self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
+        elif action_key == "volume_control":
+            self.params_stack.setCurrentIndex(5)
+            self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
+        else:
+            self.params_stack.setCurrentIndex(0)
+            self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
 
     def _on_action_type_changed(self, index: int) -> None:
-        """
-        Обработчик пользовательского выбора типа действия в комбобоксе.
-        """
+        """Обработчик пользовательского выбора типа действия в комбобоксе."""
         preset_key = self.combo_actions.itemData(index)
         value_to_emit = preset_key if preset_key is not None else self.combo_actions.currentText()
+        self._update_subform_visibility(preset_key)
         self.property_changed.emit("action_type", value_to_emit)
 
+    def _on_color_accent_changed(self, hex_color: str) -> None:
+        """Обрабатывает выбор цвета в палитре и эмитит сигнал изменения."""
+        self.property_changed.emit("color_accent", hex_color)
+
     def _open_icon_library_dialog(self) -> None:
-        """
-        Открывает модальный диалог IconLibraryDialog для выбора иконки из каталога.
-        При подтверждении выбора обновляет превью-плитку и транслирует сигнал изменения.
-        """
+        """Открывает модальный диалог IconLibraryDialog для выбора иконки из каталога."""
         from modules.deck.editor.widgets.icon_library_dialog import IconLibraryDialog
 
         dialog = IconLibraryDialog(parent=self.window(), current_icon=self.preview_tile.get_icon())
@@ -306,3 +870,20 @@ class ButtonPropertyForm(QWidget):
         """Обрабатывает прямой выбор иконки из файла или сброс из контекстного меню."""
         self.preview_tile.set_icon(icon_str_or_path)
         self.property_changed.emit("icon", icon_str_or_path)
+
+
+__all__ = [
+    "ACCENT_COLORS",
+    "ACTION_PRESET_KEYS",
+    "MEDIA_COMMAND_KEYS",
+    "VOLUME_TARGET_KEYS",
+    "VOLUME_ACTION_KEYS",
+    "ColorAccentPicker",
+    "HotkeySubform",
+    "HotkeySwitchSubform",
+    "PathUrlSubform",
+    "MultimediaSubform",
+    "TextMacroSubform",
+    "VolumeSubform",
+    "ButtonPropertyForm",
+]

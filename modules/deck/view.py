@@ -26,6 +26,7 @@ from modules.deck.sound_engine import DeckSoundEngine
 from modules.deck.models import (
     DeckButtonConfig,
     DeckConfigLoader,
+    DeckPageConfig,
     DeckRootConfig,
     NavigationParams,
 )
@@ -260,18 +261,32 @@ class DeckView(TouchModuleView):
                 pass
             self._eventbus_connected = False
 
+    def get_display_pages(self) -> list[DeckPageConfig]:
+        """
+        Возвращает только непустые страницы для отображения на сенсорной панели.
+        Пустые страницы (без кнопок) не отображаются на панели и не попадают в счетчик страниц.
+        Если все страницы пустые, возвращается первая страница для избежания нулевого счетчика.
+        """
+        if not self.root_config or not self.root_config.pages:
+            return []
+        non_empty = [p for p in self.root_config.pages if len(p.buttons) > 0]
+        return non_empty if non_empty else [self.root_config.pages[0]]
+
     def load_config(self) -> None:
         """Загрузка конфигурации макро-панели с откатом на дефолт при ошибке."""
         self.root_config = DeckConfigLoader.load_from_file(self.config_path)
         if not self.root_config.pages:
             self.root_config = DeckConfigLoader.get_default_config()
 
-        # Регистрация страниц в виджете пагинации
+        # Регистрация страниц в виджете пагинации (только непустые страницы панели)
+        display_pages = self.get_display_pages()
         if hasattr(self, "interactive_panel"):
-            page_ids = [p.id for p in self.root_config.pages]
+            page_ids = [p.id for p in display_pages]
             self.interactive_panel.set_page_ids(page_ids)
 
-        self.active_page_id = self.root_config.active_profile or self.root_config.pages[0].id
+        self.active_page_id = self.root_config.active_profile or (display_pages[0].id if display_pages else "default")
+        if display_pages and not any(p.id == self.active_page_id for p in display_pages):
+            self.active_page_id = display_pages[0].id
         self.set_active_page(self.active_page_id, emit_signal=False, animated_dots=False)
 
         # Синхронизация simulation_mode из конфигурации, если диспетчер не переопределен вручную
@@ -294,10 +309,9 @@ class DeckView(TouchModuleView):
             self.set_status(f"Ошибка: {e}")
 
     def get_current_page_index(self) -> int:
-        """Возвращает индекс активной страницы в конфигурации (0-based)."""
-        if not self.root_config or not self.root_config.pages:
-            return 0
-        for idx, p in enumerate(self.root_config.pages):
+        """Возвращает индекс активной страницы среди отображаемых на панели (0-based)."""
+        display_pages = self.get_display_pages()
+        for idx, p in enumerate(display_pages):
             if p.id == self.active_page_id:
                 return idx
         return 0
@@ -307,11 +321,12 @@ class DeckView(TouchModuleView):
         Переход на следующую страницу (жест свайпа влево: dx < -60 px).
         page_idx + 1 с синхронной анимацией точек DotPagingWidget и эмиссией bus.deck_page_changed.
         """
-        if not self.root_config or not self.root_config.pages:
+        display_pages = self.get_display_pages()
+        if not display_pages:
             return
         curr_idx = self.get_current_page_index()
-        if curr_idx < len(self.root_config.pages) - 1:
-            next_page = self.root_config.pages[curr_idx + 1]
+        if curr_idx < len(display_pages) - 1:
+            next_page = display_pages[curr_idx + 1]
             logger.info("Свайп влево: переход на следующую страницу '%s'", next_page.id)
             if hasattr(self, "interactive_panel"):
                 self.interactive_panel.trigger_swipe_feedback("left")
@@ -322,11 +337,12 @@ class DeckView(TouchModuleView):
         Переход на предыдущую страницу (жест свайпа вправо: dx > +60 px).
         page_idx - 1 с синхронной анимацией точек DotPagingWidget и эмиссией bus.deck_page_changed.
         """
-        if not self.root_config or not self.root_config.pages:
+        display_pages = self.get_display_pages()
+        if not display_pages:
             return
         curr_idx = self.get_current_page_index()
         if curr_idx > 0:
-            prev_page = self.root_config.pages[curr_idx - 1]
+            prev_page = display_pages[curr_idx - 1]
             logger.info("Свайп вправо: переход на предыдущую страницу '%s'", prev_page.id)
             if hasattr(self, "interactive_panel"):
                 self.interactive_panel.trigger_swipe_feedback("right")
@@ -345,9 +361,10 @@ class DeckView(TouchModuleView):
         if not self.root_config or not self.root_config.pages:
             return
 
+        display_pages = self.get_display_pages()
         target_page = None
         target_index = -1
-        for idx, p in enumerate(self.root_config.pages):
+        for idx, p in enumerate(display_pages):
             if p.id == page_id:
                 target_page = p
                 target_index = idx
@@ -356,9 +373,16 @@ class DeckView(TouchModuleView):
         # Fallback на индекс, если передан формат 'page_X'
         if target_page is None and page_id.startswith("page_") and page_id[5:].isdigit():
             idx = int(page_id[5:])
-            if 0 <= idx < len(self.root_config.pages):
-                target_page = self.root_config.pages[idx]
+            if 0 <= idx < len(display_pages):
+                target_page = display_pages[idx]
                 target_index = idx
+
+        # Если не найдено среди display_pages, проверим среди всех страниц root_config
+        if target_page is None:
+            for idx, p in enumerate(self.root_config.pages):
+                if p.id == page_id:
+                    target_page = p
+                    break
 
         if not target_page:
             logger.warning("Страница '%s' не найдена в конфигурации DuckDeck", page_id)
@@ -369,7 +393,7 @@ class DeckView(TouchModuleView):
         self.grid.load_page(target_page)
 
         # Синхронизация точек пагинации
-        if hasattr(self, "interactive_panel"):
+        if hasattr(self, "interactive_panel") and target_index >= 0:
             self.interactive_panel.set_current_page(target_index, animated=animated_dots)
 
         # Звуковой отклик смены страницы (при фактическом изменении)
@@ -406,17 +430,18 @@ class DeckView(TouchModuleView):
             if not self.root_config.pages:
                 self.root_config = DeckConfigLoader.get_default_config()
 
+            display_pages = self.get_display_pages()
             if hasattr(self, "interactive_panel"):
-                page_ids = [p.id for p in self.root_config.pages]
+                page_ids = [p.id for p in display_pages]
                 self.interactive_panel.set_page_ids(page_ids)
 
             target_page = None
-            for p in self.root_config.pages:
+            for p in display_pages:
                 if p.id == self.active_page_id:
                     target_page = p
                     break
-            if target_page is None and self.root_config.pages:
-                target_page = self.root_config.pages[0]
+            if target_page is None and display_pages:
+                target_page = display_pages[0]
                 self.active_page_id = target_page.id
 
             if target_page:
@@ -432,10 +457,9 @@ class DeckView(TouchModuleView):
 
     def _on_dot_page_selected(self, page_idx: int) -> None:
         """Обработка нажатия на точку в DotPagingWidget."""
-        if not self.root_config or not self.root_config.pages:
-            return
-        if 0 <= page_idx < len(self.root_config.pages):
-            target_page = self.root_config.pages[page_idx]
+        display_pages = self.get_display_pages()
+        if 0 <= page_idx < len(display_pages):
+            target_page = display_pages[page_idx]
             self.set_active_page(target_page.id, emit_signal=True, animated_dots=True)
 
     def _on_button_triggered(self, btn_config: DeckButtonConfig) -> None:
@@ -454,6 +478,15 @@ class DeckView(TouchModuleView):
                 if btn:
                     btn.set_state("success")
                 return
+
+        # Игнорирование ненастроенных кнопок-пустышек (тактильный щелчок без действия)
+        if btn_config.id.startswith("btn_unconfigured_") or (
+            not btn_config.title and not btn_config.icon and not btn_config.action.params
+        ):
+            btn = self.grid.get_button(btn_config.id)
+            if btn:
+                btn.set_state("idle")
+            return
 
         # Отправка действия в ActionDispatcher
         try:

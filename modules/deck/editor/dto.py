@@ -15,7 +15,7 @@ class ButtonSlotDTO:
     """
     Модель данных слота макро-кнопки сетки (0..9).
     Содержит презентационные поля и сохраняет расширенные свойства Pydantic v2
-    (color_accent, status_source, sound_override, toggle_action, original_config).
+    (color_accent, status_source, sound_override, toggle_action, action_params, original_config).
     """
 
     slot_index: int
@@ -27,6 +27,7 @@ class ButtonSlotDTO:
     font_size: int = 11
     font_color: str = "#d4d4d8"
     color_accent: str = "#38bdf8"
+    action_params: dict[str, Any] = field(default_factory=dict)
     status_source: Optional[str] = None
     sound_override: Optional[str] = None
     toggle_action: Optional[Any] = None

@@ -491,3 +491,103 @@ def test_scenario_8_hot_reload_language_switch(e2e_window):
     sec_titles_en = {s.category_dto.id: s.header.lbl_title.text() for s in drawer.accordion.sections}
     assert sec_titles_en.get("navigation") == "Navigation"
     assert sec_titles_en.get("system") == "System"
+
+
+def test_deck_editor_full_runtime_integration_journey(qapp, qtbot, tmp_path):
+    """
+    Сквозной интеграционный сценарий полного пути (E2E User Journey) согласно шагу 5.4:
+      - Фаза A: Запуск DeckView на 7" в изоляции -> клик по ⚙ -> DeckEditorManager открывает DeckEditorWindow на 27";
+                проверка сохранения Stealth Focus (Qt.NoFocus у DeckView).
+      - Фаза B: Выбор слота [0] -> назначение действия 'website' -> ввод URL 'https://github.com' -> ввод названия 'GitHub'.
+      - Фаза C: Открытие IconLibraryDialog -> выбор иконки -> выбор неонового цвета Cyan (#38bdf8).
+      - Фаза D: Сохранение через Save -> атомарная запись .tmp -> .bak -> индикация "✓" -> эмит bus.deck_config_updated.
+      - Фаза E: Прием сигнала в боевом DeckView -> in-place обновление слота [0] с новым названием 'GitHub', иконкой и цветом #38bdf8.
+    """
+    from modules.deck.view import DeckView
+    from modules.deck.editor.manager import DeckEditorManager
+    from modules.deck.editor.adapter import DeckConfigAdapter
+    from modules.deck.models import DeckConfigLoader
+
+    # 1. Подготовка изолированного конфига в tmp_path
+    cfg_file = tmp_path / "deck_runtime_journey.json"
+    root_cfg = DeckConfigLoader.get_default_config()
+    DeckConfigAdapter.save_deck_config_atomic(root_cfg, str(cfg_file))
+
+    # Фаза A: Инициализация DeckView на 7" экране
+    view = DeckView(config_path=str(cfg_file))
+    view.show()
+    qtbot.addWidget(view)
+    qapp.processEvents()
+
+    try:
+        # Проверка инварианта Stealth Focus (Qt.NoFocus)
+        assert view.focusPolicy() == Qt.NoFocus
+
+        # Клик по кнопке ⚙ в interactive_panel
+        settings_btn = view.interactive_panel.right_section.btn_settings
+        qtbot.mouseClick(settings_btn, Qt.LeftButton)
+        qapp.processEvents()
+
+        # DeckEditorManager открыл DeckEditorWindow
+        editor_win = DeckEditorManager.get_instance()
+        assert editor_win is not None
+        assert editor_win.width() == 1080
+        assert editor_win.height() == 740
+
+        # Направляем редактор на изолированный файл и загружаем слоты
+        editor_win.load_configuration(config_path=str(cfg_file), page_id="default")
+        qapp.processEvents()
+
+        # Фаза B: Выбор слота [0] и настройка действия Website
+        cell0 = editor_win.canvas_widget.get_cell(0)
+        assert cell0 is not None
+        qtbot.mouseClick(cell0, Qt.LeftButton)
+        qapp.processEvents()
+
+        inspector = editor_win.inspector
+        button_form = inspector.button_form
+        assert inspector.stack.currentIndex() == 1  # форма кнопки
+
+        # Выбираем website в комбобоксе
+        idx_web = button_form.combo_actions.findData("website")
+        assert idx_web >= 0
+        button_form.combo_actions.setCurrentIndex(idx_web)
+        qapp.processEvents()
+
+        button_form.edit_title.setText("GitHub")
+        button_form.edit_title.textEdited.emit("GitHub")
+        button_form.subform_path_url.edit_input.setText("https://github.com")
+        button_form.subform_path_url._on_text_edited("https://github.com")
+
+        # Фаза C: Выбор иконки и цвета акцента
+        button_form.preview_tile.set_icon("🌐")
+        button_form.property_changed.emit("icon", "🌐")
+        button_form.accent_picker._on_color_clicked("#38bdf8")
+        qapp.processEvents()
+
+        # Фаза D: Сохранение и Hot Reload
+        save_btn = editor_win.header_bar.btn_save
+        qtbot.mouseClick(save_btn, Qt.LeftButton)
+        qapp.processEvents()
+
+        assert "✓" in save_btn.text()
+
+        # Фаза E: Реакция рантайма на тачскрине
+        # DeckView получил сигнал bus.deck_config_updated и обновился in-place
+        qapp.processEvents()
+
+        btn0 = None
+        for b in view.grid.get_buttons().values():
+            if b.button_config.slot_index == 0:
+                btn0 = b
+                break
+        assert btn0 is not None
+        assert btn0.button_config.title == "GitHub"
+        assert btn0.button_config.color_accent == "#38bdf8"
+        assert view.focusPolicy() == Qt.NoFocus
+    finally:
+        DeckEditorManager.close_editor()
+        view.cleanup()
+        view.deleteLater()
+        qapp.processEvents()
+

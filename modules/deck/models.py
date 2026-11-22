@@ -13,8 +13,16 @@ logger = logging.getLogger("duckdock.deck.models")
 
 ActionType = Literal[
     "hotkey",         # Симуляция клавиш (SendInput)
+    "hotkey_switch",  # Двухпозиционный переключатель хоткеев
     "audio_device",   # Переключение аудиоустройств вывода (Наушники/Динамики)
     "launch",         # Запуск программы / скрипта
+    "website",        # Открытие URL веб-сайта
+    "open_path",      # Открытие папки или файла
+    "open_app",       # Запуск приложения с аргументами
+    "close_window",   # Закрытие активного окна / процесса
+    "text_macro",     # Текстовый макрос
+    "multimedia",     # Управление мультимедиа Windows
+    "volume_control", # Управление громкостью
     "http_request",   # REST API запрос к сторонним программам
     "screenshot",     # Скриншот основного монитора / окна
     "system",         # Системное действие (mute mic, lock, dimmer)
@@ -32,6 +40,75 @@ ActionCategory = Literal[
 class HotkeyParams(BaseModel):
     """Параметры симуляции горячих клавиш."""
     keys: List[str] = Field(default_factory=list, description="Список клавиш (например ['ctrl', 'shift', 'd'])")
+
+
+class HotkeySwitchState(BaseModel):
+    """Состояние переключателя хоткеев."""
+    title: str = Field(default="", description="Название состояния")
+    keys: List[str] = Field(default_factory=list, description="Список клавиш")
+    icon: Optional[str] = Field(default=None, description="Иконка состояния")
+
+
+class HotkeySwitchParams(BaseModel):
+    """Параметры двухпозиционного переключателя хоткеев."""
+    state_1: HotkeySwitchState = Field(default_factory=HotkeySwitchState, description="Состояние 1")
+    state_2: HotkeySwitchState = Field(default_factory=HotkeySwitchState, description="Состояние 2")
+    current_state: int = Field(default=1, ge=1, le=2, description="Текущее активное состояние (1 или 2)")
+
+
+class WebsiteParams(BaseModel):
+    """Параметры открытия веб-страницы."""
+    url: str = Field(default="", description="URL адрес сайта")
+
+
+class OpenPathParams(BaseModel):
+    """Параметры открытия пути/файла/папки."""
+    path: str = Field(default="", description="Путь к файлу или папке")
+
+
+class OpenAppParams(BaseModel):
+    """Параметры запуска приложения."""
+    executable: str = Field(default="", description="Путь к исполняемому файлу")
+    args: List[str] = Field(default_factory=list, description="Аргументы командной строки")
+    working_dir: Optional[str] = Field(default=None, description="Рабочая директория")
+
+
+class CloseWindowParams(BaseModel):
+    """Параметры закрытия окна."""
+    target: Literal["active_window", "by_process"] = Field(
+        default="active_window", description="Цель закрытия"
+    )
+    process_name: Optional[str] = Field(default=None, description="Имя процесса (для by_process)")
+
+
+class TextMacroParams(BaseModel):
+    """Параметры текстового макроса."""
+    text: str = Field(default="", description="Вставляемый текст")
+    send_enter: bool = Field(default=False, description="Отправить Enter после вставки")
+
+
+class MultimediaParams(BaseModel):
+    """Параметры мультимедийного управления Windows."""
+    command: Literal[
+        "play_pause",
+        "next_track",
+        "prev_track",
+        "stop",
+        "mute",
+        "volume_up",
+        "volume_down",
+    ] = Field(default="play_pause", description="Мультимедийная команда")
+
+
+class VolumeControlParams(BaseModel):
+    """Параметры управления громкостью."""
+    target: Literal["focus_app", "master", "microphone"] = Field(
+        default="focus_app", description="Цель регулировки"
+    )
+    command: Literal["toggle_mute", "volume_up", "volume_down", "set_level"] = Field(
+        default="toggle_mute", description="Команда регулировки"
+    )
+    step_percent: int = Field(default=5, ge=1, le=50, description="Шаг изменения в процентах")
 
 
 class AudioDeviceParams(BaseModel):
@@ -91,6 +168,14 @@ class DeckActionConfig(BaseModel):
 
     def get_typed_params(self) -> Union[
         HotkeyParams,
+        HotkeySwitchParams,
+        WebsiteParams,
+        OpenPathParams,
+        OpenAppParams,
+        CloseWindowParams,
+        TextMacroParams,
+        MultimediaParams,
+        VolumeControlParams,
         AudioDeviceParams,
         LaunchParams,
         HttpRequestParams,
@@ -102,6 +187,14 @@ class DeckActionConfig(BaseModel):
         """Фабрика типизированных параметров действия."""
         mapping = {
             "hotkey": HotkeyParams,
+            "hotkey_switch": HotkeySwitchParams,
+            "website": WebsiteParams,
+            "open_path": OpenPathParams,
+            "open_app": OpenAppParams,
+            "close_window": CloseWindowParams,
+            "text_macro": TextMacroParams,
+            "multimedia": MultimediaParams,
+            "volume_control": VolumeControlParams,
             "audio_device": AudioDeviceParams,
             "launch": LaunchParams,
             "http_request": HttpRequestParams,
@@ -405,6 +498,15 @@ __all__ = [
     "ActionType",
     "ActionCategory",
     "HotkeyParams",
+    "HotkeySwitchState",
+    "HotkeySwitchParams",
+    "WebsiteParams",
+    "OpenPathParams",
+    "OpenAppParams",
+    "CloseWindowParams",
+    "TextMacroParams",
+    "MultimediaParams",
+    "VolumeControlParams",
     "AudioDeviceParams",
     "LaunchParams",
     "HttpRequestParams",

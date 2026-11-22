@@ -98,12 +98,17 @@ class DeckEditorManager:
             window.raise_()
             window.activateWindow()
 
-            # 5. Переключение на запрошенную страницу, если передана
+            # 5. Переключение на запрошенную страницу, если передана, иначе перезагрузка конфигурации
             if page_id is not None and hasattr(window, "set_page") and callable(window.set_page):
                 try:
                     window.set_page(page_id)
                 except Exception as exc:
                     logger.warning("Failed to set page '%s' in DeckEditorWindow: %s", page_id, exc)
+            elif hasattr(window, "load_configuration") and callable(window.load_configuration):
+                try:
+                    window.load_configuration()
+                except Exception as exc:
+                    logger.warning("Failed to reload configuration in DeckEditorWindow: %s", exc)
 
             return window
 

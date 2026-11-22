@@ -364,6 +364,7 @@ def test_deck_grid_swipe_left_triggers_page_signal_and_suppresses_buttons(qapp):
         buttons=[
             DeckButtonConfig(
                 id=f"btn_{i}",
+                slot_index=i,
                 title=f"Btn {i}",
                 icon="🔷",
                 action=DeckActionConfig(action_type="hotkey", params={"keys": ["a"]}),
@@ -450,6 +451,7 @@ def test_deck_grid_swipe_right_triggers_swipe_right_signal(qapp):
         buttons=[
             DeckButtonConfig(
                 id=f"btn_{i}",
+                slot_index=i,
                 title=f"Btn {i}",
                 icon="🔷",
                 action=DeckActionConfig(action_type="hotkey", params={"keys": ["a"]}),
@@ -600,22 +602,28 @@ def test_deck_view_swipe_boundary_conditions(qapp):
     """
     view = DeckView(config_path="config/deck_config.json")
     try:
+        pages = view.get_display_pages()
+        assert len(pages) >= 1
+        first_page_id = pages[0].id
+        last_page_id = pages[-1].id
+
         # 1. Мы на первой странице (индекс 0). Свайп вправо -> остаемся на индексе 0
         assert view.get_current_page_index() == 0
         view.interactive_panel.swipe_right.emit()
-        assert view.active_page_id == "default"
+        assert view.active_page_id == first_page_id
         assert view.get_current_page_index() == 0
         assert view.interactive_panel.get_current_page() == 0
 
-        # 2. Переходим на последнюю страницу (индекс 1)
-        view.interactive_panel.swipe_left.emit()
-        assert view.active_page_id == "grid4x6"
-        assert view.get_current_page_index() == 1
+        # 2. Переходим на последнюю страницу
+        for _ in range(len(pages) - 1):
+            view.interactive_panel.swipe_left.emit()
+        assert view.active_page_id == last_page_id
+        assert view.get_current_page_index() == len(pages) - 1
 
         # 3. Свайп влево на последней странице -> остаемся на ней
         view.interactive_panel.swipe_left.emit()
-        assert view.active_page_id == "grid4x6"
-        assert view.get_current_page_index() == 1
+        assert view.active_page_id == last_page_id
+        assert view.get_current_page_index() == len(pages) - 1
     finally:
         view.cleanup()
 

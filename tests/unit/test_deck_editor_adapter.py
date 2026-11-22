@@ -267,14 +267,16 @@ def test_load_page_slots_returns_all_ten_slots(multi_page_root_config: DeckRootC
 
 
 def test_load_page_slots_by_index_and_fallback(multi_page_root_config: DeckRootConfig):
-    """Проверка загрузки по числовому индексу и корректного fallback при неизвестном ID."""
+    """Проверка загрузки по числовому индексу и возврата чистых слотов при неизвестном ID (без fallback на 1-ю)."""
     # По индексу 1 (page_media)
     slots_media = DeckConfigAdapter.load_page_slots(multi_page_root_config, 1)
     assert slots_media[1].title == "Page2 Button 1"
 
-    # Несуществующая страница -> fallback на первую страницу
-    fallback_slots = DeckConfigAdapter.load_page_slots(multi_page_root_config, "non_existent_page_id")
-    assert fallback_slots[0].title == "Page1 Button 0"
+    # Несуществующая страница -> пустые чистые слоты (без fallback на первую страницу)
+    empty_slots = DeckConfigAdapter.load_page_slots(multi_page_root_config, "non_existent_page_id")
+    assert len(empty_slots) == 10
+    assert empty_slots[0].title == ""
+    assert not empty_slots[0].hotkey
 
 
 def test_apply_slots_to_page_modifies_only_target_page(multi_page_root_config: DeckRootConfig):

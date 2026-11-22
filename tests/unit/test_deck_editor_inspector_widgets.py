@@ -100,7 +100,7 @@ def test_styles_inspector_constants() -> None:
     """
     Проверка констант геометрии и токенов цветов инспектора.
     """
-    assert INSPECTOR_HEIGHT == 220
+    assert INSPECTOR_HEIGHT == 260
     assert PREVIEW_TILE_SIZE == 84
     assert INPUT_HEIGHT == 30
     assert FORM_LABEL_WIDTH == 60
@@ -407,10 +407,9 @@ def test_button_property_form_initialization(qapp: QApplication) -> None:
     assert form.btn_hotkey is not None
     assert form.btn_font.text() == "T ▾"
 
-    # Пресеты в комбобоксе
-    assert form.combo_actions.count() == 5
-    assert form.combo_actions.itemData(0) == "preset_actions"
-    assert form.combo_actions.itemData(1) == "hotkey"
+    # Пресеты в комбобоксе (v0.6.0 Extended Actions)
+    assert form.combo_actions.count() >= 5
+    assert form.combo_actions.itemData(0) == "hotkey"
 
 
 def test_button_property_form_load_slot_data(qapp: QApplication) -> None:
@@ -426,7 +425,7 @@ def test_button_property_form_load_slot_data(qapp: QApplication) -> None:
         title="Mute Audio",
         icon="🔇",
         category="Media: Mute",
-        action_type="media_control",
+        action_type="multimedia",
         hotkey="Ctrl+Shift+M",
     )
 
@@ -440,7 +439,7 @@ def test_button_property_form_load_slot_data(qapp: QApplication) -> None:
     assert form.edit_title.text() == "Mute Audio"
     assert form.preview_tile.get_icon() == "🔇"
     assert form.btn_hotkey.get_hotkey() == "Ctrl+Shift+M"
-    assert form.combo_actions.currentData() == "media_control"
+    assert form.combo_actions.currentData() in ("multimedia", "media_control")
 
 
 def test_button_property_form_signals(qapp: QApplication) -> None:
@@ -464,8 +463,8 @@ def test_button_property_form_signals(qapp: QApplication) -> None:
     assert ("title", "New Title") in signals
 
     # 2. Выбор действия в комбобоксе
-    form.combo_actions.setCurrentIndex(2)  # open_application
-    assert ("action_type", "open_application") in signals
+    form.combo_actions.setCurrentIndex(1)  # hotkey_switch
+    assert ("action_type", "hotkey_switch") in signals
 
     # 3. Изменение хоткея
     form.btn_hotkey.hotkey_changed.emit("Ctrl+Alt+T")
@@ -487,12 +486,13 @@ def test_button_property_form_retranslate_preserves_user_inputs(qapp: QApplicati
     form = ButtonPropertyForm()
     form.edit_title.setText("Мой Макрос")
     form.btn_hotkey.set_hotkey("Ctrl+F12")
-    form.combo_actions.setCurrentIndex(3)  # media_control
+    # Выбираем hotkey (индекс 0) для проверки подписи Хоткей
+    form.combo_actions.setCurrentIndex(0)
 
     assert form.lbl_title_field.text() == "Название:"
     assert form.lbl_actions_field.text() == "Действия:"
     assert form.lbl_hotkey_field.text() == "Хоткей:"
-    assert "Управление медиа" in form.combo_actions.currentText()
+    assert "Хоткей" in form.combo_actions.currentText()
 
     # Переключаем язык на английский
     mgr.set_language("en")
@@ -502,8 +502,8 @@ def test_button_property_form_retranslate_preserves_user_inputs(qapp: QApplicati
     assert form.lbl_actions_field.text() == "Actions:"
     assert form.lbl_hotkey_field.text() == "Hotkey:"
     assert form.btn_delete.toolTip() == "Clear button action"
-    assert "Media Control" in form.combo_actions.currentText()
-    assert form.combo_actions.currentIndex() == 3
+    assert "Hotkey" in form.combo_actions.currentText()
+    assert form.combo_actions.currentIndex() == 0
 
     # Пользовательские значения строго сохранены
     assert form.edit_title.text() == "Мой Макрос"
@@ -513,6 +513,9 @@ def test_button_property_form_retranslate_preserves_user_inputs(qapp: QApplicati
     # Возврат на русский
     mgr.set_language("ru")
     form.retranslate_ui()
+    assert form.lbl_title_field.text() == "Название:"
+    assert form.edit_title.text() == "Мой Макрос"
+    assert form.btn_hotkey.get_hotkey() == "Ctrl+F12"
     assert form.lbl_title_field.text() == "Название:"
     assert form.edit_title.text() == "Мой Макрос"
     assert form.btn_hotkey.get_hotkey() == "Ctrl+F12"

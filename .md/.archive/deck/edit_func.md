@@ -792,7 +792,7 @@ flowchart TD
 
 #### 4.2. Пошаговый детальный план реализации Спринта 4 (@fullstack-builder, @frontend-ui-designer)
 
-- [ ] **Шаг 4.1: Расширение каталога действий и поисковых тегов ([modules/deck/editor/actions_registry.py](file:///d:/Projects_X/duckdock/modules/deck/editor/actions_registry.py))**
+- [x] **Шаг 4.1: Расширение каталога действий и поисковых тегов ([modules/deck/editor/actions_registry.py](file:///d:/Projects_X/duckdock/modules/deck/editor/actions_registry.py))**
   - Пополнить категорию `system` в `get_default_action_catalog()`:
     - `website`: открытие URL в браузере по умолчанию (теги: `website`, `url`, `browser`, `link`, `web`, `сайт`, `ссылка`, `браузер`).
     - `hotkey_switch`: двухпозиционный переключатель (теги: `switch`, `toggle`, `state`, `hotkey`, `свитч`, `переключатель`, `триггер`).
@@ -807,7 +807,7 @@ flowchart TD
     - `mic_mute_control`: управление микрофоном (теги: `mic`, `microphone`, `mute`, `микрофон`, `мьют`).
     - `output_device_toggle`: быстрое переключение наушники / динамики (теги: `device`, `headphones`, `speakers`, `наушники`, `динамики`).
 
-- [ ] **Шаг 4.2: Типизированные Pydantic v2 модели параметров ([modules/deck/models.py](file:///d:/Projects_X/duckdock/modules/deck/models.py)) и синхронизация DTO ([modules/deck/editor/dto.py](file:///d:/Projects_X/duckdock/modules/deck/editor/dto.py))**
+- [x] **Шаг 4.2: Типизированные Pydantic v2 модели параметров ([modules/deck/models.py](file:///d:/Projects_X/duckdock/modules/deck/models.py)) и синхронизация DTO ([modules/deck/editor/dto.py](file:///d:/Projects_X/duckdock/modules/deck/editor/dto.py))**
   - В `models.py`:
     - Расширить `ActionType`:
       ```python
@@ -832,7 +832,7 @@ flowchart TD
   - В `dto.py`:
     - Добавить поля `action_params: dict[str, Any] = Field(default_factory=dict)` и `color_accent: str = "#38bdf8"` в `ButtonSlotDTO`.
 
-- [ ] **Шаг 4.3: Движок выполнения действий в `action_dispatcher.py` ([modules/deck/action_dispatcher.py](file:///d:/Projects_X/duckdock/modules/deck/action_dispatcher.py))**
+- [x] **Шаг 4.3: Движок выполнения действий в `action_dispatcher.py` ([modules/deck/action_dispatcher.py](file:///d:/Projects_X/duckdock/modules/deck/action_dispatcher.py))**
   - Реализовать методы исполнения в `ActionRunnable.run()`:
     - _Website / Open Path:_ безопасное открытие через `os.startfile(target)` с проверкой существования пути или валидности схемы `http/https`.
     - _Open App:_ запуск через `subprocess.Popen([executable] + args, cwd=working_dir, shell=False)`.
@@ -850,7 +850,7 @@ flowchart TD
     - _Volume Controller:_ управление громкостью через `core.audio_manager` или прямые вызовы `pycaw.SimpleAudioVolume` для процесса в фокусе (`GetForegroundWindow()`).
   - Обеспечить потокобезопасность и возврат статусов через `WorkerSignals.finished(button_id, success, message)`.
 
-- [ ] **Шаг 4.4: Архитектура динамических подформ в `ButtonPropertyForm` и селектор цвета `color_accent` ([modules/deck/editor/widgets/button_property_form.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/button_property_form.py))**
+- [x] **Шаг 4.4: Архитектура динамических подформ в `ButtonPropertyForm` и селектор цвета `color_accent` ([modules/deck/editor/widgets/button_property_form.py](file:///d:/Projects_X/duckdock/modules/deck/editor/widgets/button_property_form.py))**
   - Под плиткой `KeyPreviewTile` добавить компактный стрип выбора акцентного цвета `ColorAccentPicker` (5 круглых свотчей 18×18 px: Cyan `#38bdf8`, Emerald `#10b981`, Amber `#f59e0b`, Rose `#f43f5e`, Violet `#a855f7`). При клике эмитить сигнал `property_changed("color_accent", hex_color)`.
   - Внедрить `QStackedLayout` для строки параметров действия:
     - Подформа 0: `HotkeySubform` (текущая реализация).
@@ -862,7 +862,7 @@ flowchart TD
   - При смене типа действия в `combo_actions` мгновенно активировать соответствующий индекс стэка без дрожания высоты (строго 220 px).
   - Реализовать сохранение параметров подформы в `action_params` активного слота.
 
-- [ ] **Шаг 4.5: Двуязычная локализация RU/EN со 100% паритетом ([locales/ru.json](file:///d:/Projects_X/duckdock/locales/ru.json), [locales/en.json](file:///d:/Projects_X/duckdock/locales/en.json))**
+- [x] **Шаг 4.5: Двуязычная локализация RU/EN со 100% паритетом ([locales/ru.json](file:///d:/Projects_X/duckdock/locales/ru.json), [locales/en.json](file:///d:/Projects_X/duckdock/locales/en.json))**
   - Добавить описания всех новых действий в `deck.editor.drawer.actions.*`:
     - `website`, `hotkey_switch`, `open_path`, `close_window`, `text_macro`, `multimedia`, `auto_software_vol`, `master_volume_control`, `mic_mute_control`, `output_device_toggle`.
   - Добавить переводы подписей полей подформ в `deck.editor.inspector.*`:
@@ -870,7 +870,7 @@ flowchart TD
   - Добавить названия медиа-команд и целей громкости в `deck.editor.inspector.media_commands.*` и `deck.editor.inspector.volume_targets.*`.
   - Проверить 100% паритет ключей через линтер.
 
-- [ ] **Шаг 4.6: Модульные тесты новых действий, валидации Pydantic и подформ инспектора ([tests/unit/test_deck_actions_extended.py](file:///d:/Projects_X/duckdock/tests/unit/test_deck_actions_extended.py), [tests/unit/test_deck_property_form.py](file:///d:/Projects_X/duckdock/tests/unit/test_deck_property_form.py))**
+- [x] **Шаг 4.6: Модульные тесты новых действий, валидации Pydantic и подформ инспектора ([tests/unit/test_deck_actions_extended.py](file:///d:/Projects_X/duckdock/tests/unit/test_deck_actions_extended.py), [tests/unit/test_deck_property_form.py](file:///d:/Projects_X/duckdock/tests/unit/test_deck_property_form.py))**
   - Разработать `tests/unit/test_deck_actions_extended.py`:
     - Валидация Pydantic v2 моделей для каждого нового типа действий.
     - Тестирование `action_dispatcher.py` на симуляцию мультимедийных кодов (мокирование Win32 `keybd_event`).
@@ -886,15 +886,15 @@ flowchart TD
 
 #### 4.3. Чек-лист верификации и Definition of Done (DoD) Спринта 4 (@bug-hunter)
 
-- [ ] В реестре `actions_registry.py` зарегистрированы все 12 новых действий с двуязычными поисковыми тегами (RU/EN).
-- [ ] Модели `models.py` строго валидируют параметры всех новых типов действий через Pydantic v2.
-- [ ] Диспетчер `action_dispatcher.py` безопасно выполняет все команды в неблокирующем потоке пула.
-- [ ] Мультимедийные команды (Play/Pause, Next, Prev, Volume) корректно симулируются в Windows.
-- [ ] В `ButtonPropertyForm` динамически подменяются поля параметров для каждого типа действия.
-- [ ] Высота формы инспектора строго фиксирована на 220 px (отсутствуют вертикальные скроллбары и визуальные артефакты).
-- [ ] Селектор `color_accent` корректно меняет неоновый цвет акцента кнопки на превью и сохраняет его в конфиг.
-- [ ] 100% паритет словарей RU/EN (`pytest tests/core/test_i18n_linter.py` завершается со статусом `PASS`).
-- [ ] Все модульные тесты проходят со статусом 100% PASS (`pytest tests/unit/test_deck_actions_extended.py`, `test_deck_property_form.py`).
+- [x] В реестре `actions_registry.py` зарегистрированы все 12 новых действий с двуязычными поисковыми тегами (RU/EN).
+- [x] Модели `models.py` строго валидируют параметры всех новых типов действий через Pydantic v2.
+- [x] Диспетчер `action_dispatcher.py` безопасно выполняет все команды в неблокирующем потоке пула.
+- [x] Мультимедийные команды (Play/Pause, Next, Prev, Volume) корректно симулируются в Windows.
+- [x] В `ButtonPropertyForm` динамически подменяются поля параметров для каждого типа действия.
+- [x] Высота формы инспектора строго фиксирована на 220 px (отсутствуют вертикальные скроллбары и визуальные артефакты).
+- [x] Селектор `color_accent` корректно меняет неоновый цвет акцента кнопки на превью и сохраняет его в конфиг.
+- [x] 100% паритет словарей RU/EN (`pytest tests/core/test_i18n_linter.py` завершается со статусом `PASS`).
+- [x] Все модульные тесты проходят со статусом 100% PASS (`pytest tests/unit/test_deck_actions_extended.py`, `test_deck_property_form.py`).
 
 ---
 
@@ -1025,7 +1025,7 @@ flowchart TD
 
 #### 5.2. Пошаговый детальный план реализации Спринта 5 (@bug-hunter, @fullstack-builder, @git-release-master)
 
-- [ ] **Шаг 5.1: Модульные тесты ядра конфигуратора и I/O адаптера**
+- [x] **Шаг 5.1: Модульные тесты ядра конфигуратора и I/O адаптера**
   - Создать [tests/unit/test_deck_editor_manager.py](file:///d:/Projects_X/duckdock/tests/unit/test_deck_editor_manager.py):
     - `test_manager_singleton_identity`: многократные вызовы `DeckEditorManager.get_instance()` возвращают идентичный инстанс.
     - `test_manager_open_creates_window_on_primary_screen`: проверка создания окна 1080×740 px и центрирования относительно экрана `QGuiApplication.primaryScreen()`.
@@ -1038,7 +1038,7 @@ flowchart TD
     - `test_adapter_save_atomic_write_and_backup`: проверка записи во временный файл `.tmp`, атомарной замены `os.replace` и создания резервной копии `.bak`.
     - `test_adapter_corrupted_json_recovery`: симуляция поврежденного файла JSON — адаптер корректно восстанавливает данные из `.bak` или откатывается к дефолтной структуре.
 
-- [ ] **Шаг 5.2: Модульные тесты каталога и диалога иконок**
+- [x] **Шаг 5.2: Модульные тесты каталога и диалога иконок**
   - Создать [tests/unit/test_deck_icon_catalog.py](file:///d:/Projects_X/duckdock/tests/unit/test_deck_icon_catalog.py):
     - `test_icon_catalog_categories_and_items`: проверка доступности категорий `lucide`, `streamdeck`, `standard` и валидности путей/SVG.
     - `test_icon_catalog_search_filtering`: поиск по подстроке имени (например, `"mic"`, `"sound"`) и по ключевым тегам на русском и английском языках.
@@ -1050,7 +1050,7 @@ flowchart TD
     - `test_icon_dialog_selection_and_signal`: клик по иконке в сетке + нажатие «Выбрать» эмитит сигнал `icon_selected(icon_path)` и закрывает диалог.
     - `test_icon_dialog_retranslate_ui`: переключение языка обновляет плейсхолдер поиска, кнопки и заголовок диалога.
 
-- [ ] **Шаг 5.3: Модульные тесты расширенных действий и динамического инспектора**
+- [x] **Шаг 5.3: Модульные тесты расширенных действий и динамического инспектора**
   - Создать [tests/unit/test_deck_actions_extended.py](file:///d:/Projects_X/duckdock/tests/unit/test_deck_actions_extended.py):
     - `test_action_hotkey_switch_toggle`: диспетчер корректно чередует состояния state_1/state_2, посылая соответствующие хоткеи и обновляя заголовок/иконку кнопки.
     - `test_action_app_open_safe_execution`: валидация пути исполняемого файла, запуск через `subprocess.Popen` (мокированный), перехват `FileNotFoundError`.
@@ -1063,7 +1063,7 @@ flowchart TD
     - `test_property_form_color_accent_picker`: выбор цвета в `ColorAccentPicker` обновляет превью и передается в DTO слота.
     - `test_property_form_retranslate_preserves_inputs`: смена языка интерфейса обновляет все текстовые метки подформ без сброса введенных значений.
 
-- [ ] **Шаг 5.4: Комплексный сквозной интеграционный сценарий полного пути (E2E User Journey)**
+- [x] **Шаг 5.4: Комплексный сквозной интеграционный сценарий полного пути (E2E User Journey)**
   - Обновить [tests/integration/test_deck_editor_e2e.py](file:///d:/Projects_X/duckdock/tests/integration/test_deck_editor_e2e.py), добавив полнофункциональный сценарий `test_deck_editor_full_runtime_integration_journey`:
     - **Фаза A (Запуск и открытие):** Инициализация `DeckView` (944×600) в изолированной файловой среде (`tmp_path`); симуляция клика по кнопке ⚙ в `interactive_panel`; `DeckEditorManager` открывает `DeckEditorWindow` (1080×740); подтверждается, что `WS_EX_NOACTIVATE` у `DeckView` не нарушен.
     - **Фаза B (Выбор и конфигурирование слота):** Клик по ячейке [0] на холсте редактора -> открытие формы параметров -> выбор типа действия `"website"` -> ввод URL `"https://github.com"` -> ввод названия `"GitHub"`.
@@ -1071,14 +1071,14 @@ flowchart TD
     - **Фаза D (Сохранение и Hot Reload):** Нажатие кнопки «💾 Сохранить» (или комбинации `Ctrl+S`) -> `DeckConfigAdapter` атомарно пишет конфиг -> кнопка на 2 секунды становится зеленой «✓ Сохранено!» -> эмитится сигнал `bus.deck_config_updated`.
     - **Фаза E (Реакция рантайма на тачскрине):** Боевой `DeckView` ловит сигнал -> вызывает `reload_config()` -> проверяется, что тайл [0] в `DeckView` получил новый тайтл `"GitHub"`, новую иконку и цвет `#38bdf8` без пересоздания сетки и без потери фокуса.
 
-- [ ] **Шаг 5.5: Строгий аудит локализации и AST-линтер**
+- [x] **Шаг 5.5: Строгий аудит локализации и AST-линтер**
   - Запуск и верификация [tests/core/test_i18n_linter.py](file:///d:/Projects_X/duckdock/tests/core/test_i18n_linter.py):
     - 100% паритет ключей словарей: `set(ru.keys()) == set(en.keys())`.
     - Паритет аргументов интерполяции: одинаковые токены `{name}`, `{slot}`, `{count}` в RU и EN.
     - AST-сканирование всех файлов пакета `modules/deck/editor/`: подтверждение полного отсутствия строковых литералов с кириллицей вне вызовов `t(...)`.
     - Проверка реализации `retranslate_ui()` во всех виджетах редактора (`HeaderBar`, `DeckCanvasWidget`, `GridCellWidget`, `TouchbarSectionWidget`, `KeyPropertyInspector`, `ButtonPropertyForm`, `ActionLibraryDrawer`, `IconLibraryDialog`).
 
-- [ ] **Шаг 5.6: Протокол Definition of Done, релиз v0.6.0 и синхронизация памяти (`GEMINI.md` §4)**
+- [x] **Шаг 5.6: Протокол Definition of Done, релиз v0.6.0 и синхронизация памяти (`GEMINI.md` §4)**
   - Прогон полного набора тестов: `pytest tests/` (100% PASS, 0 failures, 0 regressions).
   - Проверка стиля кода: `ruff check modules/deck/editor`.
   - Версионирование: фиксация `version = "0.6.0"` в [pyproject.toml](file:///d:/Projects_X/duckdock/pyproject.toml).

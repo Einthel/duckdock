@@ -48,12 +48,38 @@ class DeckConfigAdapter:
         category_display = "System: Hotkey"
 
         action = button_config.action
+        action_params = dict(action.params) if action.params else {}
+
         if action.action_type == "hotkey":
             keys = action.params.get("keys", [])
             if keys:
                 hotkey_str = cls._format_keys_to_string(keys)
             action_type_display = "Hotkey"
             category_display = "System: Hotkey"
+        elif action.action_type == "hotkey_switch":
+            action_type_display = "Hotkey Switch"
+            category_display = "System: Hotkey Switch"
+        elif action.action_type == "website":
+            action_type_display = "Website"
+            category_display = "System: Website"
+        elif action.action_type == "open_path":
+            action_type_display = "Open Path"
+            category_display = "System: Open Path"
+        elif action.action_type == "open_app":
+            action_type_display = "Open Application"
+            category_display = "System: Open Application"
+        elif action.action_type == "close_window":
+            action_type_display = "Close Window"
+            category_display = "System: Close Window"
+        elif action.action_type == "text_macro":
+            action_type_display = "Text Macro"
+            category_display = "System: Text Macro"
+        elif action.action_type == "multimedia":
+            action_type_display = "Multimedia"
+            category_display = "System: Multimedia"
+        elif action.action_type == "volume_control":
+            action_type_display = "Volume Control"
+            category_display = "Volume: Control"
         elif action.action_type == "launch":
             action_type_display = "Open Application"
             category_display = "System: Open Application"
@@ -86,6 +112,7 @@ class DeckConfigAdapter:
             font_size=11,
             font_color="#d4d4d8",
             color_accent=button_config.color_accent,
+            action_params=action_params,
             status_source=button_config.status_source,
             sound_override=button_config.sound_override,
             toggle_action=button_config.toggle_action.model_copy(deep=True) if button_config.toggle_action else None,
@@ -141,6 +168,10 @@ class DeckConfigAdapter:
                 norm_type = cls._normalize_action_type(dto.action_type)
                 if norm_type != orig.action.action_type:
                     action, category = cls._create_default_action(norm_type)
+                if dto.action_params:
+                    action.params.update(dto.action_params)
+            elif dto.action_params:
+                action.params.update(dto.action_params)
 
             return DeckButtonConfig(
                 id=orig.id,
@@ -171,6 +202,8 @@ class DeckConfigAdapter:
         elif dto.action_type:
             norm_type = cls._normalize_action_type(dto.action_type)
             action, category = cls._create_default_action(norm_type)
+            if dto.action_params:
+                action.params.update(dto.action_params)
         else:
             action = DeckActionConfig(action_type="system", params={"command": "toggle_dimmer"})
             category = "system"
@@ -222,16 +255,8 @@ class DeckConfigAdapter:
                     target_page = root_config.pages[idx]
 
         if target_page is None:
-            if root_config.pages:
-                target_page = root_config.pages[0]
-                logger.warning(
-                    "Page '%s' not found in DeckRootConfig. Fallback to first page '%s'.",
-                    page_id_or_index,
-                    target_page.id,
-                )
-            else:
-                logger.warning("DeckRootConfig has no pages. Returning empty slots 0..9.")
-                return {i: ButtonSlotDTO(slot_index=i) for i in range(10)}
+            # Страница не найдена в конфигурации (пустая виртуальная страница редактора)
+            return {i: ButtonSlotDTO(slot_index=i) for i in range(10)}
 
         result: dict[int, ButtonSlotDTO] = {i: ButtonSlotDTO(slot_index=i) for i in range(10)}
         for btn in target_page.buttons:
@@ -246,6 +271,7 @@ class DeckConfigAdapter:
         root_config: DeckRootConfig,
         page_id_or_index: Union[str, int],
         slots: dict[int, ButtonSlotDTO],
+        page_name: Optional[str] = None,
     ) -> DeckRootConfig:
         """
         Интегрирует обновленные слоты в целевую страницу DeckRootConfig
@@ -274,9 +300,10 @@ class DeckConfigAdapter:
 
         if target_page_idx == -1:
             page_id = str(page_id_or_index) if page_id_or_index else "default"
+            default_name = page_name if page_name is not None else f"Page {len(updated_root.pages) + 1}"
             new_page = DeckPageConfig(
                 id=page_id,
-                name=f"Page {len(updated_root.pages) + 1}",
+                name=default_name,
                 grid_rows=2,
                 grid_cols=5,
                 buttons=[],
@@ -285,6 +312,8 @@ class DeckConfigAdapter:
             target_page_idx = len(updated_root.pages) - 1
 
         target_page = updated_root.pages[target_page_idx]
+        if page_name is not None:
+            target_page.name = page_name
         existing_by_slot = {b.slot_index: b for b in target_page.buttons}
 
         new_buttons_by_slot: dict[int, DeckButtonConfig] = {}
@@ -399,6 +428,135 @@ class DeckConfigAdapter:
         """
         return DeckConfigLoader.load_from_file(file_path)
 
+    @classmethod
+    def get_page(
+        cls,
+        root_config: DeckRootConfig,
+        page_id_or_index: Union[str, int],
+    ) -> Optional[DeckPageConfig]:
+        """Возвращает DeckPageConfig по id или индексу, либо None."""
+        if isinstance(page_id_or_index, int):
+            if 0 <= page_id_or_index < len(root_config.pages):
+                return root_config.pages[page_id_or_index]
+        elif isinstance(page_id_or_index, str):
+            for p in root_config.pages:
+                if p.id == page_id_or_index or p.name == page_id_or_index:
+                    return p
+            if page_id_or_index.isdigit():
+                idx = int(page_id_or_index)
+                if 0 <= idx < len(root_config.pages):
+                    return root_config.pages[idx]
+        return None
+
+    @classmethod
+    def rename_page(
+        cls,
+        root_config: DeckRootConfig,
+        page_id_or_index: Union[str, int],
+        new_name: str,
+    ) -> DeckRootConfig:
+        """Переименовывает страницу и возвращает обновленный DeckRootConfig."""
+        updated = root_config.model_copy(deep=True)
+        page = cls.get_page(updated, page_id_or_index)
+        if page is not None:
+            page.name = new_name.strip()
+        else:
+            page_id = str(page_id_or_index)
+            new_page = DeckPageConfig(
+                id=page_id,
+                name=new_name.strip(),
+                grid_rows=2,
+                grid_cols=5,
+                buttons=[],
+            )
+            updated.pages.append(new_page)
+        return updated
+
+    @classmethod
+    def duplicate_page(
+        cls,
+        root_config: DeckRootConfig,
+        page_id_or_index: Union[str, int],
+        copy_suffix: str = " (Copy)",
+    ) -> Tuple[DeckRootConfig, DeckPageConfig]:
+        """Дублирует существующую страницу со всеми кнопками."""
+        updated = root_config.model_copy(deep=True)
+        orig_page = cls.get_page(updated, page_id_or_index)
+        new_idx = len(updated.pages) + 1
+        new_id = f"page_{new_idx}"
+
+        if orig_page is not None:
+            counter = 1
+            candidate_id = f"{orig_page.id}_copy"
+            existing_ids = {p.id for p in updated.pages}
+            while candidate_id in existing_ids:
+                counter += 1
+                candidate_id = f"{orig_page.id}_copy_{counter}"
+            new_id = candidate_id
+
+            orig_name = orig_page.name or f"Page {page_id_or_index}"
+            new_name = f"{orig_name}{copy_suffix}" if copy_suffix else orig_name
+            copied_buttons: List[DeckButtonConfig] = []
+            for btn in orig_page.buttons:
+                btn_copy = btn.model_copy(deep=True)
+                btn_copy.id = f"{btn.id}_{new_id}"
+                copied_buttons.append(btn_copy)
+            new_page = DeckPageConfig(
+                id=new_id,
+                name=new_name,
+                grid_rows=orig_page.grid_rows,
+                grid_cols=orig_page.grid_cols,
+                buttons=copied_buttons,
+            )
+        else:
+            new_page = DeckPageConfig(
+                id=new_id,
+                name=f"Page {new_idx}",
+                grid_rows=2,
+                grid_cols=5,
+                buttons=[],
+            )
+        updated.pages.append(new_page)
+        return updated, new_page
+
+    @classmethod
+    def delete_page(
+        cls,
+        root_config: DeckRootConfig,
+        page_id_or_index: Union[str, int],
+    ) -> DeckRootConfig:
+        """Удаляет страницу из DeckRootConfig."""
+        updated = root_config.model_copy(deep=True)
+        target_idx = -1
+        if isinstance(page_id_or_index, int):
+            if 0 <= page_id_or_index < len(updated.pages):
+                target_idx = page_id_or_index
+        elif isinstance(page_id_or_index, str):
+            for idx, p in enumerate(updated.pages):
+                if p.id == page_id_or_index:
+                    target_idx = idx
+                    break
+            if target_idx == -1 and page_id_or_index.isdigit():
+                idx = int(page_id_or_index)
+                if 0 <= idx < len(updated.pages):
+                    target_idx = idx
+
+        if target_idx != -1:
+            del updated.pages[target_idx]
+
+        # Гарантируем наличие хотя бы одной страницы
+        if not updated.pages:
+            updated.pages.append(
+                DeckPageConfig(
+                    id="default",
+                    name="Основной",
+                    grid_rows=2,
+                    grid_cols=5,
+                    buttons=[],
+                )
+            )
+        return updated
+
     # ==========================================================================
     # Вспомогательные методы форматирования и нормализации
     # ==========================================================================
@@ -452,8 +610,29 @@ class DeckConfigAdapter:
         raw = action_type_str.strip().lower().replace(" ", "_")
         if raw in ("hotkey", "shortcut"):
             return "hotkey"
-        if raw in ("open_application", "launch", "program", "launch_app"):
-            return "launch"
+        if raw in ("hotkey_switch", "switch", "toggle_state"):
+            return "hotkey_switch"
+        if raw in ("website", "open_website", "web", "url", "browser"):
+            return "website"
+        if raw in ("open_path", "path", "folder", "open_folder"):
+            return "open_path"
+        if raw in ("open_app", "open_application", "launch", "program", "launch_app"):
+            return "open_app"
+        if raw in ("close_window", "close", "kill_window"):
+            return "close_window"
+        if raw in ("text_macro", "macro", "text", "paste_text"):
+            return "text_macro"
+        if raw in ("multimedia", "media", "media_control"):
+            return "multimedia"
+        if raw in (
+            "volume_control",
+            "volume",
+            "auto_software_vol",
+            "master_volume_control",
+            "mic_mute_control",
+            "output_device_toggle",
+        ):
+            return "volume_control"
         if raw in ("audio_device", "audio"):
             return "audio_device"
         if raw in ("screenshot", "screen"):
@@ -471,6 +650,56 @@ class DeckConfigAdapter:
             return (
                 DeckActionConfig(action_type="hotkey", params={"keys": []}),
                 "shortcut",
+            )
+        if action_type == "hotkey_switch":
+            return (
+                DeckActionConfig(
+                    action_type="hotkey_switch",
+                    params={
+                        "state_1": {"title": "State 1", "keys": []},
+                        "state_2": {"title": "State 2", "keys": []},
+                        "current_state": 1,
+                    },
+                ),
+                "shortcut",
+            )
+        if action_type == "website":
+            return (
+                DeckActionConfig(action_type="website", params={"url": ""}),
+                "system",
+            )
+        if action_type == "open_path":
+            return (
+                DeckActionConfig(action_type="open_path", params={"path": ""}),
+                "system",
+            )
+        if action_type == "open_app":
+            return (
+                DeckActionConfig(action_type="open_app", params={"executable": "", "args": []}),
+                "program",
+            )
+        if action_type == "close_window":
+            return (
+                DeckActionConfig(action_type="close_window", params={"target": "active_window"}),
+                "system",
+            )
+        if action_type == "text_macro":
+            return (
+                DeckActionConfig(action_type="text_macro", params={"text": "", "send_enter": False}),
+                "system",
+            )
+        if action_type == "multimedia":
+            return (
+                DeckActionConfig(action_type="multimedia", params={"command": "play_pause"}),
+                "system",
+            )
+        if action_type == "volume_control":
+            return (
+                DeckActionConfig(
+                    action_type="volume_control",
+                    params={"target": "focus_app", "command": "toggle_mute", "step_percent": 5},
+                ),
+                "system",
             )
         if action_type == "launch":
             return (

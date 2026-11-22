@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-11-22
+
+### Added
+- **DuckDeck Editor Ergonomics & Live Autosave (Доработки редактора и верстки)**:
+  - **Автосохранение при смене страниц (`modules/deck/editor/window.py`)**:
+    - Интеллектуальное автосохранение `save_configuration()` при перелистывании страниц в пагинаторе, клике на кнопку `+` и удаленной смене страниц с сенсорной панели DuckDeck (срабатывает только при наличии несохраненных изменений `_is_dirty`).
+    - Автоматическая синхронизация активной страницы `self.active_page_id` при открытии редактора и загрузке конфигурации.
+  - **Расширение геометрии редактируемой зоны инспектора (`modules/deck/editor/styles.py`, `button_property_form.py`)**:
+    - Увеличение высоты инспектора `INSPECTOR_HEIGHT` и `INSPECTOR_SLOT_HEIGHT` с 220 px до 260 px.
+    - Переработан `ColorAccentPicker`: высота увеличена с 20 до 28 px, диаметр свотчей с 18 до 20 px, скругление 10 px, отступы (0, 2, 0, 2), что полностью устранило обрезание нижнего края кнопок палитры.
+    - Оптимизированы внутренние отступы `ButtonPropertyForm` (вертикальный спейсинг 8 px) для комфортного отображения всех полей и подформ параметров.
+  - **Крупные и контрастные иконки кнопок (`styles.py`, `grid_cell.py`, `deck_button.py`, `key_preview_tile.py`)**:
+    - В ячейках сетки холста редактора `EditorGridCell` размер шрифта `CellIconLabel` увеличен с 26 px до 40 px (~+54% полезной площади).
+    - В `EditorGridCell` добавлена поддержка масштабирования и отрисовки растровых/векторных файлов иконок (`QPixmap`) с сглаживанием `SmoothTransformation` (48x48 px).
+    - На сенсорной панели деки `DeckButtonWidget` размер шрифта иконки увеличен с 38 до 52 px (сетка 2x5) и с 28 до 42 px (сетка 4x6).
+    - В плитке предварительного просмотра `KeyPreviewTile` размер шрифта увеличен с 32 до 40 px.
+- **DuckDeck Editor Extended Actions, Dynamic Inspector & Full E2E Journey (Спринты 4 и 5 из `.md/deck/edit_func.md`)**:
+  - **Расширенный каталог действий (12 новых действий в `actions_registry.py`)**:
+    - `website`: открытие URL в веб-браузере по умолчанию с автоподстановкой `https://`.
+    - `hotkey_switch`: двухпозиционный переключатель хоткеев с независимыми состояниями State 1 и State 2 (заголовок, иконка, клавиши).
+    - `open_path`: запуск/открытие папок или документов через `os.startfile`.
+    - `open_app`: изолированный запуск бинарников через `subprocess.Popen(shell=False)` с аргументами и рабочей папкой.
+    - `close_window`: мягкое закрытие активного окна Windows через сообщение `WM_CLOSE` (`PostMessageW`).
+    - `text_macro`: быстрая вставка текста с поддержкой Unicode/кириллицы через буфер обмена и опциональным Enter.
+    - `multimedia`: мультимедийные клавиши Windows через фасады `keybd_event` (Play/Pause, Next, Prev, Stop, Mute, Vol Up/Down).
+    - `volume_control`: неблокирующее управление звуком (фокусный процесс, мастер-громкость, микрофон) через Core Audio.
+  - **Дискриминированные Pydantic v2 модели параметров (`modules/deck/models.py`)**:
+    - Добавлены модели `WebsiteParams`, `HotkeySwitchState`, `HotkeySwitchParams`, `OpenPathParams`, `OpenAppParams`, `CloseWindowParams`, `TextMacroParams`, `MultimediaParams`, `VolumeControlParams` с расширением `ActionType` и фабрикой `DeckActionConfig.get_typed_params()`.
+  - **Динамический стек подформ инспектора свойств (`button_property_form.py`)**:
+    - Архитектура `QStackedLayout` для бесшовного переключения подформ параметров без вертикального скроллбара (строгое соблюдение бюджета высоты 220 px).
+    - `ColorAccentPicker`: горизонтальная панель выбора 5 фирменных неоновых акцентов кнопки (Cyan `#38bdf8`, Emerald `#10b981`, Amber `#f59e0b`, Rose `#f43f5e`, Violet `#a855f7`).
+  - **Комплексный сквозной интеграционный сценарий полного цикла E2E (`tests/integration/test_deck_editor_e2e.py`)**:
+    - Фазы A..E: Тап ⚙ на 7" экране -> открытие `DeckEditorWindow` на 27" -> настройка Website -> выбор иконки и неонового акцента -> сохранение конфигурации (атомарная запись `.tmp` -> `.bak`) -> реактивный Hot Reload в `DeckView` с сохранением инварианта Stealth Focus (`Qt.NoFocus`).
+  - **Полный пакет модульного тестирования ядра и компонентов**:
+    - `test_deck_config_adapter.py`: сохранение расширенных полей, изоляция многостраничности, атомарность I/O, восстановление из `.bak`.
+    - `test_deck_actions_extended.py`: безопасность Pydantic валидации, мокирование WinAPI, мультимедиа-коды, запуск процессов.
+    - `test_deck_property_form_subforms.py`: переключение подформ, выбор цвета акцента, in-place retranslate без потери введенных данных.
+    - `test_deck_icon_dialog.py`: модальность, живой поиск, зум 24..64 px, выбор, переключение языка.
+  - **Bilingual Localization-First**:
+    - 100% паритет RU/EN в `locales/ru.json` и `locales/en.json`, подтвержденный AST-сканером `test_i18n_linter.py`.
+  - **Релизные метрики качества**:
+    - 418 тестов со статусом **100% PASS** (0 failures, 0 regressions).
+
 ## [0.5.3] - 2026-11-22
 
 ### Added

@@ -1,6 +1,6 @@
 # DuckDock / TouchWM: Архитектурная спецификация модулей
 
-> **Статус:** v0.5.3 (Спринт 3: Экосистема управления иконками, 376 тестов 100% PASS)  
+> **Статус:** v0.6.0 (Спринт 5: E2E Тесты, DoD, Расширенные действия и релиз v0.6.0, 418 тестов 100% PASS)  
 > **Целевая среда:** Windows 10/11 x64, 27" Primary (dGPU) + 7" 1024×600 JRP7813S Touchscreen (iGPU AMD Radeon Graphics).
 
 ---
@@ -268,8 +268,10 @@ flowchart TD
     - Индекс 2: Форма медиаплеера тачбара `TouchbarMediaForm`.
     - Индекс 3: Форма часов тачбара `TouchbarClockForm`.
     - Индекс 4: Форма датчиков тачбара `TouchbarTelemetryForm`.
-  - `inspector_widgets.py`:
-    - `KeyPreviewTile`: Виджет предпросмотра кнопки 64×64 px с кнопками смены/удаления иконки.
+  - `inspector_widgets.py` / `button_property_form.py`:
+    - `KeyPreviewTile`: Виджет предпросмотра кнопки 84×84 px с микро-кнопками [+] и [v], крупной иконкой 40 px, вызовом библиотеки иконок и контекстным меню `QMenu`.
+    - `ColorAccentPicker`: Компактный горизонтальный стрип 5 неоновых свотчей 20×20 px (высота 28 px) выбора цвета акцента кнопки (`#38bdf8`, `#10b981`, `#f59e0b`, `#f43f5e`, `#a855f7`) без обрезания границ.
+    - Динамический стек подформ `QStackedLayout` (бюджет высоты `INSPECTOR_HEIGHT = 260 px`): `HotkeySubform`, `HotkeySwitchSubform` (State 1 ⇄ State 2), `PathUrlSubform` (URL / exe / path), `MultimediaSubform` (Play/Pause, Next, Prev, Stop, Mute, Vol Up/Down), `TextMacroSubform` (текст + Enter), `VolumeSubform` (Focus App / Master / Mic).
     - `HotkeyCaptureButton`: Кнопка интерактивного перехвата хоткеев клавиатуры с очисткой по Backspace/Delete, отменой по Esc/FocusOut и каскадным `retranslate_ui()`.
   - `action_drawer.py` (`ActionLibraryDrawer`): Панель каталога действий со строкой поиска `ActionSearchBar` и аккордеоном `ActionAccordionWidget`.
   - `search_bar.py` (`ActionSearchBar`): Инпут поиска 52 px с кнопкой очистки `✕` и тултипом кнопки вида.

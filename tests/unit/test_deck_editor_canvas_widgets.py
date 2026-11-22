@@ -272,18 +272,24 @@ def test_pagination_bar_initialization_and_geometry(qapp):
     assert bar.height() == PAGINATION_SLOT_HEIGHT
     assert bar.height() == 36
     assert bar.btn_home.text() == "⭐"
-    assert len(bar.page_buttons) == 8
+    # По умолчанию создается ровно 1 страница
+    assert len(bar.page_buttons) == 1
     assert bar.btn_add.text() == "+"
     assert bar.get_current_page() == 1
 
     # Первая страница активна по умолчанию
     assert bar.page_buttons[0].property("active") == "true"
+
+    # Динамическое увеличение числа страниц
+    bar.set_page_count(8)
+    assert len(bar.page_buttons) == 8
     for btn in bar.page_buttons[1:]:
         assert btn.property("active") == "false"
 
 
 def test_pagination_bar_page_change_and_signals(qapp):
     bar = PageNavigationBar()
+    bar.set_page_count(8)
     emitted_pages = []
     bar.page_changed.connect(lambda p: emitted_pages.append(p))
 

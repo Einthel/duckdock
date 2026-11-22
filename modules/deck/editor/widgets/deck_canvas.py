@@ -17,6 +17,7 @@ from PySide6.QtCore import QEvent, QObject, Qt, Signal
 from PySide6.QtGui import QKeyEvent, QMouseEvent
 from PySide6.QtWidgets import (
     QGridLayout,
+    QLabel,
     QVBoxLayout,
     QWidget,
 )
@@ -63,6 +64,16 @@ class DeckCanvasWidget(QWidget):
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(0, 0, 0, 0)
         root_layout.setAlignment(Qt.AlignCenter)
+
+        # Аккуратная подпись текущей страницы над сеткой (Рис. 2, 528 px, фиксированная высота)
+        self.page_title_label = QLabel(self)
+        self.page_title_label.setObjectName("canvasPageTitleLabel")
+        self.page_title_label.setAlignment(Qt.AlignCenter)
+        self.page_title_label.setFixedHeight(24)
+        self.page_title_label.setFixedWidth(TOUCHBAR_WIDTH)
+        self.page_title_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        self.page_title_label.setVisible(True)
+        root_layout.addWidget(self.page_title_label, alignment=Qt.AlignCenter)
 
         # Контейнер сетки фиксированного размера для идеального центрирования
         # 5 колонок * 96px + 4 промежутка * 12px = 528px
@@ -233,6 +244,19 @@ class DeckCanvasWidget(QWidget):
             event.accept()
             return
         super().keyPressEvent(event)
+
+    def set_page_title(self, title: Optional[str]) -> None:
+        """
+        Устанавливает аккуратную подпись текущей страницы.
+        Контейнер всегда сохраняет фиксированную геометрию, исключая сдвиг кнопок вверх.
+        Видна только в редакторе.
+        """
+        clean_title = (title or "").strip()
+        self.page_title_label.setText(clean_title)
+
+    def get_page_title(self) -> str:
+        """Возвращает текущую подпись страницы."""
+        return self.page_title_label.text()
 
     def retranslate_ui(self) -> None:
         """

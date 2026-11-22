@@ -15,7 +15,9 @@ from PySide6.QtGui import QCloseEvent, QGuiApplication, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QFrame,
+    QInputDialog,
     QMainWindow,
+    QMessageBox,
     QSplitter,
     QVBoxLayout,
     QWidget,
@@ -78,6 +80,9 @@ class DeckEditorWindow(QMainWindow):
         self._touchbar_media = TouchbarMediaDTO()
         self._touchbar_clock = TouchbarClockDTO()
         self._touchbar_telemetry = TouchbarTelemetryDTO()
+        self._is_syncing_page: bool = False
+        self._current_page_index: int = 1
+        self._is_dirty: bool = False
 
         self._init_ui()
         self.set_header_bar(EditorHeaderBar(self))
@@ -96,6 +101,8 @@ class DeckEditorWindow(QMainWindow):
 
         self.retranslate_ui()
         bus.language_changed.connect(self._handle_language_changed)
+        bus.deck_page_changed.connect(self._on_bus_deck_page_changed)
+        self.load_configuration()
 
     def _init_ui(self) -> None:
         """Инициализация компоновки окна, контейнеров и слотов-плейсхолдеров."""
@@ -234,6 +241,10 @@ class DeckEditorWindow(QMainWindow):
             bus.language_changed.disconnect(self._handle_language_changed)
         except (RuntimeError, TypeError):
             pass
+        try:
+            bus.deck_page_changed.disconnect(self._on_bus_deck_page_changed)
+        except (RuntimeError, TypeError):
+            pass
         if hasattr(self.header_bar, "cleanup") and callable(self.header_bar.cleanup):
             try:
                 self.header_bar.cleanup()
@@ -341,6 +352,11 @@ class DeckEditorWindow(QMainWindow):
                 dto.category = str(val) if val is not None else ""
             elif prop == "icon":
                 dto.icon = str(val) if val is not None else ""
+            elif prop == "color_accent":
+                dto.color_accent = str(val) if val is not None else "#38bdf8"
+            elif prop == "action_params":
+                dto.action_params = dict(val) if isinstance(val, dict) else {}
+            self._is_dirty = True
         if isinstance(self.canvas_widget, DeckCanvasWidget):
             self.canvas_widget.update_cell_preview(slot_idx, prop, val)
 
@@ -349,6 +365,7 @@ class DeckEditorWindow(QMainWindow):
         dto = self._button_slots.get(slot_idx)
         if dto is not None:
             dto.icon = str(icon_str)
+            self._is_dirty = True
         if isinstance(self.canvas_widget, DeckCanvasWidget):
             self.canvas_widget.update_cell_icon(slot_idx, icon_str)
 
@@ -359,10 +376,13 @@ class DeckEditorWindow(QMainWindow):
         logger.info("Inspector touchbar updated: sec=%s, prop=%s, val=%s", sec_type, prop, val)
         if sec_type == "media" and hasattr(self._touchbar_media, prop):
             setattr(self._touchbar_media, prop, val)
+            self._is_dirty = True
         elif sec_type == "clock" and hasattr(self._touchbar_clock, prop):
             setattr(self._touchbar_clock, prop, val)
+            self._is_dirty = True
         elif sec_type == "telemetry" and hasattr(self._touchbar_telemetry, prop):
             setattr(self._touchbar_telemetry, prop, val)
+            self._is_dirty = True
 
     def _on_inspector_slot_cleared(self, slot_idx: int) -> None:
         """
@@ -378,6 +398,7 @@ class DeckEditorWindow(QMainWindow):
             action_type="",
             hotkey="",
         )
+        self._is_dirty = True
         if isinstance(self.canvas_widget, DeckCanvasWidget):
             self.canvas_widget.clear_cell(slot_idx)
             self.canvas_widget.clear_selection()
@@ -395,50 +416,280 @@ class DeckEditorWindow(QMainWindow):
         if isinstance(widget, PageNavigationBar):
             widget.page_changed.connect(self._on_pagination_page_changed)
             widget.add_page_requested.connect(self._on_pagination_add_page_requested)
+            widget.rename_page_requested.connect(self._on_pagination_rename_page_requested)
+            widget.duplicate_page_requested.connect(self._on_pagination_duplicate_page_requested)
+            widget.clear_page_requested.connect(self._on_pagination_clear_page_requested)
+            widget.delete_page_requested.connect(self._on_pagination_delete_page_requested)
 
     def _on_pagination_page_changed(self, page_index: int) -> None:
         logger.info("Pagination page changed: %s", page_index)
-        self.active_page_id = page_index - 1
+        # Автосохранение изменений текущей страницы перед переходом на другую (только если были правки)
+        if getattr(self, "_is_dirty", False) and self._button_slots and hasattr(self, "active_page_id") and self.active_page_id:
+            try:
+                self.save_configuration()
+            except Exception as exc:
+                logger.warning("Auto-saving page configuration before page switch failed: %s", exc)
+
+        self._current_page_index = page_index
+        from modules.deck.editor.adapter import DeckConfigAdapter
+        root_config = DeckConfigAdapter.load_deck_config(self.config_path)
+
+        page_cfg = None
+        idx = page_index - 1
+        if 0 <= idx < len(root_config.pages):
+            page_cfg = root_config.pages[idx]
+            self.active_page_id = page_cfg.id
+            page_title = page_cfg.name
+        else:
+            self.active_page_id = f"page_{page_index}"
+            page_title = ""
+
         if hasattr(self.canvas_widget, "set_page") and callable(self.canvas_widget.set_page):
             self.canvas_widget.set_page(page_index)
+        if hasattr(self.canvas_widget, "set_page_title") and callable(self.canvas_widget.set_page_title):
+            self.canvas_widget.set_page_title(page_title)
+
+        self.load_configuration(page_id=self.active_page_id)
+
+        # Синхронизация с сенсорной панелью DuckDeck
+        if not self._is_syncing_page and page_cfg is not None and len(page_cfg.buttons) > 0:
+            self._is_syncing_page = True
+            try:
+                bus.deck_page_changed.emit(page_cfg.id)
+            finally:
+                self._is_syncing_page = False
+
+    def _on_bus_deck_page_changed(self, page_id: str) -> None:
+        """Реакция на переключение страницы на сенсорной панели DuckDeck."""
+        if self._is_syncing_page:
+            return
+        if getattr(self, "_is_dirty", False) and self._button_slots and hasattr(self, "active_page_id") and self.active_page_id:
+            try:
+                self.save_configuration()
+            except Exception as exc:
+                logger.warning("Auto-saving page configuration before remote page switch failed: %s", exc)
+        from modules.deck.editor.adapter import DeckConfigAdapter
+        root_config = DeckConfigAdapter.load_deck_config(self.config_path)
+
+        found_idx = -1
+        for idx, p in enumerate(root_config.pages):
+            if p.id == page_id:
+                found_idx = idx
+                break
+
+        if found_idx != -1:
+            target_page_idx = found_idx + 1
+            self._is_syncing_page = True
+            try:
+                self._current_page_index = target_page_idx
+                self.active_page_id = page_id
+                if hasattr(self.pagination_bar, "set_page_count"):
+                    self.pagination_bar.set_page_count(len(root_config.pages))
+                if hasattr(self.pagination_bar, "set_current_page"):
+                    self.pagination_bar.set_current_page(target_page_idx)
+                if hasattr(self.canvas_widget, "set_page"):
+                    self.canvas_widget.set_page(target_page_idx)
+                if hasattr(self.canvas_widget, "set_page_title"):
+                    self.canvas_widget.set_page_title(root_config.pages[found_idx].name)
+                self.load_configuration(page_id=page_id)
+            finally:
+                self._is_syncing_page = False
 
     def _on_pagination_add_page_requested(self) -> None:
+        """Добавление новой страницы по нажатию на кнопку '+'."""
         logger.info("Pagination add page requested")
+        if getattr(self, "_is_dirty", False) and self._button_slots and hasattr(self, "active_page_id") and self.active_page_id:
+            try:
+                self.save_configuration()
+            except Exception as exc:
+                logger.warning("Auto-saving page configuration before adding new page failed: %s", exc)
+        from modules.deck.editor.adapter import DeckConfigAdapter
+        from modules.deck.models import DeckPageConfig
+        root_config = DeckConfigAdapter.load_deck_config(self.config_path)
+
+        new_page_index = len(root_config.pages) + 1
+        new_page_id = f"page_{new_page_index}"
+
+        # Создаем и сохраняем новую страницу в конфиг
+        new_page = DeckPageConfig(
+            id=new_page_id,
+            name="",
+            grid_rows=2,
+            grid_cols=5,
+            buttons=[],
+        )
+        root_config.pages.append(new_page)
+        DeckConfigAdapter.save_deck_config_atomic(root_config, self.config_path)
+        bus.deck_config_updated.emit()
+
+        if isinstance(self.pagination_bar, PageNavigationBar):
+            self.pagination_bar.set_page_count(new_page_index)
+            self.pagination_bar.set_current_page(new_page_index)
+        self._on_pagination_page_changed(new_page_index)
+
+    def _on_pagination_rename_page_requested(self, page_index: int) -> None:
+        """Контекстное меню: переименование страницы."""
+        from modules.deck.editor.adapter import DeckConfigAdapter
+        root_config = DeckConfigAdapter.load_deck_config(self.config_path)
+
+        idx = page_index - 1
+        current_name = ""
+        page_id = f"page_{page_index}"
+        if 0 <= idx < len(root_config.pages):
+            current_name = root_config.pages[idx].name
+            page_id = root_config.pages[idx].id
+
+        new_name, ok = QInputDialog.getText(
+            self,
+            t("deck.editor.canvas.pagination.rename_dialog_title"),
+            t("deck.editor.canvas.pagination.rename_dialog_label"),
+            text=current_name,
+        )
+        if ok:
+            clean_name = new_name.strip()
+            updated_root = DeckConfigAdapter.rename_page(root_config, page_id, clean_name)
+            DeckConfigAdapter.save_deck_config_atomic(updated_root, self.config_path)
+            if hasattr(self.canvas_widget, "set_page_title"):
+                self.canvas_widget.set_page_title(clean_name)
+            bus.deck_config_updated.emit()
+            logger.info("Page %d renamed to '%s'", page_index, clean_name)
+
+    def _on_pagination_duplicate_page_requested(self, page_index: int) -> None:
+        """Контекстное меню: дублирование страницы."""
+        from modules.deck.editor.adapter import DeckConfigAdapter
+        root_config = DeckConfigAdapter.load_deck_config(self.config_path)
+
+        suffix = " " + t("deck.editor.canvas.pagination.duplicate_suffix")
+        updated_root, new_page = DeckConfigAdapter.duplicate_page(
+            root_config, page_index - 1, copy_suffix=suffix
+        )
+        DeckConfigAdapter.save_deck_config_atomic(updated_root, self.config_path)
+        bus.deck_config_updated.emit()
+
+        new_count = len(updated_root.pages)
+        if isinstance(self.pagination_bar, PageNavigationBar):
+            self.pagination_bar.set_page_count(new_count)
+            self.pagination_bar.set_current_page(new_count)
+        self._on_pagination_page_changed(new_count)
+        logger.info("Page %d duplicated to new page '%s' (idx %d)", page_index, new_page.id, new_count)
+
+    def _on_pagination_clear_page_requested(self, page_index: int) -> None:
+        """Контекстное меню: очистка всех слотов страницы без ее удаления."""
+        from modules.deck.editor.adapter import DeckConfigAdapter
+        root_config = DeckConfigAdapter.load_deck_config(self.config_path)
+
+        idx = page_index - 1
+        page_name = ""
+        if 0 <= idx < len(root_config.pages):
+            page_name = root_config.pages[idx].name
+
+        display_name = page_name or str(page_index)
+        confirm = QMessageBox.question(
+            self,
+            t("deck.editor.canvas.pagination.clear_confirm_title"),
+            t("deck.editor.canvas.pagination.clear_confirm_message", name=display_name),
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if confirm == QMessageBox.Yes:
+            self._button_slots = {i: ButtonSlotDTO(slot_index=i) for i in range(10)}
+
+            if isinstance(self.canvas_widget, DeckCanvasWidget):
+                for i in range(10):
+                    self.canvas_widget.clear_cell(i)
+                self.canvas_widget.clear_selection()
+
+            if hasattr(self, "inspector") and hasattr(self.inspector, "show_placeholder"):
+                self.inspector.show_placeholder()
+
+            page_id = self.active_page_id
+            updated_root = DeckConfigAdapter.apply_slots_to_page(
+                root_config=root_config,
+                page_id_or_index=page_id,
+                slots=self._button_slots,
+            )
+            DeckConfigAdapter.save_deck_config_atomic(updated_root, self.config_path)
+            bus.deck_config_updated.emit()
+            logger.info("Page %d ('%s') cleared.", page_index, page_id)
+
+    def _on_pagination_delete_page_requested(self, page_index: int) -> None:
+        """Контекстное меню: удаление страницы (недоступно, если осталась всего 1 страница)."""
+        from modules.deck.editor.adapter import DeckConfigAdapter
+        root_config = DeckConfigAdapter.load_deck_config(self.config_path)
+
+        if len(root_config.pages) <= 1:
+            return
+
+        idx = page_index - 1
+        page_name = ""
+        if 0 <= idx < len(root_config.pages):
+            page_name = root_config.pages[idx].name
+
+        display_name = page_name or str(page_index)
+        confirm = QMessageBox.question(
+            self,
+            t("deck.editor.canvas.pagination.delete_confirm_title"),
+            t("deck.editor.canvas.pagination.delete_confirm_message", name=display_name),
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if confirm == QMessageBox.Yes:
+            updated_root = DeckConfigAdapter.delete_page(root_config, idx)
+            DeckConfigAdapter.save_deck_config_atomic(updated_root, self.config_path)
+            bus.deck_config_updated.emit()
+
+            new_count = len(updated_root.pages)
+            if isinstance(self.pagination_bar, PageNavigationBar):
+                self.pagination_bar.set_page_count(new_count)
+
+            new_target = max(1, min(page_index, new_count))
+            if hasattr(self.pagination_bar, "set_current_page"):
+                self.pagination_bar.set_current_page(new_target)
+            self._on_pagination_page_changed(new_target)
+            logger.info("Page %d deleted, switched to %d", page_index, new_target)
 
     def set_page(self, page_id: str | int) -> None:
         """
         Переключает активную страницу редактора (холст и панель пагинации).
-        Поддерживает форматы: int (1..8), str ('page_0', 'page_1', '1').
+        Поддерживает форматы: int (1..N), str ('page_0', 'page_1', '1', 'default', 'grid4x6').
         """
-        self.active_page_id = page_id
+        from modules.deck.editor.adapter import DeckConfigAdapter
+        root_config = DeckConfigAdapter.load_deck_config(self.config_path)
+
         page_idx = 1
         if isinstance(page_id, int):
-            page_idx = max(1, min(8, page_id))
+            page_idx = max(1, page_id)
         elif isinstance(page_id, str):
-            if page_id.startswith("page_"):
+            found_idx = -1
+            for idx, p in enumerate(root_config.pages):
+                if p.id == page_id:
+                    found_idx = idx
+                    break
+            if found_idx != -1:
+                page_idx = found_idx + 1
+            elif page_id.startswith("page_"):
                 try:
                     num = int(page_id.split("_")[1])
-                    page_idx = max(1, min(8, num + 1))
+                    page_idx = max(1, num + 1)
                 except (ValueError, IndexError):
                     page_idx = 1
             else:
                 try:
                     num = int(page_id)
-                    page_idx = max(1, min(8, num))
+                    page_idx = max(1, num)
                 except ValueError:
                     page_idx = 1
 
-        if self.pagination_bar is not None and hasattr(self.pagination_bar, "set_current_page"):
-            try:
-                self.pagination_bar.set_current_page(page_idx)
-            except Exception as exc:
-                logger.warning("Error setting pagination page: %s", exc)
+        if self.pagination_bar is not None:
+            if hasattr(self.pagination_bar, "set_page_count"):
+                self.pagination_bar.set_page_count(max(len(root_config.pages), page_idx))
+            if hasattr(self.pagination_bar, "set_current_page"):
+                try:
+                    self.pagination_bar.set_current_page(page_idx)
+                except Exception as exc:
+                    logger.warning("Error setting pagination page: %s", exc)
 
-        if self.canvas_widget is not None and hasattr(self.canvas_widget, "set_page"):
-            try:
-                self.canvas_widget.set_page(page_idx)
-            except Exception as exc:
-                logger.warning("Error setting canvas page: %s", exc)
+        self._on_pagination_page_changed(page_idx)
 
     def set_inspector_widget(self, widget: QWidget) -> None:
         """Заменяет слот инспектора свойств на указанный виджет."""
@@ -561,6 +812,7 @@ class DeckEditorWindow(QMainWindow):
                     logger.warning("Error showing save success in header bar: %s", exc)
 
             # 5. Эмиссия глобального сигнала обновления конфигурации
+            self._is_dirty = False
             bus.deck_config_updated.emit()
             logger.info("Deck configuration successfully saved and bus.deck_config_updated emitted.")
             return True
@@ -584,14 +836,48 @@ class DeckEditorWindow(QMainWindow):
 
         from modules.deck.editor.adapter import DeckConfigAdapter
         root_config = DeckConfigAdapter.load_deck_config(self.config_path)
+        page = DeckConfigAdapter.get_page(root_config, self.active_page_id)
+        if page is not None:
+            self.active_page_id = page.id
+        elif root_config.pages:
+            self.active_page_id = root_config.pages[0].id
+            page = root_config.pages[0]
+
         slots = DeckConfigAdapter.load_page_slots(root_config, self.active_page_id)
         self._button_slots = slots
 
+        # Обновление подписи страницы на холсте
+        if hasattr(self.canvas_widget, "set_page_title"):
+            self.canvas_widget.set_page_title(page.name if page and page.name else "")
+
+        if hasattr(self.pagination_bar, "set_page_count"):
+            target_count = max(len(root_config.pages), getattr(self, "_current_page_index", 1))
+            self.pagination_bar.set_page_count(target_count)
+            self.pagination_bar.set_current_page(getattr(self, "_current_page_index", 1))
+
         if isinstance(self.canvas_widget, DeckCanvasWidget):
             for idx, dto in slots.items():
-                self.canvas_widget.update_cell_preview(idx, "title", dto.title)
-                self.canvas_widget.update_cell_preview(idx, "icon", dto.icon)
-                self.canvas_widget.update_cell_preview(idx, "category", dto.category)
+                is_empty = (
+                    not dto.title
+                    and not dto.hotkey
+                    and (not dto.icon or dto.icon == "🖲️")
+                    and not getattr(dto, "original_config", None)
+                )
+                if is_empty:
+                    self.canvas_widget.clear_cell(idx)
+                else:
+                    self.canvas_widget.update_cell_preview(idx, "title", dto.title)
+                    self.canvas_widget.update_cell_preview(idx, "icon", dto.icon)
+                    self.canvas_widget.update_cell_preview(idx, "category", dto.category)
+
+            # Если была выделена кнопка, обновляем инспектор актуальными данными
+            sel = self.canvas_widget.get_selected_target()
+            if sel is not None and sel[0] == "button" and isinstance(self.inspector, KeyPropertyInspector):
+                slot_idx = int(sel[1])
+                if slot_idx in self._button_slots:
+                    self.inspector.load_button_slot(slot_idx, self._button_slots[slot_idx])
+
+        self._is_dirty = False
 
     # ==========================================================================
     # Свойства-алиасы для обратной и прямой совместимости

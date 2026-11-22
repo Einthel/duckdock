@@ -6,10 +6,11 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import Optional
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFontMetrics, QMouseEvent
+from PySide6.QtGui import QFontMetrics, QMouseEvent, QPixmap
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -122,7 +123,20 @@ class EditorGridCell(QFrame):
         self._category = category
         self._hotkey = hotkey
 
-        self.lbl_icon.setText(icon)
+        if icon and os.path.isfile(icon):
+            pixmap = QPixmap(icon)
+            if not pixmap.isNull():
+                scaled = pixmap.scaled(
+                    48,
+                    48,
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation,
+                )
+                self.lbl_icon.setPixmap(scaled)
+            else:
+                self.lbl_icon.setText(icon)
+        else:
+            self.lbl_icon.setText(icon)
 
         # Эллипсис для длинных названий
         metrics = QFontMetrics(self.lbl_title.font())
@@ -139,7 +153,7 @@ class EditorGridCell(QFrame):
         self._category = ""
         self._hotkey = ""
 
-        self.lbl_icon.setText("")
+        self.lbl_icon.clear()
         self.lbl_title.setText("")
         self.setToolTip("")
 

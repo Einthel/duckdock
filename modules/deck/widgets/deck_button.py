@@ -46,14 +46,14 @@ class DeckButtonWidget(QFrame):
             self.tile_width = 143
             self.tile_height = 123
             self.corner_radius = 10
-            self.icon_font_size = 28
+            self.icon_font_size = 42
             self.title_font_size = 11
             self.status_font_size = 9
         else:
             self.tile_width = 174
             self.tile_height = 168
             self.corner_radius = 14
-            self.icon_font_size = 38
+            self.icon_font_size = 52
             self.title_font_size = 13
             self.status_font_size = 10
 

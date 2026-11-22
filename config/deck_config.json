@@ -27,7 +27,6 @@
           "icon_size": 48,
           "color_accent": "#06b6d4",
           "background_color": "#161b26",
-          "status_source": "audio_device",
           "action": {
             "action_type": "audio_device",
             "params": {
@@ -39,6 +38,7 @@
             }
           },
           "toggle_action": null,
+          "status_source": "audio_device",
           "sound_override": null
         },
         {
@@ -52,14 +52,16 @@
           "icon_size": 48,
           "color_accent": "#ef4444",
           "background_color": "#161b26",
-          "status_source": "mic_mute",
           "action": {
-            "action_type": "system",
+            "action_type": "volume_control",
             "params": {
-              "command": "toggle_mic_mute"
+              "target": "microphone",
+              "command": "toggle_mute",
+              "step_percent": 5
             }
           },
           "toggle_action": null,
+          "status_source": "mic_mute",
           "sound_override": null
         },
         {
@@ -73,7 +75,6 @@
           "icon_size": 48,
           "color_accent": "#38bdf8",
           "background_color": "#161b26",
-          "status_source": null,
           "action": {
             "action_type": "screenshot",
             "params": {
@@ -83,6 +84,7 @@
             }
           },
           "toggle_action": null,
+          "status_source": null,
           "sound_override": null
         },
         {
@@ -96,7 +98,6 @@
           "icon_size": 48,
           "color_accent": "#818cf8",
           "background_color": "#161b26",
-          "status_source": null,
           "action": {
             "action_type": "hotkey",
             "params": {
@@ -108,6 +109,7 @@
             }
           },
           "toggle_action": null,
+          "status_source": null,
           "sound_override": null
         },
         {
@@ -121,7 +123,6 @@
           "icon_size": 48,
           "color_accent": "#dc2626",
           "background_color": "#161b26",
-          "status_source": null,
           "action": {
             "action_type": "hotkey",
             "params": {
@@ -132,6 +133,7 @@
             }
           },
           "toggle_action": null,
+          "status_source": null,
           "sound_override": null
         },
         {
@@ -145,7 +147,6 @@
           "icon_size": 48,
           "color_accent": "#f43f5e",
           "background_color": "#161b26",
-          "status_source": null,
           "action": {
             "action_type": "http_request",
             "params": {
@@ -157,6 +158,7 @@
             }
           },
           "toggle_action": null,
+          "status_source": null,
           "sound_override": null
         },
         {
@@ -170,17 +172,18 @@
           "icon_size": 48,
           "color_accent": "#10b981",
           "background_color": "#161b26",
-          "status_source": null,
           "action": {
-            "action_type": "launch",
+            "action_type": "open_app",
             "params": {
-              "path": "wt.exe",
+              "executable": "",
               "args": [],
+              "path": "wt.exe",
               "working_dir": null,
               "detached": true
             }
           },
           "toggle_action": null,
+          "status_source": null,
           "sound_override": null
         },
         {
@@ -194,7 +197,6 @@
           "icon_size": 48,
           "color_accent": "#a855f7",
           "background_color": "#161b26",
-          "status_source": "dimmer",
           "action": {
             "action_type": "system",
             "params": {
@@ -202,6 +204,7 @@
             }
           },
           "toggle_action": null,
+          "status_source": "dimmer",
           "sound_override": null
         },
         {
@@ -215,7 +218,6 @@
           "icon_size": 48,
           "color_accent": "#f59e0b",
           "background_color": "#161b26",
-          "status_source": null,
           "action": {
             "action_type": "system",
             "params": {
@@ -223,6 +225,7 @@
             }
           },
           "toggle_action": null,
+          "status_source": null,
           "sound_override": null
         },
         {
@@ -236,17 +239,18 @@
           "icon_size": 48,
           "color_accent": "#06b6d4",
           "background_color": "#161b26",
-          "status_source": null,
           "action": {
-            "action_type": "launch",
+            "action_type": "open_app",
             "params": {
-              "path": "calc.exe",
+              "executable": "",
               "args": [],
+              "path": "calc.exe",
               "working_dir": null,
               "detached": true
             }
           },
           "toggle_action": null,
+          "status_source": null,
           "sound_override": null
         }
       ]
@@ -268,7 +272,6 @@
           "icon_size": 48,
           "color_accent": "#38bdf8",
           "background_color": "#161b26",
-          "status_source": null,
           "action": {
             "action_type": "navigation",
             "params": {
@@ -276,6 +279,7 @@
             }
           },
           "toggle_action": null,
+          "status_source": null,
           "sound_override": null
         },
         {
@@ -289,7 +293,6 @@
           "icon_size": 48,
           "color_accent": "#ef4444",
           "background_color": "#161b26",
-          "status_source": "mic_mute",
           "action": {
             "action_type": "system",
             "params": {
@@ -297,6 +300,7 @@
             }
           },
           "toggle_action": null,
+          "status_source": "mic_mute",
           "sound_override": null
         },
         {
@@ -310,7 +314,6 @@
           "icon_size": 48,
           "color_accent": "#dc2626",
           "background_color": "#161b26",
-          "status_source": null,
           "action": {
             "action_type": "hotkey",
             "params": {
@@ -321,6 +324,7 @@
             }
           },
           "toggle_action": null,
+          "status_source": null,
           "sound_override": null
         },
         {
@@ -334,7 +338,6 @@
           "icon_size": 48,
           "color_accent": "#38bdf8",
           "background_color": "#161b26",
-          "status_source": null,
           "action": {
             "action_type": "screenshot",
             "params": {
@@ -344,6 +347,7 @@
             }
           },
           "toggle_action": null,
+          "status_source": null,
           "sound_override": null
         },
         {
@@ -357,7 +361,6 @@
           "icon_size": 48,
           "color_accent": "#818cf8",
           "background_color": "#161b26",
-          "status_source": null,
           "action": {
             "action_type": "hotkey",
             "params": {
@@ -369,6 +372,7 @@
             }
           },
           "toggle_action": null,
+          "status_source": null,
           "sound_override": null
         },
         {
@@ -382,7 +386,6 @@
           "icon_size": 48,
           "color_accent": "#06b6d4",
           "background_color": "#161b26",
-          "status_source": "audio_device",
           "action": {
             "action_type": "audio_device",
             "params": {
@@ -394,6 +397,7 @@
             }
           },
           "toggle_action": null,
+          "status_source": "audio_device",
           "sound_override": null
         },
         {
@@ -407,17 +411,18 @@
           "icon_size": 48,
           "color_accent": "#10b981",
           "background_color": "#161b26",
-          "status_source": null,
           "action": {
-            "action_type": "launch",
+            "action_type": "open_app",
             "params": {
-              "path": "wt.exe",
+              "executable": "",
               "args": [],
+              "path": "wt.exe",
               "working_dir": null,
               "detached": true
             }
           },
           "toggle_action": null,
+          "status_source": null,
           "sound_override": null
         },
         {
@@ -431,7 +436,6 @@
           "icon_size": 48,
           "color_accent": "#a855f7",
           "background_color": "#161b26",
-          "status_source": "dimmer",
           "action": {
             "action_type": "system",
             "params": {
@@ -439,6 +443,7 @@
             }
           },
           "toggle_action": null,
+          "status_source": "dimmer",
           "sound_override": null
         },
         {
@@ -452,7 +457,6 @@
           "icon_size": 48,
           "color_accent": "#f59e0b",
           "background_color": "#161b26",
-          "status_source": null,
           "action": {
             "action_type": "system",
             "params": {
@@ -460,6 +464,7 @@
             }
           },
           "toggle_action": null,
+          "status_source": null,
           "sound_override": null
         },
         {
@@ -473,17 +478,70 @@
           "icon_size": 48,
           "color_accent": "#06b6d4",
           "background_color": "#161b26",
-          "status_source": null,
           "action": {
-            "action_type": "launch",
+            "action_type": "open_app",
             "params": {
-              "path": "calc.exe",
+              "executable": "",
               "args": [],
+              "path": "calc.exe",
               "working_dir": null,
               "detached": true
             }
           },
           "toggle_action": null,
+          "status_source": null,
+          "sound_override": null
+        }
+      ]
+    },
+    {
+      "id": "page_3",
+      "name": "",
+      "grid_rows": 2,
+      "grid_cols": 5,
+      "buttons": [
+        {
+          "id": "btn_slot_6",
+          "slot_index": 6,
+          "name": "dvgdcfs",
+          "title": "dvgdcfs",
+          "category": "shortcut",
+          "icon": "🖲️",
+          "icon_path": null,
+          "icon_size": 48,
+          "color_accent": "#38bdf8",
+          "background_color": "#161b26",
+          "action": {
+            "action_type": "hotkey",
+            "params": {
+              "keys": []
+            }
+          },
+          "toggle_action": null,
+          "status_source": null,
+          "sound_override": null
+        },
+        {
+          "id": "btn_slot_9",
+          "slot_index": 9,
+          "name": "Управление микрофоном",
+          "title": "Управление микрофоном",
+          "category": "system",
+          "icon": "🎙️",
+          "icon_path": null,
+          "icon_size": 48,
+          "color_accent": "#38bdf8",
+          "background_color": "#161b26",
+          "action": {
+            "action_type": "volume_control",
+            "params": {
+              "target": "focus_app",
+              "command": "toggle_mute",
+              "step_percent": 5
+            }
+          },
+          "toggle_action": null,
+          "status_source": null,
           "sound_override": null
         }
       ]

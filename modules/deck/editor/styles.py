@@ -79,7 +79,7 @@ TOOL_BUTTON_SIZE = 32
 
 CANVAS_SLOT_MIN_HEIGHT = 300
 PAGINATION_SLOT_HEIGHT = 36
-INSPECTOR_SLOT_HEIGHT = 220
+INSPECTOR_SLOT_HEIGHT = 260
 SEARCH_SLOT_HEIGHT = 52
 
 # ==============================================================================
@@ -106,7 +106,7 @@ BORDER_TOUCHBAR = BORDER_SURFACE_1
 # ==============================================================================
 # Токены инспектора свойств и превью-плитки (Property Inspector & Tile Geometry)
 # ==============================================================================
-INSPECTOR_HEIGHT = 220
+INSPECTOR_HEIGHT = 260
 PREVIEW_TILE_SIZE = 84
 INPUT_HEIGHT = 30
 FORM_LABEL_WIDTH = 60
@@ -432,7 +432,7 @@ QLabel.CellIconLabel,
 QLabel[class="CellIconLabel"],
 QLabel#lblCellIcon {{
     color: {TEXT_PRIMARY_HIGH};
-    font-size: 26px;
+    font-size: 40px;
     background: transparent;
     border: none;
 }}
@@ -594,6 +594,20 @@ QLabel#lblTouchbarFallback {{
     font-size: 11px;
     background: transparent;
     border: none;
+}}
+
+/* ========================================================================== */
+/* Аккуратная подпись текущей страницы над сеткой холста                      */
+/* ========================================================================== */
+QLabel#canvasPageTitleLabel {{
+    color: {TEXT_SECONDARY_MED};
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    background: transparent;
+    border: none;
+    padding: 0px 4px;
+    margin-bottom: 2px;
 }}
 
 /* ========================================================================== */
@@ -859,6 +873,56 @@ InspectorFieldLabel {{
     font-size: 12px;
     font-weight: 500;
     background: transparent;
+}}
+
+/* Свотчи выбора акцентного цвета кнопки */
+QPushButton.ColorAccentSwatch,
+QPushButton[class="ColorAccentSwatch"],
+ColorAccentSwatch {{
+    min-width: 18px;
+    max-width: 18px;
+    min-height: 18px;
+    max-height: 18px;
+    border-radius: 9px;
+    border: 1px solid {BORDER_SURFACE_2};
+    padding: 0px;
+    margin: 0px;
+}}
+
+QPushButton.ColorAccentSwatch:hover,
+QPushButton[class="ColorAccentSwatch"]:hover,
+ColorAccentSwatch:hover {{
+    border: 1.5px solid {BORDER_FOCUS_NEON};
+}}
+
+QPushButton.ColorAccentSwatch[selected="true"],
+QPushButton[class="ColorAccentSwatch"][selected="true"],
+ColorAccentSwatch[selected="true"] {{
+    border: 2px solid #ffffff;
+}}
+
+/* Кнопка выбора файла/папки в подформе инспектора */
+QPushButton.InspectorBrowseButton,
+QPushButton[class="InspectorBrowseButton"],
+InspectorBrowseButton {{
+    min-width: {INPUT_HEIGHT}px;
+    max-width: {INPUT_HEIGHT}px;
+    min-height: {INPUT_HEIGHT}px;
+    max-height: {INPUT_HEIGHT}px;
+    background-color: {SURFACE_2_CARD};
+    border: 1px solid {BORDER_SURFACE_1};
+    border-radius: 6px;
+    color: {TEXT_PRIMARY_HIGH};
+    font-size: 13px;
+    padding: 0px;
+}}
+
+QPushButton.InspectorBrowseButton:hover,
+QPushButton[class="InspectorBrowseButton"]:hover,
+InspectorBrowseButton:hover {{
+    background-color: {SURFACE_3_HOVER};
+    border-color: {BORDER_HOVER};
+    color: {BORDER_FOCUS_NEON};
 }}
 
 /* Кнопка сброса настроек секции тачбара */
@@ -1240,6 +1304,53 @@ QMenu::separator {{
     height: 1px;
     background-color: {BORDER_SURFACE_2};
     margin: 4px 6px;
+}}
+
+/* ========================================================================== */
+/* QInputDialog и QMessageBox (Диалоги переименования и подтверждения)        */
+/* ========================================================================== */
+QInputDialog,
+QMessageBox {{
+    background-color: {SURFACE_1_PANEL};
+    border: 1px solid {BORDER_SURFACE_2};
+    color: {TEXT_PRIMARY_HIGH};
+}}
+
+QInputDialog QLabel,
+QMessageBox QLabel {{
+    color: {TEXT_PRIMARY_HIGH};
+    font-size: 13px;
+}}
+
+QInputDialog QLineEdit {{
+    background-color: {SURFACE_2_CARD};
+    border: 1px solid {BORDER_SURFACE_2};
+    border-radius: 6px;
+    color: {TEXT_PRIMARY_HIGH};
+    padding: 6px 10px;
+    font-size: 13px;
+}}
+
+QInputDialog QLineEdit:focus {{
+    border-color: {BORDER_FOCUS_NEON};
+}}
+
+QInputDialog QPushButton,
+QMessageBox QPushButton {{
+    background-color: {SURFACE_2_CARD};
+    border: 1px solid {BORDER_SURFACE_2};
+    border-radius: 6px;
+    color: {TEXT_PRIMARY_HIGH};
+    padding: 6px 16px;
+    min-width: 60px;
+    font-size: 12px;
+    font-weight: 600;
+}}
+
+QInputDialog QPushButton:hover,
+QMessageBox QPushButton:hover {{
+    background-color: {SURFACE_3_HOVER};
+    border-color: {BORDER_FOCUS_NEON};
 }}
 
 /* ========================================================================== */

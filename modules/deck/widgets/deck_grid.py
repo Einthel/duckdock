@@ -64,6 +64,7 @@ class DeckGrid(QWidget):
         """
         Загрузка страницы кнопок с очисткой предыдущих виджетов без утечек памяти.
         В DuckDeck v0.4.0 используется сетка 2x5 (10 кнопок на страницу).
+        Все ячейки сетки всегда отображаются полноценными тайлами DeckButtonWidget.
         """
         # Очистка существующих элементов
         self.clear()
@@ -77,16 +78,39 @@ class DeckGrid(QWidget):
 
         rows = min(page_config.grid_rows or 2, 2)
         cols = page_config.grid_cols or 5
+        total_cells = rows * cols
 
-        # Размещение кнопок по формуле: row = idx // cols, col = idx % cols
-        for idx, btn_cfg in enumerate(page_config.buttons):
-            row = idx // cols
-            col = idx % cols
-            if row >= rows:
-                logger.warning(
-                    f"Кнопка '{btn_cfg.id}' выходит за пределы сетки ({rows}x{cols})"
+        # Сопоставляем сконфигурированные кнопки по slot_index
+        configured_by_slot: Dict[int, DeckButtonConfig] = {}
+        for btn in page_config.buttons:
+            if btn.slot_index is not None and 0 <= btn.slot_index < total_cells:
+                configured_by_slot[btn.slot_index] = btn
+            elif len(configured_by_slot) < total_cells:
+                for s in range(total_cells):
+                    if s not in configured_by_slot:
+                        configured_by_slot[s] = btn
+                        break
+
+        from modules.deck.models import DeckActionConfig, DeckButtonConfig
+
+        for slot_idx in range(total_cells):
+            row = slot_idx // cols
+            col = slot_idx % cols
+
+            if slot_idx in configured_by_slot:
+                btn_cfg = configured_by_slot[slot_idx]
+            else:
+                btn_cfg = DeckButtonConfig(
+                    id=f"btn_unconfigured_{page_config.id}_{slot_idx}",
+                    slot_index=slot_idx,
+                    name=f"Slot {slot_idx}",
+                    title="",
+                    category="system",
+                    icon="",
+                    color_accent="#38bdf8",
+                    background_color="#161b26",
+                    action=DeckActionConfig(action_type="hotkey", params={}),
                 )
-                break
 
             btn_widget = DeckButtonWidget(
                 button_config=btn_cfg,
@@ -99,21 +123,6 @@ class DeckGrid(QWidget):
             self.grid_layout.addWidget(btn_widget, row, col, Qt.AlignCenter)
             self._buttons[btn_cfg.id] = btn_widget
 
-        # Заполнение пустых ячеек сетки распорками для сохранения жесткой геометрии
-        total_cells = rows * cols
-        buttons_count = len(self._buttons)
-        if buttons_count < total_cells:
-            for idx in range(buttons_count, total_cells):
-                r = idx // cols
-                c = idx % cols
-                spacer = QSpacerItem(
-                    174 if cols == 5 else 143,
-                    168 if rows <= 2 else 123,
-                    QSizePolicy.Fixed,
-                    QSizePolicy.Fixed,
-                )
-                self.grid_layout.addItem(spacer, r, c)
-
     def get_button(self, button_id: str) -> Optional[DeckButtonWidget]:
         """Получить виджет кнопки по ее ID."""
         return self._buttons.get(button_id)
@@ -124,27 +133,55 @@ class DeckGrid(QWidget):
         Возвращает True, если кнопки были успешно обновлены in-place,
         или False, если была выполнена полная перезагрузка сетки (load_page).
         """
-        if not self._buttons:
-            self.load_page(page_config)
-            return True
+        rows = min(page_config.grid_rows or 2, 2)
+        cols = page_config.grid_cols or 5
+        total_cells = rows * cols
 
-        # Если количество кнопок изменилось, выполняем перестройку
-        if len(self._buttons) != len(page_config.buttons):
+        if not self._buttons or len(self._buttons) != total_cells:
+            self.load_page(page_config)
+            return False
+
+        # Сопоставляем сконфигурированные кнопки по slot_index
+        configured_by_slot: Dict[int, DeckButtonConfig] = {}
+        for btn in page_config.buttons:
+            if btn.slot_index is not None and 0 <= btn.slot_index < total_cells:
+                configured_by_slot[btn.slot_index] = btn
+            elif len(configured_by_slot) < total_cells:
+                for s in range(total_cells):
+                    if s not in configured_by_slot:
+                        configured_by_slot[s] = btn
+                        break
+
+        from modules.deck.models import DeckActionConfig, DeckButtonConfig
+
+        # Находим существующие виджеты по слотам
+        widgets_by_slot: Dict[int, DeckButtonWidget] = {}
+        for w in self._buttons.values():
+            s_idx = getattr(w.button_config, "slot_index", None)
+            if s_idx is not None and s_idx not in widgets_by_slot:
+                widgets_by_slot[s_idx] = w
+
+        if len(widgets_by_slot) != total_cells:
             self.load_page(page_config)
             return False
 
         updated: Dict[str, DeckButtonWidget] = {}
-        for btn_cfg in page_config.buttons:
-            btn_widget = self._buttons.get(btn_cfg.id)
-            if btn_widget is None:
-                for existing_w in self._buttons.values():
-                    if getattr(existing_w.button_config, "slot_index", None) == btn_cfg.slot_index:
-                        btn_widget = existing_w
-                        break
-            if btn_widget is None:
-                self.load_page(page_config)
-                return False
-
+        for slot_idx in range(total_cells):
+            btn_widget = widgets_by_slot[slot_idx]
+            if slot_idx in configured_by_slot:
+                btn_cfg = configured_by_slot[slot_idx]
+            else:
+                btn_cfg = DeckButtonConfig(
+                    id=f"btn_unconfigured_{page_config.id}_{slot_idx}",
+                    slot_index=slot_idx,
+                    name=f"Slot {slot_idx}",
+                    title="",
+                    category="system",
+                    icon="",
+                    color_accent="#38bdf8",
+                    background_color="#161b26",
+                    action=DeckActionConfig(action_type="hotkey", params={}),
+                )
             btn_widget.update_config(btn_cfg)
             updated[btn_cfg.id] = btn_widget
 

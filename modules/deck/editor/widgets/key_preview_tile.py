@@ -51,7 +51,7 @@ class KeyPreviewTile(QFrame):
         self.lbl_icon.setAlignment(Qt.AlignCenter)
         self.lbl_icon.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         font = self.lbl_icon.font()
-        font.setPixelSize(32)
+        font.setPixelSize(40)
         self.lbl_icon.setFont(font)
 
         # Левая верхняя микро-кнопка '+' (библиотека иконок)

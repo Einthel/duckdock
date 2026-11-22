@@ -169,7 +169,26 @@
       "page_navigated": "Переход на страницу: {page}",
       "unknown_cmd": "Неизвестная команда: {cmd}",
       "unsupported_action": "Неподдерживаемый тип действия: {action}",
-      "generic_error": "Ошибка: {error}"
+      "generic_error": "Ошибка: {error}",
+      "website_opened": "Открыт сайт: {url}",
+      "empty_url": "URL сайта не указан",
+      "path_opened": "Открыт путь: {path}",
+      "empty_path": "Путь не указан",
+      "path_not_found": "Путь не найден: {path}",
+      "app_launched": "Запущено: {app}",
+      "empty_executable": "Исполняемый файл не указан",
+      "window_closed": "Окно закрыто",
+      "no_active_window": "Нет активного окна",
+      "macro_pasted": "Текстовый макрос отправлен",
+      "media_play_pause": "Медиа: Play/Pause",
+      "media_next_track": "Медиа: Следующий трек",
+      "media_prev_track": "Медиа: Предыдущий трек",
+      "media_stop": "Медиа: Стоп",
+      "media_mute": "Медиа: Mute",
+      "media_volume_up": "Медиа: Громкость +5%",
+      "media_volume_down": "Медиа: Громкость -5%",
+      "volume_updated": "Громкость: {percent}%",
+      "switch_state": "Переключено: {state}"
     },
     "feedback": {
       "switched": "Переключено"
@@ -202,7 +221,19 @@
       "canvas": {
         "pagination": {
           "home_tooltip": "Домашняя страница",
-          "add_tooltip": "Создать новую страницу"
+          "add_tooltip": "Создать новую страницу",
+          "page_tooltip": "Страница {number}",
+          "context_menu_rename": "Переименовать страницу",
+          "context_menu_duplicate": "Дублировать страницу",
+          "context_menu_delete": "Удалить страницу",
+          "context_menu_clear": "Очистить страницу",
+          "rename_dialog_title": "Переименование страницы",
+          "rename_dialog_label": "Введите название страницы:",
+          "delete_confirm_title": "Удаление страницы",
+          "delete_confirm_message": "Вы уверены, что хотите удалить страницу '{name}'?",
+          "clear_confirm_title": "Очистка страницы",
+          "clear_confirm_message": "Вы уверены, что хотите очистить все кнопки на странице '{name}'?",
+          "duplicate_suffix": "(Копия)"
         },
         "touchbar": {
           "media_title": "Медиаплеер",
@@ -221,7 +252,20 @@
         "fields": {
           "title": "Название:",
           "actions": "Действия:",
-          "hotkey": "Хоткей:"
+          "hotkey": "Хоткей:",
+          "params": "Параметры:",
+          "url": "URL сайта:",
+          "path": "Путь:",
+          "executable": "Программа:",
+          "state_1": "Состояние 1:",
+          "state_2": "Состояние 2:",
+          "media_command": "Команда:",
+          "macro_text": "Текст:",
+          "send_enter": "↵ Enter",
+          "vol_target": "Цель:",
+          "vol_action": "Действие:",
+          "browse": "📂",
+          "color_accent": "Акцент:"
         },
         "hotkey": {
           "click_to_assign": "Нажмите для назначения",
@@ -230,9 +274,35 @@
         "actions_presets": {
           "preset_actions": "Готовые действия",
           "hotkey": "Хоткей",
+          "hotkey_switch": "Переключатель хоткеев",
+          "website": "Веб-сайт",
+          "open_app": "Запуск приложения",
+          "open_path": "Открыть папку / файл",
+          "close_window": "Закрыть окно",
+          "text_macro": "Текстовый макрос",
+          "multimedia": "Управление медиа",
+          "volume_control": "Регулятор громкости",
           "open_application": "Запуск приложения",
-          "media_control": "Управление медиа",
-          "text_macro": "Текстовый макрос"
+          "media_control": "Управление медиа"
+        },
+        "media_commands": {
+          "play_pause": "⏯️ Воспроизведение / Пауза",
+          "next_track": "⏭️ Следующий трек",
+          "prev_track": "⏮️ Предыдущий трек",
+          "stop": "⏹️ Остановить",
+          "mute": "🔇 Отключить звук",
+          "volume_up": "🔊 Громкость +5%",
+          "volume_down": "🔉 Громкость -5%"
+        },
+        "volume_targets": {
+          "focus_app": "Активное приложение (в фокусе)",
+          "master": "Общий звук (Master)",
+          "microphone": "Микрофон (Ввод)"
+        },
+        "volume_actions": {
+          "toggle_mute": "Переключить Mute",
+          "volume_up": "Громкость +5%",
+          "volume_down": "Громкость -5%"
         },
         "touchbar": {
           "media_header": "Тачбар: Медиаплеер",
@@ -279,9 +349,18 @@
           "brightness": "Яркость",
           "sleep_display": "Спящий режим экрана",
           "hotkey": "Хоткей",
+          "hotkey_switch": "Переключатель хоткеев",
           "open_app": "Запуск приложения",
           "open_website": "Открыть веб-сайт",
+          "website": "Открыть веб-сайт",
+          "open_path": "Открыть путь / файл",
+          "close_window": "Закрыть активное окно",
           "text_macro": "Текстовый макрос",
+          "multimedia": "Управление медиа",
+          "auto_software_vol": "Громкость активного приложения",
+          "master_volume_control": "Общая громкость",
+          "mic_mute_control": "Управление микрофоном",
+          "output_device_toggle": "Переключение аудиоустройства",
           "mute_audio": "Заглушить звук",
           "volume_up": "Увеличить громкость",
           "volume_down": "Уменьшить громкость",

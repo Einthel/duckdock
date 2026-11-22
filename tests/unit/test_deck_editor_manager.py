@@ -142,3 +142,59 @@ def test_no_circular_imports():
     # Check that modules.deck.widgets.interactive_panel does not statically import editor.manager
     import modules.deck.widgets.interactive_panel as ip
     assert "DeckEditorManager" not in ip.__dict__
+
+
+# ==============================================================================
+# Aliases and Explicit Step 5.1 Test Cases
+# ==============================================================================
+
+
+def test_manager_singleton_identity(qapp: QApplication):
+    """Многократные вызовы get_instance / open_editor возвращают идентичный инстанс."""
+    assert DeckEditorManager.get_instance() is None
+    w1 = DeckEditorManager.open_editor()
+    assert DeckEditorManager.get_instance() is w1
+    w2 = DeckEditorManager.open_editor()
+    assert w2 is w1
+    DeckEditorManager.close_editor()
+    assert DeckEditorManager.get_instance() is None
+
+
+def test_manager_open_creates_window_on_primary_screen(qapp: QApplication):
+    """Проверка создания окна 1080x740 и центрирования относительно экрана primaryScreen."""
+    win = DeckEditorManager.open_editor()
+    assert win.width() == 1080
+    assert win.height() == 740
+    screen = QGuiApplication.primaryScreen()
+    if screen:
+        avail = screen.availableGeometry()
+        expected_x = avail.x() + (avail.width() - 1080) // 2
+        expected_y = avail.y() + (avail.height() - 740) // 2
+        assert abs(win.x() - expected_x) <= 40
+        assert abs(win.y() - expected_y) <= 40
+
+
+def test_manager_reopen_reactivates_existing_window(qapp: QApplication):
+    """Повторный вызов open_editor() активирует существующее окно без создания второго."""
+    win1 = DeckEditorManager.open_editor()
+    win1.showMinimized()
+    qapp.processEvents()
+
+    win2 = DeckEditorManager.open_editor()
+    assert win2 is win1
+    assert not win2.isMinimized()
+
+
+def test_manager_switch_page_on_open(qapp: QApplication):
+    """Передача аргумента page_id переключает активную страницу в редакторе."""
+    win = DeckEditorManager.open_editor(page_id="page_2")
+    assert win.pagination_bar.get_current_page() == 3
+
+
+def test_manager_close_cleans_reference(qapp: QApplication):
+    """Закрытие окна корректно сбрасывает ссылку в менеджере."""
+    DeckEditorManager.open_editor()
+    assert DeckEditorManager.get_instance() is not None
+    DeckEditorManager.close_editor()
+    assert DeckEditorManager.get_instance() is None
+

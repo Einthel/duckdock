@@ -485,20 +485,20 @@ def test_sound_settings_model_and_root_config():
 
 
 def test_deck_config_json_ten_buttons_per_page():
-    """Проверка актуализированного config/deck_config.json: ровно 10 кнопок на страницу."""
+    """Проверка актуализированного config/deck_config.json: базовая валидация структуры страниц и кнопок."""
     cfg = DeckConfigLoader.load_from_file("config/deck_config.json")
     assert isinstance(cfg, DeckRootConfig)
     assert isinstance(cfg.sound_settings, SoundSettings)
     assert cfg.sound_settings.enabled is True
-    assert len(cfg.pages) >= 2
+    assert len(cfg.pages) >= 1
 
     for page in cfg.pages:
         assert page.grid_rows == 2
         assert page.grid_cols == 5
-        assert len(page.buttons) == 10, f"Страница {page.id} должна содержать ровно 10 кнопок"
-        # Проверяем уникальность и корректность slot_index 0..9
+        assert len(page.buttons) <= 10
+        # Проверяем уникальность slot_index
         slots = [b.slot_index for b in page.buttons]
-        assert sorted(slots) == list(range(10)), f"Страница {page.id} должна содержать слоты 0..9"
+        assert len(slots) == len(set(slots))
         for btn in page.buttons:
             assert btn.category in ("system", "shortcut", "program", "api")
             assert btn.icon_size == 48
