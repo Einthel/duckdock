@@ -192,7 +192,10 @@
       "volume_updated": "Громкость: {percent}%",
       "switch_state": "Переключено: {state}",
       "sound_played": "Воспроизведение: {sound}",
-      "soundboard_stopped": "Саундборд остановлен"
+      "soundboard_stopped": "Саундборд остановлен",
+      "display_sleep": "Дисплей переведен в спящий режим",
+      "macro_empty": "Макро-цепочка пуста",
+      "macro_finished": "Выполнено шагов макроса: {success} из {total}"
     },
     "feedback": {
       "switched": "Переключено"
@@ -459,6 +462,152 @@
           "btn_cancel": "Отмена",
           "no_results": "Иконки не найдены",
           "files_filter": "Изображения (*.png *.svg *.ico *.jpg *.webp)"
+        }
+      },
+      "categories": {
+        "audio_comm": "Аудио и связь",
+        "media_stream": "Медиа и стриминг",
+        "launchers": "Приложения и файлы",
+        "system_control": "Система и экран",
+        "input_macros": "Ввод и макросы",
+        "navigation": "Навигация DuckDeck",
+        "soundboard": "Саундборд",
+        "multi_action": "Мульти-действия и макросы"
+      },
+      "primitives": {
+        "hotkey": "Горячая клавиша",
+        "launch": "Запуск цели",
+        "audio": "Управление аудио",
+        "media": "Мультимедиа клавиши",
+        "text": "Вставка текста",
+        "system": "Системный контроль",
+        "deck_nav": "Навигация Deck",
+        "macro": "Макро-цепочка"
+      },
+      "presets": {
+        "output_device_toggle": {
+          "title": "Переключение аудиовыхода",
+          "desc": "Циклическое переключение между наушниками и динамиками"
+        },
+        "mic_mute_toggle": {
+          "title": "Mute микрофона",
+          "desc": "Включение и отключение системного микрофона"
+        },
+        "master_mute_toggle": {
+          "title": "Mute звука",
+          "desc": "Включение и отключение общего звука Windows"
+        },
+        "focus_app_vol_up": {
+          "title": "Громкость приложения (+5%)",
+          "desc": "Увеличить громкость активного приложения"
+        },
+        "focus_app_vol_down": {
+          "title": "Громкость приложения (-5%)",
+          "desc": "Уменьшить громкость активного приложения"
+        },
+        "discord_mute": {
+          "title": "Discord: Заглушить микрофон",
+          "desc": "Переключение микрофона в Discord (Ctrl+Shift+M)"
+        },
+        "discord_deafen": {
+          "title": "Discord: Заглушить звук",
+          "desc": "Отключение звука и микрофона в Discord (Ctrl+Shift+D)"
+        },
+        "media_play_pause": {
+          "title": "Воспроизведение / Пауза",
+          "desc": "Мультимедийная клавиша Play/Pause"
+        },
+        "media_next_track": {
+          "title": "Следующий трек",
+          "desc": "Мультимедийная клавиша Next Track"
+        },
+        "media_prev_track": {
+          "title": "Предыдущий трек",
+          "desc": "Мультимедийная клавиша Previous Track"
+        },
+        "obs_record_toggle": {
+          "title": "OBS: Запись",
+          "desc": "Старт / остановка записи в OBS Studio (Ctrl+F9)"
+        },
+        "obs_stream_toggle": {
+          "title": "OBS: Стрим",
+          "desc": "Старт / остановка трансляции в OBS Studio (Ctrl+F10)"
+        },
+        "launch_terminal": {
+          "title": "Терминал Windows",
+          "desc": "Запуск консоли Windows Terminal (wt.exe)"
+        },
+        "launch_browser": {
+          "title": "Веб-браузер",
+          "desc": "Открыть браузер по умолчанию"
+        },
+        "open_downloads": {
+          "title": "Папка Загрузки",
+          "desc": "Открыть системный каталог загрузок пользователя"
+        },
+        "launch_calculator": {
+          "title": "Калькулятор",
+          "desc": "Быстрый запуск калькулятора Windows (calc.exe)"
+        },
+        "toggle_dimmer": {
+          "title": "Диммер экрана",
+          "desc": "Переключение ночного затемнения экрана DuckDock"
+        },
+        "screenshot_primary": {
+          "title": "Скриншот экрана",
+          "desc": "Захват основного монитора в буфер обмена"
+        },
+        "lock_workstation": {
+          "title": "Блокировка ПК",
+          "desc": "Мгновенная блокировка рабочей станции Windows"
+        },
+        "show_desktop": {
+          "title": "Рабочий стол",
+          "desc": "Свернуть все окна и показать рабочий стол (Win+D)"
+        },
+        "task_manager": {
+          "title": "Диспетчер задач",
+          "desc": "Открыть диспетчер задач Windows (Ctrl+Shift+Esc)"
+        },
+        "close_window": {
+          "title": "Закрыть окно",
+          "desc": "Отправить сигнал закрытия активному окну"
+        },
+        "custom_hotkey": {
+          "title": "Горячая клавиша",
+          "desc": "Нажатие произвольного сочетания клавиш"
+        },
+        "hotkey_toggle": {
+          "title": "Двухпозиционный тумблер",
+          "desc": "Переключение между двумя комбинациями клавиш"
+        },
+        "paste_text": {
+          "title": "Вставка текста",
+          "desc": "Быстрая вставка шаблонного текста из буфера"
+        },
+        "nav_next_page": {
+          "title": "Следующая страница",
+          "desc": "Переход на следующую страницу макро-панели"
+        },
+        "nav_prev_page": {
+          "title": "Предыдущая страница",
+          "desc": "Переход на предыдущую страницу макро-панели"
+        },
+        "create_folder": {
+          "title": "Открыть папку",
+          "desc": "Переход во вложенную подсетку или папку"
+        },
+        "soundboard_play": {
+          "title": "Звуковой эффект",
+          "desc": "Воспроизведение аудиофайла через саундборд"
+        },
+        "soundboard_stop": {
+          "title": "Остановить саундборд",
+          "desc": "Мгновенная остановка всех звуков саундборда"
+        },
+        "macro_sequence": {
+          "title": "Макро-цепочка",
+          "desc": "Последовательный запуск нескольких действий с задержкой"
         }
       }
     }

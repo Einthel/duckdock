@@ -515,12 +515,12 @@ def test_deck_grid_swipe_right_triggers_swipe_right_signal(qapp):
 # =============================================================================
 
 @pytest.mark.unit
-def test_deck_view_swipe_left_switches_to_next_page(qapp):
+def test_deck_view_swipe_left_switches_to_next_page(qapp, sample_two_page_deck_config_path):
     """
     Свайп влево на интерактивной панели переключает DeckView на следующую страницу,
     обновляет активную точку DotPagingWidget и эмитирует bus.deck_page_changed.
     """
-    view = DeckView(config_path="config/deck_config.json")
+    view = DeckView(config_path=sample_two_page_deck_config_path)
     emitted_pages = []
     bus.deck_page_changed.connect(lambda p: emitted_pages.append(p))
 
@@ -542,12 +542,12 @@ def test_deck_view_swipe_left_switches_to_next_page(qapp):
 
 
 @pytest.mark.unit
-def test_deck_view_swipe_right_switches_to_prev_page(qapp):
+def test_deck_view_swipe_right_switches_to_prev_page(qapp, sample_two_page_deck_config_path):
     """
     Свайп вправо возвращает DeckView на предыдущую страницу,
     синхронизирует точку DotPagingWidget и эмитирует bus.deck_page_changed.
     """
-    view = DeckView(config_path="config/deck_config.json")
+    view = DeckView(config_path=sample_two_page_deck_config_path)
     emitted_pages = []
     bus.deck_page_changed.connect(lambda p: emitted_pages.append(p))
 
@@ -572,12 +572,12 @@ def test_deck_view_swipe_right_switches_to_prev_page(qapp):
 
 
 @pytest.mark.unit
-def test_deck_view_swipe_from_grid_triggers_paging(qapp):
+def test_deck_view_swipe_from_grid_triggers_paging(qapp, sample_two_page_deck_config_path):
     """
     Свайп по области кнопок DeckGrid (swipe_left / swipe_right)
     также корректно переключает страницы макро-панели.
     """
-    view = DeckView(config_path="config/deck_config.json")
+    view = DeckView(config_path=sample_two_page_deck_config_path)
     try:
         assert view.active_page_id == "default"
 
@@ -595,12 +595,12 @@ def test_deck_view_swipe_from_grid_triggers_paging(qapp):
 
 
 @pytest.mark.unit
-def test_deck_view_swipe_boundary_conditions(qapp):
+def test_deck_view_swipe_boundary_conditions(qapp, sample_two_page_deck_config_path):
     """
     На первой странице свайп вправо не должен вызывать ошибок или смещения.
     На последней странице свайп влево не должен выходить за пределы списка.
     """
-    view = DeckView(config_path="config/deck_config.json")
+    view = DeckView(config_path=sample_two_page_deck_config_path)
     try:
         pages = view.get_display_pages()
         assert len(pages) >= 1
@@ -633,12 +633,12 @@ def test_deck_view_swipe_boundary_conditions(qapp):
 # =============================================================================
 
 @pytest.mark.unit
-def test_deck_view_dot_paging_click_synchronization(qapp):
+def test_deck_view_dot_paging_click_synchronization(qapp, sample_two_page_deck_config_path):
     """
     Нажатие на точку в DotPagingWidget (сигнал page_selected)
     переключает страницу в DeckView.
     """
-    view = DeckView(config_path="config/deck_config.json")
+    view = DeckView(config_path=sample_two_page_deck_config_path)
     try:
         assert view.active_page_id == "default"
 
@@ -653,12 +653,12 @@ def test_deck_view_dot_paging_click_synchronization(qapp):
 
 
 @pytest.mark.unit
-def test_deck_view_external_deck_page_changed_eventbus_sync(qapp):
+def test_deck_view_external_deck_page_changed_eventbus_sync(qapp, sample_two_page_deck_config_path):
     """
     Внешний сигнал bus.deck_page_changed обновляет активную страницу в DeckView
     и индикатор в DotPagingWidget, не вызывая зацикливания.
     """
-    view = DeckView(config_path="config/deck_config.json")
+    view = DeckView(config_path=sample_two_page_deck_config_path)
     try:
         assert view.active_page_id == "default"
 

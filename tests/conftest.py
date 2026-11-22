@@ -107,3 +107,130 @@ def qtbot(qapp):
     """Фикстура qtbot для тестирования UI компонентов."""
     return QtBotFixture(qapp)
 
+
+@pytest.fixture
+def sample_two_page_deck_config_path(tmp_path):
+    """
+    Создает изолированный временный файл конфигурации DuckDeck с двумя страницами
+    ('default' с тестовыми кнопками и 'grid4x6' для тестирования навигации и свайпов).
+    Предотвращает загрязнение и зависимость тестов от боевого config/deck_config.json.
+    """
+    from modules.deck.models import (
+        DeckActionConfig,
+        DeckButtonConfig,
+        DeckConfigLoader,
+        DeckPageConfig,
+        DeckRootConfig,
+        SoundSettings,
+    )
+
+    buttons_p1 = [
+        DeckButtonConfig(
+            id="btn_toggle_audio_device",
+            slot_index=0,
+            name="Аудиовыход",
+            title="Аудиовыход",
+            category="system",
+            icon="🎧",
+            icon_path="resources/deck/icons/system/sound.png",
+            icon_size=48,
+            color_accent="#06b6d4",
+            status_source="audio_device",
+            action=DeckActionConfig(
+                action_type="audio",
+                params={"target": "device", "command": "toggle_device", "devices": ["Наушники", "Динамики"]},
+            ),
+        ),
+        DeckButtonConfig(
+            id="btn_mute_mic",
+            slot_index=1,
+            name="Микрофон",
+            title="Микрофон",
+            category="system",
+            icon="🎙",
+            icon_path="resources/deck/icons/system/mic.png",
+            icon_size=48,
+            color_accent="#ef4444",
+            status_source="mic_mute",
+            action=DeckActionConfig(
+                action_type="audio",
+                params={"target": "mic", "command": "toggle_mute"},
+            ),
+        ),
+        DeckButtonConfig(
+            id="btn_screenshot_primary",
+            slot_index=2,
+            name="Скриншот",
+            title="Скриншот",
+            category="system",
+            icon="📸",
+            icon_path="resources/deck/icons/system/screenshot.png",
+            icon_size=48,
+            color_accent="#38bdf8",
+            action=DeckActionConfig(
+                action_type="system",
+                params={"command": "screenshot", "screenshot_target": "primary"},
+            ),
+        ),
+        DeckButtonConfig(
+            id="btn_toggle_dimmer",
+            slot_index=7,
+            name="Ночной режим",
+            title="Ночной режим",
+            category="system",
+            icon="🌙",
+            icon_path="resources/deck/icons/system/dimmer.png",
+            icon_size=48,
+            color_accent="#a855f7",
+            status_source="dimmer",
+            action=DeckActionConfig(
+                action_type="system",
+                params={"command": "dimmer"},
+            ),
+        ),
+    ]
+
+    buttons_p2 = [
+        DeckButtonConfig(
+            id="btn_stream_back",
+            slot_index=0,
+            name="Назад",
+            title="Назад",
+            category="navigation",
+            icon="◀",
+            icon_size=48,
+            color_accent="#38bdf8",
+            action=DeckActionConfig(
+                action_type="navigation",
+                params={"target_page_id": "default"},
+            ),
+        ),
+    ]
+
+    root = DeckRootConfig(
+        active_profile="default",
+        simulation_mode=False,
+        sound_settings=SoundSettings(),
+        pages=[
+            DeckPageConfig(
+                id="default",
+                name="Основной",
+                grid_rows=2,
+                grid_cols=5,
+                buttons=buttons_p1,
+            ),
+            DeckPageConfig(
+                id="grid4x6",
+                name="Стриминг",
+                grid_rows=2,
+                grid_cols=5,
+                buttons=buttons_p2,
+            ),
+        ],
+    )
+
+    cfg_file = tmp_path / "deck_test_isolated.json"
+    DeckConfigLoader.save_to_file(root, str(cfg_file))
+    return str(cfg_file)
+
+

@@ -50,9 +50,9 @@ def sample_button_config():
 # -------------------------------------------------------------
 # 1. Проверка инвариантов фокуса (Qt.NoFocus)
 # -------------------------------------------------------------
-def test_deck_view_no_focus_invariant(qapp):
+def test_deck_view_no_focus_invariant(qapp, sample_two_page_deck_config_path):
     """Инвариант Stealth Focus: все элементы DeckView обязаны иметь Qt.NoFocus."""
-    view = DeckView(config_path="config/deck_config.json")
+    view = DeckView(config_path=sample_two_page_deck_config_path)
     try:
         assert view.focusPolicy() == Qt.NoFocus
         assert view.interactive_panel.focusPolicy() == Qt.NoFocus
@@ -73,7 +73,7 @@ def test_deck_view_no_focus_invariant(qapp):
 # -------------------------------------------------------------
 # 2. Проверка точной геометрии под экран 944x600 (DuckDeck v0.4.0)
 # -------------------------------------------------------------
-def test_deck_view_geometry_and_tile_dimensions(qapp):
+def test_deck_view_geometry_and_tile_dimensions(qapp, sample_two_page_deck_config_path):
     """
     Проверка строгой геометрии:
       - DeckView: 944x600 px.
@@ -82,7 +82,7 @@ def test_deck_view_geometry_and_tile_dimensions(qapp):
       - Формула строгой высоты: 12 + 168 + 12 + 168 + 12 + 216 + 12 = 600 px.
       - Сетка 2x5: ровно 10 тайлов 174x168 px, скругление 14 px.
     """
-    view = DeckView(config_path="config/deck_config.json")
+    view = DeckView(config_path=sample_two_page_deck_config_path)
     try:
         assert view.width() == 944
         assert view.height() == 600
@@ -253,14 +253,14 @@ def test_deck_button_executing_watchdog_timeout(qapp):
 # -------------------------------------------------------------
 # 5. Централизованная реактивность Live Dynamic Tiles
 # -------------------------------------------------------------
-def test_deck_view_live_dynamic_tiles_reactivity(qapp):
+def test_deck_view_live_dynamic_tiles_reactivity(qapp, sample_two_page_deck_config_path):
     """
     Проверка централизованной реактивности живых тайлов:
       - bus.playback_device_changed меняет иконку (🎧/🔊) и строку устройства.
       - bus.mic_mute_changed меняет иконку (🎙/🔇) и статус 'Включен'/'Выключен'.
       - bus.dimmer_opacity_changed обновляет статус процента затемнения.
     """
-    view = DeckView(config_path="config/deck_config.json")
+    view = DeckView(config_path=sample_two_page_deck_config_path)
     try:
         view.set_active_page("default")
         audio_btn = view.grid.get_button("btn_toggle_audio_device")
@@ -302,9 +302,9 @@ def test_deck_view_live_dynamic_tiles_reactivity(qapp):
 # -------------------------------------------------------------
 # 6. Навигация между страницами
 # -------------------------------------------------------------
-def test_deck_view_page_navigation(qapp):
+def test_deck_view_page_navigation(qapp, sample_two_page_deck_config_path):
     """Проверка переключения страниц через метод set_active_page и навигационные кнопки."""
-    view = DeckView(config_path="config/deck_config.json")
+    view = DeckView(config_path=sample_two_page_deck_config_path)
     try:
         assert view.active_page_id == "default"
         assert "btn_toggle_audio_device" in view.grid.get_buttons()
@@ -329,7 +329,7 @@ def test_deck_view_page_navigation(qapp):
 # -------------------------------------------------------------
 # 7. Интеграция с диспетчером действий и индикация состояний
 # -------------------------------------------------------------
-def test_deck_view_action_dispatch_and_feedback(qapp):
+def test_deck_view_action_dispatch_and_feedback(qapp, sample_two_page_deck_config_path):
     """
     Проверка прохождения действий через диспетчер:
       - Начало действия переводит кнопку в 'executing'.
@@ -346,7 +346,7 @@ def test_deck_view_action_dispatch_and_feedback(qapp):
             return True
 
     dummy_disp = DummyDispatcher()
-    view = DeckView(config_path="config/deck_config.json", dispatcher=dummy_disp)
+    view = DeckView(config_path=sample_two_page_deck_config_path, dispatcher=dummy_disp)
     try:
         btn = view.grid.get_button("btn_screenshot_primary")
         assert btn is not None
@@ -417,12 +417,12 @@ def test_deck_view_reload_config_and_fallback(qapp):
 # -------------------------------------------------------------
 # 9. Гарантированная отписка от EventBus и отсутствие утечек
 # -------------------------------------------------------------
-def test_deck_view_cleanup_eventbus_unsubscription(qapp):
+def test_deck_view_cleanup_eventbus_unsubscription(qapp, sample_two_page_deck_config_path):
     """
     Проверка отсутствия утечек подписчиков EventBus после вызова cleanup():
     эмиссия сигналов после очистки не должна вызывать исключений или обновления несуществующих тайлов.
     """
-    view = DeckView(config_path="config/deck_config.json")
+    view = DeckView(config_path=sample_two_page_deck_config_path)
     audio_btn = view.grid.get_button("btn_toggle_audio_device")
     assert audio_btn is not None
 

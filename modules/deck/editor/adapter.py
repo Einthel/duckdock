@@ -81,21 +81,34 @@ class DeckConfigAdapter:
             action_type_display = "Volume Control"
             category_display = "Volume: Control"
         elif action.action_type == "launch":
-            action_type_display = "Open Application"
-            category_display = "System: Open Application"
-        elif action.action_type == "audio_device":
-            action_type_display = "Audio Device"
-            category_display = "System: Audio Device"
+            target_str = str(action.params.get("target", "") or action.params.get("path", "") or action.params.get("url", ""))
+            if action.params.get("is_http") or "method" in action.params or ("http" in target_str and "api" in target_str):
+                action_type_display = "HTTP Request"
+                category_display = "API: HTTP Request"
+            else:
+                action_type_display = "Open Application"
+                category_display = "System: Open Application"
+        elif action.action_type in ("audio_device", "audio"):
+            if action.params.get("command") == "toggle_device" or action.params.get("target") == "device" or "devices" in action.params:
+                action_type_display = "Audio Device"
+                category_display = "System: Audio Device"
+            else:
+                action_type_display = "Volume Control"
+                category_display = "Volume: Control"
         elif action.action_type == "system":
-            action_type_display = "System"
-            category_display = "System"
+            if action.params.get("command") == "screenshot":
+                action_type_display = "Screenshot"
+                category_display = "System: Screenshot"
+            else:
+                action_type_display = "System"
+                category_display = "System"
         elif action.action_type == "screenshot":
             action_type_display = "Screenshot"
             category_display = "System: Screenshot"
         elif action.action_type == "http_request":
             action_type_display = "HTTP Request"
             category_display = "API: HTTP Request"
-        elif action.action_type == "navigation":
+        elif action.action_type in ("navigation", "deck_nav"):
             action_type_display = "Navigation"
             category_display = "Navigation"
         elif action.action_type == "create_folder":

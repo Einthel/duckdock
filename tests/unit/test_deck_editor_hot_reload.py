@@ -42,6 +42,19 @@ def isolated_deck_config(tmp_path):
     cfg_file = config_dir / "deck_config.json"
 
     default_root = DeckConfigLoader.get_default_config()
+    from modules.deck.models import DeckActionConfig, DeckButtonConfig
+    default_root.pages[0].buttons = [
+        DeckButtonConfig(
+            id="btn_obs_record",
+            slot_index=4,
+            name="OBS Запись",
+            title="OBS Запись",
+            category="shortcut",
+            icon="⏺",
+            color_accent="#dc2626",
+            action=DeckActionConfig(action_type="hotkey", params={"keys": ["ctrl", "f9"]}),
+        )
+    ]
     with open(cfg_file, "w", encoding="utf-8") as f:
         f.write(default_root.model_dump_json(indent=2))
 

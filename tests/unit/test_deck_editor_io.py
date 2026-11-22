@@ -143,6 +143,18 @@ def isolated_config_file(tmp_path: Any) -> str:
     config_dir.mkdir(parents=True, exist_ok=True)
     cfg_file = config_dir / "deck_config.json"
     default_root = DeckConfigLoader.get_default_config()
+    default_root.pages[0].buttons = [
+        DeckButtonConfig(
+            id="btn_default_test_0",
+            slot_index=0,
+            name="Test Slot 0",
+            title="Initial Title",
+            category="system",
+            icon="⚡",
+            color_accent="#38bdf8",
+            action=DeckActionConfig(action_type="system", params={"command": "dimmer"}),
+        )
+    ]
     with open(cfg_file, "w", encoding="utf-8") as f:
         f.write(default_root.model_dump_json(indent=2))
     return str(cfg_file)

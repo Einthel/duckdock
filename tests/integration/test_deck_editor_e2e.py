@@ -43,7 +43,7 @@ def reset_i18n_language():
 
 
 @pytest.fixture
-def e2e_window(qapp, qtbot):
+def e2e_window(qapp, qtbot, tmp_path):
     """
     Фикстура создания и инициализации главного окна DeckEditorWindow
     с эталонными демо-данными Рис. 1 для E2E сценариев.
@@ -51,7 +51,8 @@ def e2e_window(qapp, qtbot):
     # Гарантируем английский начальный язык для дефолтных строковых проверок
     I18nManager().set_language("en", emit_signal=False)
 
-    window = DeckEditorWindow()
+    cfg_file = tmp_path / "deck_config.json"
+    window = DeckEditorWindow(config_path=str(cfg_file))
     window._skip_close_dialog = True
     load_demo_profile_into_window(window)
     window.show()

@@ -623,7 +623,7 @@ def test_deck_action_dispatcher_simulation_mode_button_object_and_fallback_title
         bus.deck_notification.disconnect(on_notif)
 
 
-def test_deck_view_simulation_mode_integration(qapp):
+def test_deck_view_simulation_mode_integration(qapp, sample_two_page_deck_config_path):
     """
     Интеграционный тест DeckView со сквозным тактильным циклом в simulation_mode:
     - Конфигурация DeckRootConfig с simulation_mode=True передается в диспетчер.
@@ -640,7 +640,7 @@ def test_deck_view_simulation_mode_integration(qapp):
     bus.deck_notification.connect(on_notif)
 
     try:
-        view = DeckView(config_path="config/deck_config.json")
+        view = DeckView(config_path=sample_two_page_deck_config_path)
         # Активируем режим симуляции
         view.dispatcher.simulation_mode = True
 
@@ -666,7 +666,7 @@ def test_deck_view_simulation_mode_integration(qapp):
 # 8. Тесты реактивности симуляции, звукового отклика и DoD верификация (Шаг 4.3)
 # =============================================================================
 
-def test_deck_simulation_mode_and_audio_feedback_integration(qapp):
+def test_deck_simulation_mode_and_audio_feedback_integration(qapp, sample_two_page_deck_config_path):
     """
     Проверка сквозного взаимодействия DeckView в simulation_mode с аудио-движком:
     - При клике на плитку: вызов sound_engine.play_tap(sound_override=...).
@@ -688,7 +688,7 @@ def test_deck_simulation_mode_and_audio_feedback_integration(qapp):
 
     try:
         view = DeckView(
-            config_path="config/deck_config.json",
+            config_path=sample_two_page_deck_config_path,
             sound_engine=mock_sound_engine,
         )
         view.dispatcher.simulation_mode = True
@@ -788,6 +788,214 @@ def test_action_runnable_combat_handlers_integrity(qapp):
         # В боевом режиме задача отправляется в QThreadPool
         mock_pool_start.assert_called_once()
         assert len(dispatcher._active_tasks) == 1
+
+
+# =============================================================================
+# 9. TDD тесты Этапа 1: Модели 8 базовых примитивов, нормализатор и пресеты
+# =============================================================================
+from modules.deck.models import (
+    ActionPresetDefinition,
+    AudioActionParams,
+    DeckActionNormalizer,
+    DeckNavActionParams,
+    HotkeyActionParams,
+    LaunchActionParams,
+    MacroActionParams,
+    MediaActionParams,
+    SystemActionParams,
+    TextActionParams,
+)
+from pydantic import ValidationError
+
+
+@pytest.mark.parametrize(
+    "legacy_type,legacy_params,expected_type,expected_target,expected_cmd",
+    [
+        ("website", {"url": "https://github.com"}, "launch", "https://github.com", None),
+        ("open_website", {"url": "http://duckdock.local"}, "launch", "http://duckdock.local", None),
+        ("open_app", {"executable": "wt.exe", "args": ["-p", "PowerShell"]}, "launch", "wt.exe", None),
+        ("open_path", {"path": "C:\\Games"}, "launch", "C:\\Games", None),
+        ("launch", {"path": "calc.exe"}, "launch", "calc.exe", None),
+        ("http_request", {"url": "http://127.0.0.1:8000/api", "method": "POST"}, "launch", "http://127.0.0.1:8000/api", None),
+        ("hotkey", {"keys": ["ctrl", "c"]}, "hotkey", None, None),
+        ("hotkey_switch", {"state_1": {"keys": ["f1"]}, "state_2": {"keys": ["f2"]}}, "hotkey", None, None),
+        ("volume_control", {"target": "master", "command": "volume_up", "step_percent": 10}, "audio", "master", "step"),
+        ("volume_control", {"target": "microphone", "command": "toggle_mute"}, "audio", "mic", "toggle_mute"),
+        ("audio_device", {"mode": "toggle", "devices": ["Наушники", "Динамики"]}, "audio", "device", "toggle_device"),
+        ("play_audio", {"file_path": "click.wav"}, "audio", "soundboard", "play_sound"),
+        ("stop_audio", {}, "audio", "soundboard", "stop_sound"),
+        ("multimedia", {"command": "next_track"}, "media", None, "next_track"),
+        ("text_macro", {"text": "Hello World", "send_enter": True}, "text", None, None),
+        ("screenshot", {"target": "primary_screen"}, "system", None, "screenshot"),
+        ("close_window", {"target": "active_window"}, "system", None, "close_window"),
+        ("brightness", {}, "system", None, "dimmer"),
+        ("sleep_display", {}, "system", None, "sleep_display"),
+        ("system", {"command": "toggle_dimmer"}, "system", None, "dimmer"),
+        ("system", {"command": "lock_workstation"}, "system", None, "lock_pc"),
+        ("navigation", {"target_page_id": "page_gaming"}, "deck_nav", "page_gaming", "goto_page"),
+        ("create_folder", {"page_id": "tools_folder"}, "deck_nav", "tools_folder", "folder_open"),
+        ("switch_profile", {"page_id": "profile_dev"}, "deck_nav", "profile_dev", "goto_page"),
+        ("prev_page", {}, "deck_nav", None, "prev_page"),
+        ("next_page", {}, "deck_nav", None, "next_page"),
+        ("goto_page", {"page_id": "p2"}, "deck_nav", "p2", "goto_page"),
+        ("page_indicator", {"page_id": "p1"}, "deck_nav", "p1", "goto_page"),
+        ("multi_action", {"steps": []}, "macro", None, None),
+        ("multi_action_switch", {"steps": []}, "macro", None, None),
+    ],
+)
+def test_deck_action_normalizer_legacy_migration(
+    legacy_type, legacy_params, expected_type, expected_target, expected_cmd
+):
+    """
+    Шаг 1.4: Проверка прозрачной миграции всех 26+ устаревших типов конфигураций
+    в 8 канонических базовых примитивов DuckDeck.
+    """
+    config = DeckActionConfig(action_type=legacy_type, params=legacy_params)
+    assert config.action_type == expected_type
+
+    typed = config.get_typed_params()
+    if expected_type == "launch":
+        assert isinstance(typed, LaunchActionParams)
+        if expected_target:
+            assert typed.target == expected_target
+    elif expected_type == "audio":
+        assert isinstance(typed, AudioActionParams)
+        if expected_target:
+            assert typed.target == expected_target
+        if expected_cmd:
+            assert typed.command == expected_cmd
+    elif expected_type == "hotkey":
+        assert isinstance(typed, HotkeyActionParams)
+    elif expected_type == "media":
+        assert isinstance(typed, MediaActionParams)
+        if expected_cmd:
+            assert typed.command == expected_cmd
+    elif expected_type == "text":
+        assert isinstance(typed, TextActionParams)
+    elif expected_type == "system":
+        assert isinstance(typed, SystemActionParams)
+        if expected_cmd:
+            assert typed.command == expected_cmd
+    elif expected_type == "deck_nav":
+        assert isinstance(typed, DeckNavActionParams)
+        if expected_target:
+            assert typed.page_id == expected_target
+        if expected_cmd:
+            assert typed.target == expected_cmd
+    elif expected_type == "macro":
+        assert isinstance(typed, MacroActionParams)
+
+
+def test_eight_core_primitives_strict_validation():
+    """
+    Шаг 1.4: Проверка строгой валидации параметров для каждого из 8 примитивов
+    с валидными и невалидными значениями (Pydantic ValidationError).
+    """
+    # 1. HotkeyActionParams
+    hk = HotkeyActionParams(keys=["ctrl", "shift", "d"], mode="toggle", toggle_keys=["ctrl", "alt", "d"])
+    assert hk.mode == "toggle"
+    with pytest.raises(ValidationError):
+        HotkeyActionParams(mode="invalid_mode")  # type: ignore
+
+    # 2. LaunchActionParams
+    la = LaunchActionParams(target="notepad.exe", args=["test.txt"], working_dir="C:\\", kind="app")
+    assert la.target == "notepad.exe"
+    assert la.path == "notepad.exe"
+    with pytest.raises(ValidationError):
+        LaunchActionParams(kind="invalid_kind")  # type: ignore
+
+    # 3. AudioActionParams
+    aud = AudioActionParams(target="mic", command="toggle_mute", step_percent=10)
+    assert aud.target == "mic"
+    assert aud.command == "toggle_mute"
+    with pytest.raises(ValidationError):
+        AudioActionParams(target="invalid_target")  # type: ignore
+    with pytest.raises(ValidationError):
+        AudioActionParams(command="invalid_cmd")  # type: ignore
+
+    # 4. MediaActionParams
+    med = MediaActionParams(command="next_track")
+    assert med.command == "next_track"
+    with pytest.raises(ValidationError):
+        MediaActionParams(command="invalid_media")  # type: ignore
+
+    # 5. TextActionParams
+    txt = TextActionParams(text="git status", send_enter=True)
+    assert txt.text == "git status"
+    assert txt.send_enter is True
+
+    # 6. SystemActionParams
+    sys_p = SystemActionParams(command="dimmer", screenshot_target="primary")
+    assert sys_p.command == "dimmer"
+    assert sys_p.screenshot_target == "primary"
+    with pytest.raises(ValidationError):
+        SystemActionParams(command="non_existent_sys_cmd")  # type: ignore
+
+    # 7. DeckNavActionParams
+    nav = DeckNavActionParams(target="folder_open", page_id="folder_sub")
+    assert nav.target == "folder_open"
+    assert nav.page_id == "folder_sub"
+    assert nav.target_page_id == "folder_sub"
+    with pytest.raises(ValidationError):
+        DeckNavActionParams(target="invalid_nav_target")  # type: ignore
+
+    # 8. MacroActionParams
+    mac = MacroActionParams(steps=[DeckActionConfig(action_type="hotkey", params={"keys": ["enter"]})], delay_ms=100)
+    assert len(mac.steps) == 1
+    assert mac.delay_ms == 100
+
+
+def test_action_preset_definition_model():
+    """
+    Шаг 1.4: Проверка декларативной схемы ActionPresetDefinition.
+    """
+    preset = ActionPresetDefinition(
+        id="discord_mute",
+        category="audio_comm",
+        title_key="deck.presets.discord_mute.title",
+        desc_key="deck.presets.discord_mute.desc",
+        icon="🎤",
+        color_accent="#818cf8",
+        status_source="mic_mute",
+        base_action=DeckActionConfig(
+            action_type="hotkey",
+            params={"keys": ["ctrl", "shift", "m"]},
+        ),
+        keywords=["discord", "mute", "микрофон", "дискорд"],
+    )
+    assert preset.id == "discord_mute"
+    assert preset.category == "audio_comm"
+    assert preset.base_action.action_type == "hotkey"
+    assert len(preset.keywords) == 4
+
+    # Сериализация и десериализация пресета
+    dumped = preset.model_dump_json()
+    reloaded = ActionPresetDefinition.model_validate_json(dumped)
+    assert reloaded.id == preset.id
+    assert reloaded.base_action.action_type == "hotkey"
+
+
+def test_deck_action_serialization_and_roundtrip():
+    """
+    Шаг 1.4: Проверка JSON roundtrip сериализации/десериализации для всех 8 примитивов.
+    """
+    primitives = [
+        DeckActionConfig(action_type="hotkey", params={"keys": ["ctrl", "alt", "del"], "mode": "press"}),
+        DeckActionConfig(action_type="launch", params={"target": "wt.exe", "kind": "app"}),
+        DeckActionConfig(action_type="audio", params={"target": "device", "command": "toggle_device"}),
+        DeckActionConfig(action_type="media", params={"command": "play_pause"}),
+        DeckActionConfig(action_type="text", params={"text": "echo 1", "send_enter": True}),
+        DeckActionConfig(action_type="system", params={"command": "dimmer"}),
+        DeckActionConfig(action_type="deck_nav", params={"target": "next_page"}),
+        DeckActionConfig(action_type="macro", params={"steps": [], "delay_ms": 25}),
+    ]
+
+    for original in primitives:
+        json_data = original.model_dump_json()
+        restored = DeckActionConfig.model_validate_json(json_data)
+        assert restored.action_type == original.action_type
+        assert restored.params == original.params
+
 
 
 

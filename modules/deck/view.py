@@ -474,7 +474,7 @@ class DeckView(TouchModuleView):
             self.sound_engine.play_tap(sound_override=btn_config.sound_override)
 
         # Навигационные действия обрабатываются внутри UI без отправки в worker thread
-        if btn_config.action.action_type == "navigation":
+        if btn_config.action.action_type in ("navigation", "deck_nav"):
             typed = btn_config.action.get_typed_params()
             if isinstance(typed, NavigationParams):
                 self.set_active_page(typed.target_page_id)

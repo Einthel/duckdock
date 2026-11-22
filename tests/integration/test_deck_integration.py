@@ -71,7 +71,6 @@ def test_main_window_deck_view_tab_initialization(qapp):
         win.close()
 
 
-@pytest.mark.skip(reason="Временно отключено по запросу пользователя (проверка переключения устройства воспроизведения)")
 @pytest.mark.integration
 def test_audio_view_device_switch_button_and_eventbus_sync(qapp):
     """

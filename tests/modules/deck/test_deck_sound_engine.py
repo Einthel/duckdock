@@ -179,7 +179,7 @@ def test_deck_sound_engine_reexport_shim():
     assert ShimEngine is DirectEngine
 
 
-def test_deck_view_sound_engine_integration(qapp):
+def test_deck_view_sound_engine_integration(qapp, sample_two_page_deck_config_path):
     """
     Интеграционный тест интеграции DeckSoundEngine в DeckView:
     - Клик по плитке воспроизводит play_tap().
@@ -191,7 +191,7 @@ def test_deck_view_sound_engine_integration(qapp):
 
     mock_sound_engine = MagicMock(spec=DeckSoundEngine)
     view = DeckView(
-        config_path="config/deck_config.json",
+        config_path=sample_two_page_deck_config_path,
         sound_engine=mock_sound_engine,
     )
 

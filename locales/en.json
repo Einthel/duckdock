@@ -190,7 +190,10 @@
       "volume_updated": "Volume: {percent}%",
       "switch_state": "Switched to: {state}",
       "sound_played": "Playing: {sound}",
-      "soundboard_stopped": "Soundboard stopped"
+      "soundboard_stopped": "Soundboard stopped",
+      "display_sleep": "Display put to sleep",
+      "macro_empty": "Macro sequence is empty",
+      "macro_finished": "Completed macro steps: {success} of {total}"
     },
     "feedback": {
       "switched": "Switched"
@@ -457,6 +460,152 @@
           "btn_cancel": "Cancel",
           "no_results": "No icons found",
           "files_filter": "Images (*.png *.svg *.ico *.jpg *.webp)"
+        }
+      },
+      "categories": {
+        "audio_comm": "Audio & Voice",
+        "media_stream": "Media & Streaming",
+        "launchers": "Apps & Files",
+        "system_control": "System & Display",
+        "input_macros": "Input & Macros",
+        "navigation": "Deck Navigation",
+        "soundboard": "Soundboard",
+        "multi_action": "Multi-Actions & Macros"
+      },
+      "primitives": {
+        "hotkey": "Hotkey",
+        "launch": "Launch Target",
+        "audio": "Audio Control",
+        "media": "Media Keys",
+        "text": "Insert Text",
+        "system": "System Control",
+        "deck_nav": "Deck Navigation",
+        "macro": "Macro Chain"
+      },
+      "presets": {
+        "output_device_toggle": {
+          "title": "Toggle Audio Output",
+          "desc": "Cycle playback output between headphones and speakers"
+        },
+        "mic_mute_toggle": {
+          "title": "Toggle Mic Mute",
+          "desc": "Mute or unmute system microphone"
+        },
+        "master_mute_toggle": {
+          "title": "Toggle Master Mute",
+          "desc": "Mute or unmute Windows master audio"
+        },
+        "focus_app_vol_up": {
+          "title": "App Volume (+5%)",
+          "desc": "Increase volume of foreground application"
+        },
+        "focus_app_vol_down": {
+          "title": "App Volume (-5%)",
+          "desc": "Decrease volume of foreground application"
+        },
+        "discord_mute": {
+          "title": "Discord: Mute Mic",
+          "desc": "Toggle microphone in Discord (Ctrl+Shift+M)"
+        },
+        "discord_deafen": {
+          "title": "Discord: Deafen",
+          "desc": "Toggle sound and microphone in Discord (Ctrl+Shift+D)"
+        },
+        "media_play_pause": {
+          "title": "Play / Pause",
+          "desc": "Multimedia Play/Pause key"
+        },
+        "media_next_track": {
+          "title": "Next Track",
+          "desc": "Multimedia Next Track key"
+        },
+        "media_prev_track": {
+          "title": "Previous Track",
+          "desc": "Multimedia Previous Track key"
+        },
+        "obs_record_toggle": {
+          "title": "OBS: Record",
+          "desc": "Start / stop recording in OBS Studio (Ctrl+F9)"
+        },
+        "obs_stream_toggle": {
+          "title": "OBS: Stream",
+          "desc": "Start / stop streaming in OBS Studio (Ctrl+F10)"
+        },
+        "launch_terminal": {
+          "title": "Windows Terminal",
+          "desc": "Launch Windows Terminal console (wt.exe)"
+        },
+        "launch_browser": {
+          "title": "Web Browser",
+          "desc": "Open default web browser"
+        },
+        "open_downloads": {
+          "title": "Downloads Folder",
+          "desc": "Open user Downloads directory"
+        },
+        "launch_calculator": {
+          "title": "Calculator",
+          "desc": "Quick launch Windows calculator (calc.exe)"
+        },
+        "toggle_dimmer": {
+          "title": "Screen Dimmer",
+          "desc": "Toggle DuckDock night screen dimmer"
+        },
+        "screenshot_primary": {
+          "title": "Screenshot Screen",
+          "desc": "Capture primary display to clipboard"
+        },
+        "lock_workstation": {
+          "title": "Lock Workstation",
+          "desc": "Instantly lock Windows PC workstation"
+        },
+        "show_desktop": {
+          "title": "Show Desktop",
+          "desc": "Minimize all windows to desktop (Win+D)"
+        },
+        "task_manager": {
+          "title": "Task Manager",
+          "desc": "Open Windows Task Manager (Ctrl+Shift+Esc)"
+        },
+        "close_window": {
+          "title": "Close Window",
+          "desc": "Send close signal to active window"
+        },
+        "custom_hotkey": {
+          "title": "Custom Hotkey",
+          "desc": "Trigger custom keyboard key combination"
+        },
+        "hotkey_toggle": {
+          "title": "Hotkey Toggle Switch",
+          "desc": "Toggle between two keyboard combinations"
+        },
+        "paste_text": {
+          "title": "Paste Text",
+          "desc": "Fast snippet pasting from clipboard"
+        },
+        "nav_next_page": {
+          "title": "Next Page",
+          "desc": "Navigate to next page of macro panel"
+        },
+        "nav_prev_page": {
+          "title": "Previous Page",
+          "desc": "Navigate to previous page of macro panel"
+        },
+        "create_folder": {
+          "title": "Open Folder",
+          "desc": "Open nested subgrid folder"
+        },
+        "soundboard_play": {
+          "title": "Play Sound Effect",
+          "desc": "Play audio file via soundboard"
+        },
+        "soundboard_stop": {
+          "title": "Stop Soundboard",
+          "desc": "Instantly stop all soundboard playback"
+        },
+        "macro_sequence": {
+          "title": "Macro Sequence",
+          "desc": "Execute multiple actions sequentially with delay"
         }
       }
     }

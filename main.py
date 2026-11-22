@@ -67,11 +67,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if cli_args.editor:
         print("[*] Запуск DuckDeck Button & Touchbar Editor...")
-        from modules.deck.editor.demo_data import load_demo_profile_into_window
         from modules.deck.editor.window import DeckEditorWindow
 
         editor_window = DeckEditorWindow()
-        load_demo_profile_into_window(editor_window)
         editor_window._center_on_primary_screen()
         editor_window.show()
 

@@ -33,7 +33,7 @@ def test_parse_args_deck_editor_flag():
 
 
 def test_main_editor_launch_flow(monkeypatch, qapp):
-    """Проверка вызова DeckEditorWindow и load_demo_profile_into_window при флаге --editor."""
+    """Проверка чистого вызова DeckEditorWindow без принудительной перезаписи демо-данными при флаге --editor."""
     mock_window = MagicMock()
     mock_editor_class = MagicMock(return_value=mock_window)
     mock_load_demo = MagicMock()
@@ -46,6 +46,6 @@ def test_main_editor_launch_flow(monkeypatch, qapp):
 
     assert exit_code == 0
     mock_editor_class.assert_called_once()
-    mock_load_demo.assert_called_once_with(mock_window)
+    mock_load_demo.assert_not_called()
     mock_window._center_on_primary_screen.assert_called_once()
     mock_window.show.assert_called_once()
