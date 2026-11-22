@@ -107,12 +107,18 @@ class ActionItemWidget(QFrame):
         if (event.buttons() & Qt.LeftButton) and self._drag_start_pos is not None:
             dist = (event.pos() - self._drag_start_pos).manhattanLength()
             if dist >= QApplication.startDragDistance():
+                self._drag_start_pos = None
+
+                cat_id = getattr(self.item_dto, "category_id", "")
+                if not cat_id and getattr(self.item_dto, "category_key", ""):
+                    cat_id = self.item_dto.category_key.split(".")[-1]
+
                 payload = {
                     "id": self.item_dto.id,
                     "title": self.item_dto.get_title(),
                     "icon": self.item_dto.icon,
                     "category": self.item_dto.category_key,
-                    "category_id": self.item_dto.category_id,
+                    "category_id": cat_id,
                     "keywords": self.item_dto.keywords,
                 }
                 mime = QMimeData()
@@ -123,6 +129,5 @@ class ActionItemWidget(QFrame):
                 drag.setPixmap(pixmap)
                 drag.setHotSpot(event.pos())
                 drag.exec(Qt.CopyAction)
-                self._drag_start_pos = None
                 return
         super().mouseMoveEvent(event)

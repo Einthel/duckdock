@@ -29,6 +29,16 @@ ActionType = Literal[
     "navigation",     # Переход на страницу/папку
     "play_audio",     # Воспроизведение звука саундборда
     "stop_audio",     # Остановка всех звуков саундборда
+    "create_folder",  # Создать папку (вложенная подсетка)
+    "switch_profile", # Сменить профиль
+    "prev_page",      # Предыдущая страница
+    "next_page",      # Следующая страница
+    "goto_page",      # Перейти на страницу
+    "page_indicator", # Индикатор страниц
+    "brightness",     # Регулировка яркости
+    "sleep_display",  # Спящий режим дисплея
+    "multi_action",   # Цепочка макро-действий
+    "multi_action_switch", # Переключатель цепочек макро-действий
 ]
 
 ActionCategory = Literal[
@@ -36,6 +46,10 @@ ActionCategory = Literal[
     "shortcut",       # Клавиатурные сочетания и хоткеи
     "program",        # Запуск внешних программ и скриптов
     "api",            # REST API запросы к сторонним сервисам
+    "navigation",     # Навигация (страницы, профили, папки)
+    "soundboard",     # Саундборд (воспроизведение и остановка аудио)
+    "stream_deck",    # Управление стримдеком и экраном
+    "multi_action",   # Мульти-действия и макро-цепочки
 ]
 
 
@@ -160,7 +174,7 @@ class SystemParams(BaseModel):
 
 class NavigationParams(BaseModel):
     """Параметры навигации между страницами DuckDeck."""
-    target_page_id: str = Field(description="ID целевой страницы профиля")
+    target_page_id: str = Field(default="default", description="ID целевой страницы профиля")
 
 
 class SoundboardParams(BaseModel):
@@ -211,6 +225,12 @@ class DeckActionConfig(BaseModel):
             "screenshot": ScreenshotParams,
             "system": SystemParams,
             "navigation": NavigationParams,
+            "create_folder": NavigationParams,
+            "switch_profile": NavigationParams,
+            "prev_page": NavigationParams,
+            "next_page": NavigationParams,
+            "goto_page": NavigationParams,
+            "page_indicator": NavigationParams,
             "play_audio": SoundboardParams,
             "stop_audio": SoundboardParams,
         }

@@ -300,6 +300,7 @@ class EditorGridCell(QFrame):
         if (event.buttons() & Qt.LeftButton) and self._drag_start_pos is not None:
             dist = (event.pos() - self._drag_start_pos).manhattanLength()
             if dist >= QApplication.startDragDistance():
+                self._drag_start_pos = None
                 if bool(self._title) or bool(self._icon) or bool(self._hotkey):
                     mime = QMimeData()
                     mime.setData("application/x-duckdeck-slot", str(self.slot_index).encode("utf-8"))
@@ -309,7 +310,6 @@ class EditorGridCell(QFrame):
                     drag.setPixmap(pixmap)
                     drag.setHotSpot(event.pos())
                     drag.exec(Qt.MoveAction | Qt.CopyAction)
-                    self._drag_start_pos = None
                     return
         super().mouseMoveEvent(event)
 

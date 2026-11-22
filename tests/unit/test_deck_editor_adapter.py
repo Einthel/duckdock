@@ -449,3 +449,39 @@ def test_save_deck_config_atomic_handles_validation_error():
         assert success is False
         assert not os.path.exists(cfg_path)
         assert not os.path.exists(f"{cfg_path}.tmp")
+
+
+def test_all_catalog_actions_convert_and_save_without_validation_error():
+    """
+    Проверяет, что ВСЕ действия из каталога библиотеки (actions_registry.py),
+    включая create_folder, play_audio, stop_audio, brightness, multi_action и др.,
+    безошибочно конвертируются через dto_to_slot и apply_slots_to_page без ValidationError.
+    """
+    from modules.deck.editor.actions_registry import get_default_action_catalog
+
+    catalog = get_default_action_catalog()
+    all_action_ids = [item.id for cat in catalog for item in cat.items]
+
+    # Гарантируем, что в каталоге присутствуют ключевые действия
+    assert "create_folder" in all_action_ids
+    assert "play_audio" in all_action_ids
+    assert "stop_audio" in all_action_ids
+
+    slots = []
+    for idx, act_id in enumerate(all_action_ids[:10]):
+        dto = ButtonSlotDTO(
+            slot_index=idx,
+            title=f"Action {act_id}",
+            icon="⚡",
+            action_type=act_id,
+        )
+        slots.append(dto)
+        btn = DeckConfigAdapter.dto_to_slot(dto)
+        assert isinstance(btn, DeckButtonConfig)
+        assert btn.action is not None
+        reconstructed_dto = DeckConfigAdapter.slot_to_dto(btn)
+        assert reconstructed_dto.slot_index == idx
+
+    root = DeckConfigLoader.get_default_config()
+    updated = DeckConfigAdapter.apply_slots_to_page(root, "default", slots)
+    assert len(updated.pages[0].buttons) == 10

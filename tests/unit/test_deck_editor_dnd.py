@@ -215,3 +215,37 @@ def test_grid_cell_drop_slot_invalid_range_ignored(qapp: QApplication) -> None:
     assert len(emitted) == 0
     assert evt3.isAccepted() is False
 
+
+def test_action_item_widget_drag_payload_has_category_id(qapp: QApplication) -> None:
+    """
+    Проверяет, что при инициализации DND в ActionItemWidget:
+    - свойство category_id возвращается корректно из ActionItemDTO;
+    - mouseMoveEvent не падает с AttributeError: 'ActionItemDTO' object has no attribute 'category_id'.
+    """
+    from unittest.mock import patch
+    from PySide6.QtGui import QMouseEvent
+    from PySide6.QtCore import QEvent
+
+    item_dto = ActionItemDTO(
+        id="create_folder",
+        title_key="deck.editor.drawer.actions.create_folder",
+        category_key="deck.editor.drawer.categories.navigation",
+        icon="📁",
+    )
+    assert item_dto.category_id == "navigation"
+
+    widget = ActionItemWidget(item_dto=item_dto)
+    widget._drag_start_pos = QPoint(10, 10)
+
+    move_event = QMouseEvent(
+        QEvent.Type.MouseMove,
+        QPointF(50.0, 50.0),
+        QPointF(50.0, 50.0),
+        Qt.MouseButton.LeftButton,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+
+    with patch("PySide6.QtGui.QDrag.exec", return_value=Qt.DropAction.CopyAction):
+        widget.mouseMoveEvent(move_event)
+

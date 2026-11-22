@@ -92,6 +92,11 @@ class ActionItemDTO:
         """Возвращает локализованное название действия."""
         return t(self.title_key)
 
+    @property
+    def category_id(self) -> str:
+        """Идентификатор категории (например, 'navigation', 'soundboard', 'system')."""
+        return self.category_key.split(".")[-1] if self.category_key else ""
+
 
 @dataclass
 class ActionCategoryDTO:

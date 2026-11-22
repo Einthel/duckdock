@@ -98,12 +98,42 @@ class DeckConfigAdapter:
         elif action.action_type == "navigation":
             action_type_display = "Navigation"
             category_display = "Navigation"
+        elif action.action_type == "create_folder":
+            action_type_display = "Create Folder"
+            category_display = "Navigation: Create Folder"
+        elif action.action_type == "switch_profile":
+            action_type_display = "Switch Profile"
+            category_display = "Navigation: Switch Profile"
+        elif action.action_type == "prev_page":
+            action_type_display = "Previous Page"
+            category_display = "Navigation: Prev Page"
+        elif action.action_type == "next_page":
+            action_type_display = "Next Page"
+            category_display = "Navigation: Next Page"
+        elif action.action_type == "goto_page":
+            action_type_display = "Goto Page"
+            category_display = "Navigation: Goto Page"
+        elif action.action_type == "page_indicator":
+            action_type_display = "Page Indicator"
+            category_display = "Navigation: Page Indicator"
         elif action.action_type == "play_audio":
             action_type_display = "Play Audio"
             category_display = "Soundboard: Play Audio"
         elif action.action_type == "stop_audio":
             action_type_display = "Stop Audio"
             category_display = "Soundboard: Stop Audio"
+        elif action.action_type == "brightness":
+            action_type_display = "Brightness"
+            category_display = "Stream Deck: Brightness"
+        elif action.action_type == "sleep_display":
+            action_type_display = "Sleep Display"
+            category_display = "Stream Deck: Sleep Display"
+        elif action.action_type == "multi_action":
+            action_type_display = "Multi Action"
+            category_display = "Multi Action"
+        elif action.action_type == "multi_action_switch":
+            action_type_display = "Multi Action Switch"
+            category_display = "Multi Action Switch"
         else:
             action_type_display = str(action.action_type).capitalize()
             category_display = str(button_config.category).capitalize()
@@ -339,6 +369,9 @@ class DeckConfigAdapter:
         existing_by_slot = {b.slot_index: b for b in target_page.buttons}
 
         new_buttons_by_slot: dict[int, DeckButtonConfig] = {}
+
+        if isinstance(slots, list):
+            slots = {dto.slot_index: dto for dto in slots}
 
         # 1. Сохраняем не затронутые вызовом кнопки (если передан частичный dict слотов)
         for s_idx, btn in existing_by_slot.items():

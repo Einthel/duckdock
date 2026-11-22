@@ -19,7 +19,11 @@ if str(BASE_DIR) not in sys.path:
 from core.dpi import init_dpi_awareness
 init_dpi_awareness()
 
-# 2. Настройка Chromium флагов под легковесный рендеринг на iGPU (AMD Radeon Graphics)
+# 2. Инициализация логирования (консоль + logs/duckdock.log)
+from core.logger import init_logging
+init_logging()
+
+# 3. Настройка Chromium флагов под легковесный рендеринг на iGPU (AMD Radeon Graphics)
 # и обход детекции автоматизации WebEngine в Google Accounts
 os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = (
     "--enable-gpu-rasterization "

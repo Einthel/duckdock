@@ -500,7 +500,7 @@ def test_deck_config_json_ten_buttons_per_page():
         slots = [b.slot_index for b in page.buttons]
         assert len(slots) == len(set(slots))
         for btn in page.buttons:
-            assert btn.category in ("system", "shortcut", "program", "api")
+            assert btn.category in ActionCategory.__args__
             assert btn.icon_size == 48
 
 

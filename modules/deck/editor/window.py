@@ -391,6 +391,8 @@ class DeckEditorWindow(QMainWindow):
         new_dto.category = category_text
         new_dto.action_type = action_data.get("id", "")
         new_dto.action_params = {}
+        if new_dto.action_type not in ("hotkey", "hotkey_switch"):
+            new_dto.hotkey = ""
 
         cmd = AssignActionCommand(self, slot_idx, new_dto, old_dto)
         self._undo_stack.push(cmd)
@@ -453,6 +455,8 @@ class DeckEditorWindow(QMainWindow):
                     dto.hotkey = str(val) if val is not None else ""
                 elif prop_name == "action_type":
                     dto.action_type = str(val) if val is not None else ""
+                    if dto.action_type not in ("hotkey", "hotkey_switch"):
+                        dto.hotkey = ""
                 elif prop_name == "category":
                     dto.category = str(val) if val is not None else ""
                 elif prop_name == "icon":
@@ -934,6 +938,8 @@ class DeckEditorWindow(QMainWindow):
             new_dto.category = category_text
             new_dto.action_type = getattr(item_dto, "id", "")
             new_dto.action_params = {}
+            if new_dto.action_type not in ("hotkey", "hotkey_switch"):
+                new_dto.hotkey = ""
 
             logger.info(
                 "Assigned action '%s' to slot %d: title='%s', icon='%s'",
