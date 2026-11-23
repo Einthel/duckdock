@@ -17,12 +17,12 @@
       "grid_cols": 5,
       "buttons": [
         {
-          "id": "btn_slot_6",
+          "id": "btn_slot_0",
           "slot_index": 0,
-          "name": "Вставка текста",
-          "title": "Вставка текста",
-          "category": "system",
-          "icon": "📝",
+          "name": "Запуск приложения",
+          "title": "Запуск приложения",
+          "category": "program",
+          "icon": "🚀",
           "icon_path": null,
           "icon_size": 48,
           "font_size": 11,
@@ -32,123 +32,17 @@
           "color_accent": "#10b981",
           "background_color": "#161b26",
           "action": {
-            "action_type": "text",
+            "action_type": "launch",
             "params": {
-              "text": "",
-              "send_enter": false
+              "target": "",
+              "args": [],
+              "working_dir": null,
+              "kind": "app",
+              "detached": true
             }
           },
           "toggle_action": null,
-          "status_source": null,
-          "sound_override": null
-        },
-        {
-          "id": "btn_slot_1",
-          "slot_index": 1,
-          "name": "Диммер экрана",
-          "title": "Диммер экрана",
-          "category": "system",
-          "icon": "🌙",
-          "icon_path": null,
-          "icon_size": 48,
-          "font_size": 11,
-          "font_color": "#d4d4d8",
-          "text_alignment": "bottom",
-          "hide_title": false,
-          "color_accent": "#f59e0b",
-          "background_color": "#161b26",
-          "action": {
-            "action_type": "system",
-            "params": {
-              "command": "dimmer",
-              "screenshot_target": "primary"
-            }
-          },
-          "toggle_action": null,
-          "status_source": "dimmer",
-          "sound_override": null
-        },
-        {
-          "id": "btn_slot_2",
-          "slot_index": 2,
-          "name": "Терминал Windows",
-          "title": "Скриншот экрана",
-          "category": "system",
-          "icon": "📸",
-          "icon_path": null,
-          "icon_size": 48,
-          "font_size": 11,
-          "font_color": "#d4d4d8",
-          "text_alignment": "bottom",
-          "hide_title": false,
-          "color_accent": "#38bdf8",
-          "background_color": "#161b26",
-          "action": {
-            "action_type": "system",
-            "params": {
-              "command": "screenshot",
-              "screenshot_target": "primary",
-              "clipboard": true,
-              "save_path": null
-            }
-          },
-          "toggle_action": null,
-          "status_source": null,
-          "sound_override": null
-        },
-        {
-          "id": "btn_slot_3",
-          "slot_index": 3,
-          "name": "Блокировка ПК",
-          "title": "Блокировка ПК",
-          "category": "system",
-          "icon": "🔒",
-          "icon_path": null,
-          "icon_size": 48,
-          "font_size": 11,
-          "font_color": "#d4d4d8",
-          "text_alignment": "bottom",
-          "hide_title": false,
-          "color_accent": "#ef4444",
-          "background_color": "#161b26",
-          "action": {
-            "action_type": "system",
-            "params": {
-              "command": "lock_pc",
-              "screenshot_target": "primary"
-            }
-          },
-          "toggle_action": null,
-          "status_source": null,
-          "sound_override": null
-        },
-        {
-          "id": "btn_slot_4",
-          "slot_index": 4,
-          "name": "Двухпозиционный тумблер",
-          "title": "Двухпозиционный тумблер",
-          "category": "shortcut",
-          "icon": "⇄",
-          "icon_path": null,
-          "icon_size": 48,
-          "font_size": 11,
-          "font_color": "#d4d4d8",
-          "text_alignment": "bottom",
-          "hide_title": false,
-          "color_accent": "#a855f7",
-          "background_color": "#161b26",
-          "action": {
-            "action_type": "hotkey",
-            "params": {
-              "keys": [
-                "f1"
-              ],
-              "mode": "press",
-              "toggle_keys": []
-            }
-          },
-          "toggle_action": null,
-          "status_source": null,
+          "status_source": "none",
           "sound_override": null
         },
         {
@@ -171,63 +65,6 @@
             "params": {
               "target": "prev_page",
               "page_id": null
-            }
-          },
-          "toggle_action": null,
-          "status_source": null,
-          "sound_override": null
-        },
-        {
-          "id": "btn_slot_2",
-          "slot_index": 6,
-          "name": "Терминал Windows",
-          "title": "Терминал Windows",
-          "category": "program",
-          "icon": "💻",
-          "icon_path": null,
-          "icon_size": 48,
-          "font_size": 11,
-          "font_color": "#d4d4d8",
-          "text_alignment": "bottom",
-          "hide_title": false,
-          "color_accent": "#10b981",
-          "background_color": "#161b26",
-          "action": {
-            "action_type": "launch",
-            "params": {
-              "target": "wt.exe",
-              "args": [],
-              "working_dir": null,
-              "kind": "app",
-              "detached": true
-            }
-          },
-          "toggle_action": null,
-          "status_source": null,
-          "sound_override": null
-        },
-        {
-          "id": "btn_slot_7",
-          "slot_index": 7,
-          "name": "Диспетчер задач",
-          "title": "Скриншот экрана",
-          "category": "system",
-          "icon": "📸",
-          "icon_path": null,
-          "icon_size": 48,
-          "font_size": 11,
-          "font_color": "#d4d4d8",
-          "text_alignment": "bottom",
-          "hide_title": false,
-          "color_accent": "#38bdf8",
-          "background_color": "#161b26",
-          "action": {
-            "action_type": "system",
-            "params": {
-              "command": "screenshot",
-              "screenshot_target": "primary",
-              "clipboard": true,
-              "save_path": null
             }
           },
           "toggle_action": null,
@@ -269,12 +106,12 @@
       "grid_cols": 5,
       "buttons": [
         {
-          "id": "btn_slot_0",
-          "slot_index": 0,
-          "name": "Вставка текста",
-          "title": "Вставка текста",
+          "id": "btn_slot_1",
+          "slot_index": 1,
+          "name": "Веб-браузер",
+          "title": "Громкость приложения (-5%)",
           "category": "system",
-          "icon": "📝",
+          "icon": "🔉-",
           "icon_path": null,
           "icon_size": 48,
           "font_size": 11,
@@ -284,118 +121,19 @@
           "color_accent": "#10b981",
           "background_color": "#161b26",
           "action": {
-            "action_type": "text",
+            "action_type": "media",
             "params": {
-              "text": "",
-              "send_enter": false
+              "command": "volume_down"
             }
           },
           "toggle_action": null,
-          "status_source": null,
+          "status_source": "none",
           "sound_override": null
         },
         {
-          "id": "btn_slot_1",
-          "slot_index": 1,
-          "name": "Переключение аудиовыхода",
-          "title": "Переключение аудиовыхода",
-          "category": "system",
-          "icon": "🎧",
-          "icon_path": null,
-          "icon_size": 48,
-          "font_size": 11,
-          "font_color": "#d4d4d8",
-          "text_alignment": "bottom",
-          "hide_title": false,
-          "color_accent": "#06b6d4",
-          "background_color": "#161b26",
-          "action": {
-            "action_type": "audio",
-            "params": {
-              "target": "device",
-              "command": "toggle_device",
-              "step_percent": 5,
-              "devices": [
-                "Наушники",
-                "Динамики"
-              ],
-              "file_path": "",
-              "volume": 1.0,
-              "stop_others": false,
-              "mode": "toggle",
-              "target_device_id": null
-            }
-          },
-          "toggle_action": null,
-          "status_source": "audio_device",
-          "sound_override": null
-        },
-        {
-          "id": "btn_slot_5",
-          "slot_index": 5,
-          "name": "Предыдущая страница",
-          "title": "Предыдущая страница",
-          "category": "navigation",
-          "icon": "◀",
-          "icon_path": null,
-          "icon_size": 48,
-          "font_size": 11,
-          "font_color": "#d4d4d8",
-          "text_alignment": "bottom",
-          "hide_title": false,
-          "color_accent": "#71717a",
-          "background_color": "#161b26",
-          "action": {
-            "action_type": "deck_nav",
-            "params": {
-              "target": "prev_page",
-              "page_id": null
-            }
-          },
-          "toggle_action": null,
-          "status_source": null,
-          "sound_override": null
-        },
-        {
-          "id": "btn_slot_6",
-          "slot_index": 6,
-          "name": "Mute микрофона",
-          "title": "Mute микрофона",
-          "category": "system",
-          "icon": "🎙️",
-          "icon_path": null,
-          "icon_size": 48,
-          "font_size": 11,
-          "font_color": "#d4d4d8",
-          "text_alignment": "bottom",
-          "hide_title": false,
-          "color_accent": "#ef4444",
-          "background_color": "#161b26",
-          "action": {
-            "action_type": "audio",
-            "params": {
-              "target": "mic",
-              "command": "toggle_mute",
-              "step_percent": 5,
-              "devices": [
-                "Наушники",
-                "Динамики"
-              ],
-              "file_path": "",
-              "volume": 1.0,
-              "stop_others": false,
-              "mode": "toggle",
-              "target_device_id": null
-            }
-          },
-          "toggle_action": null,
-          "status_source": "mic_mute",
-          "sound_override": null
-        },
-        {
-          "id": "btn_slot_7",
-          "slot_index": 7,
-          "name": "Mute звука",
+          "id": "btn_slot_2",
+          "slot_index": 2,
+          "name": "Предыдущий трек",
           "title": "Mute звука",
           "category": "system",
           "icon": "🔇",
@@ -429,39 +167,30 @@
           "sound_override": null
         },
         {
-          "id": "btn_slot_9",
-          "slot_index": 9,
-          "name": "Следующая страница",
-          "title": "Следующая страница",
-          "category": "navigation",
-          "icon": "▶",
+          "id": "btn_slot_3",
+          "slot_index": 3,
+          "name": "Следующий трек",
+          "title": "Громкость приложения (+5%)",
+          "category": "system",
+          "icon": "🔊+",
           "icon_path": null,
           "icon_size": 48,
           "font_size": 11,
           "font_color": "#d4d4d8",
           "text_alignment": "bottom",
           "hide_title": false,
-          "color_accent": "#71717a",
+          "color_accent": "#10b981",
           "background_color": "#161b26",
           "action": {
-            "action_type": "deck_nav",
+            "action_type": "media",
             "params": {
-              "target": "next_page",
-              "page_id": null
+              "command": "volume_up"
             }
           },
           "toggle_action": null,
-          "status_source": null,
+          "status_source": "none",
           "sound_override": null
-        }
-      ]
-    },
-    {
-      "id": "page_3",
-      "name": "",
-      "grid_rows": 2,
-      "grid_cols": 5,
-      "buttons": [
+        },
         {
           "id": "btn_slot_5",
           "slot_index": 5,
@@ -491,27 +220,72 @@
         {
           "id": "btn_slot_6",
           "slot_index": 6,
-          "name": "Горячая клавиша",
-          "title": "Горячая клавиша",
-          "category": "shortcut",
-          "icon": "⌨️",
+          "name": "Mute микрофона",
+          "title": "Предыдущий трек",
+          "category": "system",
+          "icon": "⏮️",
           "icon_path": null,
           "icon_size": 48,
           "font_size": 11,
           "font_color": "#d4d4d8",
           "text_alignment": "bottom",
           "hide_title": false,
-          "color_accent": "#38bdf8",
+          "color_accent": "#f59e0b",
           "background_color": "#161b26",
           "action": {
-            "action_type": "hotkey",
+            "action_type": "media",
             "params": {
-              "keys": [
-                "ctrl",
-                "c"
-              ],
-              "mode": "press",
-              "toggle_keys": []
+              "command": "prev_track"
+            }
+          },
+          "toggle_action": null,
+          "status_source": "none",
+          "sound_override": null
+        },
+        {
+          "id": "btn_slot_8",
+          "slot_index": 7,
+          "name": "Громкость приложения (-5%)",
+          "title": "Следующий трек",
+          "category": "system",
+          "icon": "⏭️",
+          "icon_path": null,
+          "icon_size": 48,
+          "font_size": 11,
+          "font_color": "#d4d4d8",
+          "text_alignment": "bottom",
+          "hide_title": false,
+          "color_accent": "#f59e0b",
+          "background_color": "#161b26",
+          "action": {
+            "action_type": "media",
+            "params": {
+              "command": "play_pause"
+            }
+          },
+          "toggle_action": null,
+          "status_source": null,
+          "sound_override": null
+        },
+        {
+          "id": "btn_slot_8",
+          "slot_index": 8,
+          "name": "Громкость приложения (-5%)",
+          "title": "Следующий трек",
+          "category": "system",
+          "icon": "⏭️",
+          "icon_path": null,
+          "icon_size": 48,
+          "font_size": 11,
+          "font_color": "#d4d4d8",
+          "text_alignment": "bottom",
+          "hide_title": false,
+          "color_accent": "#f59e0b",
+          "background_color": "#161b26",
+          "action": {
+            "action_type": "media",
+            "params": {
+              "command": "next_track"
             }
           },
           "toggle_action": null,
