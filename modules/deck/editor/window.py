@@ -378,21 +378,37 @@ class DeckEditorWindow(QMainWindow):
             widget.slot_dropped.connect(self._on_canvas_slot_dropped)
 
     def _on_canvas_action_dropped(self, slot_idx: int, action_data: dict) -> None:
-        """Обработка сброса действия из библиотеки на ячейку холста."""
+        """Обработка сброса действия или пресета из библиотеки на ячейку холста."""
         old_dto = self.get_slot_dto(slot_idx)
-        title_text = action_data.get("title", "")
-        category_key = action_data.get("category", "")
-        cat_name = t(category_key) if category_key else ""
-        category_text = f"{cat_name}: {title_text}" if cat_name else title_text
+        action_id = action_data.get("id", "")
+        from modules.deck.presets import ActionPresetsRegistry
+        preset = ActionPresetsRegistry.get_preset_by_id(action_id)
 
         new_dto = old_dto.model_copy(deep=True)
-        new_dto.title = title_text
-        new_dto.icon = action_data.get("icon", "🖲️")
-        new_dto.category = category_text
-        new_dto.action_type = action_data.get("id", "")
-        new_dto.action_params = {}
-        if new_dto.action_type not in ("hotkey", "hotkey_switch"):
-            new_dto.hotkey = ""
+        if preset is not None:
+            new_dto.title = t(preset.title_key)
+            new_dto.icon = preset.icon
+            new_dto.color_accent = preset.color_accent or "#38bdf8"
+            new_dto.status_source = preset.status_source
+            new_dto.category = t(f"deck.editor.categories.{preset.category}")
+            new_dto.action_type = preset.base_action.action_type
+            new_dto.action_params = dict(preset.base_action.params)
+            if preset.base_action.action_type == "hotkey":
+                keys = preset.base_action.params.get("keys", [])
+                new_dto.hotkey = "+".join(keys) if isinstance(keys, list) else str(keys)
+        else:
+            title_text = action_data.get("title", "")
+            category_key = action_data.get("category", "")
+            cat_name = t(category_key) if category_key else ""
+            category_text = f"{cat_name}: {title_text}" if cat_name else title_text
+
+            new_dto.title = title_text
+            new_dto.icon = action_data.get("icon", "🖲️")
+            new_dto.category = category_text
+            new_dto.action_type = action_id
+            new_dto.action_params = {}
+            if new_dto.action_type not in ("hotkey", "hotkey_switch"):
+                new_dto.hotkey = ""
 
         cmd = AssignActionCommand(self, slot_idx, new_dto, old_dto)
         self._undo_stack.push(cmd)
@@ -433,6 +449,7 @@ class DeckEditorWindow(QMainWindow):
                     self.canvas_widget.update_cell_preview(slot_idx, "text_alignment", getattr(cloned, "text_alignment", "bottom"))
                     self.canvas_widget.update_cell_preview(slot_idx, "hide_title", getattr(cloned, "hide_title", False))
                     self.canvas_widget.update_cell_preview(slot_idx, "status_source", getattr(cloned, "status_source", "none"))
+                    self.canvas_widget.update_cell_preview(slot_idx, "color_accent", getattr(cloned, "color_accent", "#38bdf8"))
 
             if isinstance(self.inspector, KeyPropertyInspector):
                 if getattr(self.inspector, "_current_slot_index", None) == slot_idx:
@@ -925,14 +942,40 @@ class DeckEditorWindow(QMainWindow):
 
         if selected_target is not None and selected_target[0] == "button":
             slot_idx = int(selected_target[1])
-            old_dto = self.get_slot_dto(slot_idx)
+        else:
+            # Быстрое наполнение: ищем первый свободный/неконфигурированный слот
+            slot_idx = 0
+            for idx in range(10):
+                s = self.get_slot_dto(idx)
+                if not s.title and (not s.action_type or s.action_type.lower() in ("none", "unconfigured", "")):
+                    slot_idx = idx
+                    break
+            if isinstance(self.canvas_widget, DeckCanvasWidget):
+                self.canvas_widget.select_button(slot_idx)
 
+        old_dto = self.get_slot_dto(slot_idx)
+
+        from modules.deck.presets import ActionPresetsRegistry
+        preset = ActionPresetsRegistry.get_preset_by_id(getattr(item_dto, "id", ""))
+
+        new_dto = old_dto.model_copy(deep=True)
+        if preset is not None:
+            new_dto.title = t(preset.title_key)
+            new_dto.icon = preset.icon
+            new_dto.color_accent = preset.color_accent or "#38bdf8"
+            new_dto.status_source = preset.status_source
+            new_dto.category = t(f"deck.editor.categories.{preset.category}")
+            new_dto.action_type = preset.base_action.action_type
+            new_dto.action_params = dict(preset.base_action.params)
+            if preset.base_action.action_type == "hotkey":
+                keys = preset.base_action.params.get("keys", [])
+                new_dto.hotkey = "+".join(keys) if isinstance(keys, list) else str(keys)
+        else:
             title_text = item_dto.get_title() if hasattr(item_dto, "get_title") else ""
             category_key = getattr(item_dto, "category_key", "")
             cat_name = t(category_key) if category_key else ""
             category_text = f"{cat_name}: {title_text}" if cat_name else title_text
 
-            new_dto = old_dto.model_copy(deep=True)
             new_dto.title = title_text
             new_dto.icon = getattr(item_dto, "icon", "🖲️")
             new_dto.category = category_text
@@ -941,16 +984,16 @@ class DeckEditorWindow(QMainWindow):
             if new_dto.action_type not in ("hotkey", "hotkey_switch"):
                 new_dto.hotkey = ""
 
-            logger.info(
-                "Assigned action '%s' to slot %d: title='%s', icon='%s'",
-                new_dto.action_type,
-                slot_idx,
-                new_dto.title,
-                new_dto.icon,
-            )
+        logger.info(
+            "Assigned action '%s' to slot %d: title='%s', icon='%s'",
+            new_dto.action_type,
+            slot_idx,
+            new_dto.title,
+            new_dto.icon,
+        )
 
-            cmd = AssignActionCommand(self, slot_idx, new_dto, old_dto)
-            self._undo_stack.push(cmd)
+        cmd = AssignActionCommand(self, slot_idx, new_dto, old_dto)
+        self._undo_stack.push(cmd)
 
     def _on_test_action_requested(self, slot_idx: int) -> None:
         """Безопасный тестовый запуск действия выбранной кнопки без потери фокуса."""

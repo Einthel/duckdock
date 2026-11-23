@@ -345,6 +345,9 @@ class DeckActionNormalizer:
         raw_type = data.get("action_type")
         raw_params = data.get("params")
         params = dict(raw_params) if isinstance(raw_params, dict) else {}
+        for k, v in data.items():
+            if k not in ("action_type", "params") and k not in params:
+                params[k] = v
 
         # 1. hotkey / hotkey_switch
         if raw_type in ("hotkey", "shortcut"):

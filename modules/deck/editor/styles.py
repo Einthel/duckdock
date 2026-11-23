@@ -810,6 +810,11 @@ KeyPreviewTile:hover {{
     border: 1px solid {BORDER_HOVER};
 }}
 
+QLabel#lblTileIcon {{
+    font-size: 28px;
+    background: transparent;
+}}
+
 /* Угловые микро-кнопки плитки превью (20x20 px) */
 QPushButton.TileCornerButton,
 QPushButton[class="TileCornerButton"],
@@ -967,6 +972,61 @@ QPushButton.ColorAccentSwatch[selected="true"],
 QPushButton[class="ColorAccentSwatch"][selected="true"],
 ColorAccentSwatch[selected="true"] {{
     border: 2px solid #ffffff;
+}}
+
+/* Кнопка вызова меню шаблонов пресетов (⚡ Шаблоны...) */
+QPushButton#btnPresetsMenu,
+QPushButton.InspectorPresetsButton,
+QPushButton[class="InspectorPresetsButton"] {{
+    min-height: {INPUT_HEIGHT}px;
+    max-height: {INPUT_HEIGHT}px;
+    background-color: #101c2e;
+    border: 1px solid #1e3a5f;
+    border-radius: 6px;
+    color: #38bdf8;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 0 10px;
+}}
+
+QPushButton#btnPresetsMenu:hover,
+QPushButton.InspectorPresetsButton:hover,
+QPushButton[class="InspectorPresetsButton"]:hover {{
+    background-color: #162a45;
+    border-color: #38bdf8;
+    color: #7dd3fc;
+}}
+
+QPushButton#btnPresetsMenu:pressed,
+QPushButton.InspectorPresetsButton:pressed,
+QPushButton[class="InspectorPresetsButton"]:pressed {{
+    background-color: #0c1524;
+    border-color: #0284c7;
+    color: #38bdf8;
+}}
+
+/* Кнопка в неконфигурированном слоте */
+QPushButton#btnUnconfiguredPresets,
+QPushButton.UnconfiguredPresetButton,
+QPushButton[class="UnconfiguredPresetButton"] {{
+    min-height: {INPUT_HEIGHT}px;
+    max-height: {INPUT_HEIGHT}px;
+    background-color: #141f32;
+    border: 1px dashed #38bdf8;
+    border-radius: 6px;
+    color: #38bdf8;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 0 12px;
+}}
+
+QPushButton#btnUnconfiguredPresets:hover,
+QPushButton.UnconfiguredPresetButton:hover,
+QPushButton[class="UnconfiguredPresetButton"]:hover {{
+    background-color: #1c2e4a;
+    border-style: solid;
+    border-color: #7dd3fc;
+    color: #ffffff;
 }}
 
 /* Кнопка выбора файла/папки в подформе инспектора */

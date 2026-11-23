@@ -57,6 +57,7 @@ class EditorGridCell(QFrame):
         self._category = ""
         self._hotkey = ""
         self._status_source = "none"
+        self._color_accent = "#38bdf8"
         self._font_size = 11
         self._font_color = "#d4d4d8"
         self._text_alignment = "bottom"
@@ -198,6 +199,7 @@ class EditorGridCell(QFrame):
         category: str = "",
         hotkey: str = "",
         status_source: str = "none",
+        color_accent: str = "#38bdf8",
         font_size: int = 11,
         font_color: str = "#d4d4d8",
         text_alignment: str = "bottom",
@@ -211,6 +213,7 @@ class EditorGridCell(QFrame):
         self._category = category
         self._hotkey = hotkey
         self._status_source = status_source
+        self._color_accent = color_accent
 
         self.set_typography(font_size, font_color, text_alignment, hide_title)
 
@@ -258,6 +261,7 @@ class EditorGridCell(QFrame):
         self._category = ""
         self._hotkey = ""
         self._status_source = "none"
+        self._color_accent = "#38bdf8"
 
         self.lbl_icon.clear()
         self.lbl_title.setText("")
@@ -276,6 +280,7 @@ class EditorGridCell(QFrame):
             "category": self._category,
             "hotkey": self._hotkey,
             "status_source": self._status_source,
+            "color_accent": self._color_accent,
             "font_size": self._font_size,
             "font_color": self._font_color,
             "text_alignment": self._text_alignment,

@@ -95,6 +95,12 @@ class DeckConfigAdapter:
             else:
                 action_type_display = "Volume Control"
                 category_display = "Volume: Control"
+        elif action.action_type in ("media", "multimedia"):
+            action_type_display = "Multimedia"
+            category_display = "System: Multimedia"
+        elif action.action_type in ("text", "text_macro"):
+            action_type_display = "Text Macro"
+            category_display = "System: Text Macro"
         elif action.action_type == "system":
             if action.params.get("command") == "screenshot":
                 action_type_display = "Screenshot"
@@ -102,6 +108,9 @@ class DeckConfigAdapter:
             else:
                 action_type_display = "System"
                 category_display = "System"
+        elif action.action_type in ("macro", "multi_action", "multi_action_switch"):
+            action_type_display = "Multi Action"
+            category_display = "Multi Action"
         elif action.action_type == "screenshot":
             action_type_display = "Screenshot"
             category_display = "System: Screenshot"
@@ -266,7 +275,7 @@ class DeckConfigAdapter:
             if dto.action_params:
                 action.params.update(dto.action_params)
         else:
-            action = DeckActionConfig(action_type="system", params={"command": "toggle_dimmer"})
+            action = DeckActionConfig(action_type="system", params={"command": "dimmer"})
             category = "system"
 
         return DeckButtonConfig(
@@ -674,25 +683,34 @@ class DeckConfigAdapter:
 
     @staticmethod
     def _normalize_action_type(action_type_str: str) -> str:
-        """Нормализует пользовательскую строку типа действия в канонический ActionType."""
+        """Нормализует пользовательскую строку типа действия в канонический ActionType (8 примитивов)."""
         raw = action_type_str.strip().lower().replace(" ", "_")
-        if raw in ("hotkey", "shortcut"):
+        if raw in ("hotkey", "shortcut", "hotkey_switch", "switch", "toggle_state"):
             return "hotkey"
-        if raw in ("hotkey_switch", "switch", "toggle_state"):
-            return "hotkey_switch"
-        if raw in ("website", "open_website", "web", "url", "browser"):
-            return "website"
-        if raw in ("open_path", "path", "folder", "open_folder"):
-            return "open_path"
-        if raw in ("open_app", "open_application", "launch", "program", "launch_app"):
-            return "open_app"
-        if raw in ("close_window", "close", "kill_window"):
-            return "close_window"
-        if raw in ("text_macro", "macro", "text", "paste_text"):
-            return "text_macro"
-        if raw in ("multimedia", "media", "media_control"):
-            return "multimedia"
         if raw in (
+            "launch",
+            "open_app",
+            "open_application",
+            "program",
+            "launch_app",
+            "open_path",
+            "path",
+            "folder",
+            "open_folder",
+            "website",
+            "open_website",
+            "web",
+            "url",
+            "browser",
+            "http_request",
+            "api",
+            "rest",
+        ):
+            return "launch"
+        if raw in (
+            "audio",
+            "audio_device",
+            "toggle_device",
             "volume_control",
             "volume",
             "auto_software_vol",
@@ -702,154 +720,100 @@ class DeckConfigAdapter:
             "volume_up",
             "volume_down",
             "output_device_toggle",
-        ):
-            return "volume_control"
-        if raw in ("audio_device", "audio", "toggle_device"):
-            return "audio_device"
-        if raw in ("screenshot", "screen"):
-            return "screenshot"
-        if raw in ("system", "system_command"):
-            return "system"
-        if raw in ("http_request", "api", "rest"):
-            return "http_request"
-        if raw in ("navigation", "page", "switch_page"):
-            return "navigation"
-        if raw in (
+            "soundboard",
             "play_audio",
             "stop_audio",
+        ):
+            return "audio"
+        if raw in ("media", "multimedia", "media_control"):
+            return "media"
+        if raw in ("text", "text_macro", "macro_text", "paste_text"):
+            return "text"
+        if raw in (
+            "system",
+            "system_command",
+            "screenshot",
+            "screen",
+            "close_window",
+            "close",
+            "kill_window",
             "brightness",
             "sleep_display",
+            "dimmer",
+            "toggle_dimmer",
+            "lock_pc",
+        ):
+            return "system"
+        if raw in (
+            "deck_nav",
+            "navigation",
+            "page",
+            "switch_page",
             "create_folder",
             "switch_profile",
             "prev_page",
             "next_page",
             "goto_page",
             "page_indicator",
-            "multi_action",
-            "multi_action_switch",
+            "folder_open",
+            "folder_back",
         ):
-            return raw
+            return "deck_nav"
+        if raw in ("macro", "multi_action", "multi_action_switch"):
+            return "macro"
         return "system"
 
     @classmethod
     def _create_default_action(cls, action_type: str) -> Tuple[DeckActionConfig, ActionCategory]:
         """Создает дефолтное действие DeckActionConfig и сопоставляет ActionCategory."""
-        if action_type == "hotkey":
+        norm = cls._normalize_action_type(action_type)
+        if norm == "hotkey":
             return (
                 DeckActionConfig(action_type="hotkey", params={"keys": []}),
                 "shortcut",
             )
-        if action_type == "hotkey_switch":
+        if norm == "launch":
             return (
-                DeckActionConfig(
-                    action_type="hotkey_switch",
-                    params={
-                        "state_1": {"title": "State 1", "keys": []},
-                        "state_2": {"title": "State 2", "keys": []},
-                        "current_state": 1,
-                    },
-                ),
-                "shortcut",
-            )
-        if action_type == "website":
-            return (
-                DeckActionConfig(action_type="website", params={"url": ""}),
-                "system",
-            )
-        if action_type == "open_path":
-            return (
-                DeckActionConfig(action_type="open_path", params={"path": ""}),
-                "system",
-            )
-        if action_type == "open_app":
-            return (
-                DeckActionConfig(action_type="open_app", params={"executable": "", "args": []}),
+                DeckActionConfig(action_type="launch", params={"target": "", "args": []}),
                 "program",
             )
-        if action_type == "close_window":
-            return (
-                DeckActionConfig(action_type="close_window", params={"target": "active_window"}),
-                "system",
-            )
-        if action_type == "text_macro":
-            return (
-                DeckActionConfig(action_type="text_macro", params={"text": "", "send_enter": False}),
-                "system",
-            )
-        if action_type == "multimedia":
-            return (
-                DeckActionConfig(action_type="multimedia", params={"command": "play_pause"}),
-                "system",
-            )
-        if action_type == "volume_control":
+        if norm == "audio":
             return (
                 DeckActionConfig(
-                    action_type="volume_control",
-                    params={"target": "focus_app", "command": "toggle_mute", "step_percent": 5},
+                    action_type="audio",
+                    params={"target": "master", "command": "toggle_mute", "step_percent": 5},
                 ),
                 "system",
             )
-        if action_type == "launch":
+        if norm == "media":
             return (
-                DeckActionConfig(action_type="launch", params={"path": "", "args": []}),
-                "program",
-            )
-        if action_type == "audio_device":
-            return (
-                DeckActionConfig(
-                    action_type="audio_device",
-                    params={"mode": "toggle", "devices": ["Наушники", "Динамики"]},
-                ),
+                DeckActionConfig(action_type="media", params={"command": "play_pause"}),
                 "system",
             )
-        if action_type == "screenshot":
+        if norm == "text":
             return (
-                DeckActionConfig(
-                    action_type="screenshot",
-                    params={"target": "primary_screen", "clipboard": True},
-                ),
+                DeckActionConfig(action_type="text", params={"text": "", "send_enter": False}),
                 "system",
             )
-        if action_type == "http_request":
+        if norm == "system":
             return (
-                DeckActionConfig(
-                    action_type="http_request",
-                    params={"url": "", "method": "POST"},
-                ),
-                "api",
+                DeckActionConfig(action_type="system", params={"command": "dimmer"}),
+                "system",
             )
-        if action_type == "play_audio":
+        if norm == "deck_nav":
             return (
-                DeckActionConfig(
-                    action_type="play_audio",
-                    params={"file_path": "", "volume": 1.0, "stop_others": False},
-                ),
-                "soundboard",
-            )
-        if action_type == "stop_audio":
-            return (
-                DeckActionConfig(action_type="stop_audio", params={}),
-                "soundboard",
-            )
-        if action_type in ("brightness", "sleep_display"):
-            return (
-                DeckActionConfig(action_type=action_type, params={}),
-                "stream_deck",
-            )
-        if action_type in ("create_folder", "switch_profile", "prev_page", "next_page", "goto_page", "page_indicator", "navigation"):
-            return (
-                DeckActionConfig(action_type=action_type, params={"target_page_id": "default"}),
+                DeckActionConfig(action_type="deck_nav", params={"target": "next_page"}),
                 "navigation",
             )
-        if action_type in ("multi_action", "multi_action_switch"):
+        if norm == "macro":
             return (
-                DeckActionConfig(action_type=action_type, params={"actions": []}),
+                DeckActionConfig(action_type="macro", params={"steps": [], "delay_ms": 50}),
                 "multi_action",
             )
         return (
             DeckActionConfig(
                 action_type="system",
-                params={"command": "toggle_dimmer"},
+                params={"command": "dimmer"},
             ),
             "system",
         )

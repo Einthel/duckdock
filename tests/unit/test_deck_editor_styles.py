@@ -173,11 +173,11 @@ def test_qss_contains_surface_tokens_and_applies_without_errors(qapp):
     assert window.styleSheet() == EDITOR_MAIN_QSS
 
 
-def test_deck_editor_window_theme_applied_on_init(qapp):
+def test_deck_editor_window_theme_applied_on_init(qapp, sample_two_page_deck_config_path):
     """Проверка автоматического применения темы Dark Obsidian v2 к DeckEditorWindow при создании."""
     from modules.deck.editor.window import DeckEditorWindow
 
-    window = DeckEditorWindow()
+    window = DeckEditorWindow(config_path=sample_two_page_deck_config_path)
     try:
         assert len(window.styleSheet()) > 0
         assert window.styleSheet() == EDITOR_MAIN_QSS

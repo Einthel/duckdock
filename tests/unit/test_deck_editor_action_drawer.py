@@ -413,11 +413,11 @@ def test_action_item_selection(qapp, qtbot, action_catalog):
 # ==============================================================================
 
 
-def test_action_drawer_window_integration(qapp, qtbot):
+def test_action_drawer_window_integration(qapp, qtbot, tmp_path):
     """
     Сквозной интеграционный тест взаимодействия ActionLibraryDrawer с холстом DeckCanvasWidget
     и инспектором KeyPropertyInspector внутри главного окна DeckEditorWindow:
-    1. Открытие DeckEditorWindow.
+    1. Открытие DeckEditorWindow с изолированной конфигурацией (Zero Mutation).
     2. Выбор кнопки слота 0 на холсте (клик или select_button(0)).
     3. Поиск и клик по действию 'Website' (open_website) в ActionLibraryDrawer.
     4. Проверка назначения выбранного действия на слот 0:
@@ -425,7 +425,13 @@ def test_action_drawer_window_integration(qapp, qtbot):
        - Превью ячейки на холсте (cell 0) обновлено (title, icon).
        - Форма инспектора свойств переключена в режим кнопки и отображает новое название и иконку.
     """
-    window = DeckEditorWindow()
+    from modules.deck.editor.adapter import DeckConfigAdapter
+    from modules.deck.models import DeckConfigLoader
+
+    cfg_file = str(tmp_path / "deck_config.json")
+    DeckConfigAdapter.save_deck_config_atomic(DeckConfigLoader.get_default_config(), cfg_file)
+
+    window = DeckEditorWindow(config_path=cfg_file)
     window._skip_close_dialog = True
     window.show()
     qtbot.addWidget(window)
@@ -466,3 +472,93 @@ def test_action_drawer_window_integration(qapp, qtbot):
     window._is_dirty = False
     window._undo_stack.setClean()
     window.close()
+
+
+# ==============================================================================
+# 8. Тесты Шага 3.4: Загрузка ActionPresetsRegistry и быстрое наполнение слота
+# ==============================================================================
+
+
+def test_action_drawer_presets_registry_loading_and_bilingual_search(qapp, qtbot):
+    """
+    Проверка загрузки пресетов из ActionPresetsRegistry в ActionLibraryDrawer
+    и двуязычного поиска (русский и английский) по тегам ключевых слов.
+    """
+    drawer = ActionLibraryDrawer()
+    drawer.load_presets_registry()
+    drawer.show()
+    qtbot.addWidget(drawer)
+
+    assert len(drawer.accordion.sections) == 8
+    expected_categories = [
+        "audio_comm",
+        "media_stream",
+        "launchers",
+        "system_control",
+        "input_macros",
+        "navigation",
+        "soundboard",
+        "multi_action",
+    ]
+    loaded_cat_ids = [s.category_dto.id for s in drawer.accordion.sections]
+    assert loaded_cat_ids == expected_categories
+
+    # 1. Поиск по-русски: "микрофон"
+    drawer.search_bar.search_input.setText("микрофон")
+    audio_sec = next(s for s in drawer.accordion.sections if s.category_dto.id == "audio_comm")
+    assert audio_sec.isVisible() is True
+    assert audio_sec.is_expanded is True
+
+    # 2. Поиск по-английски: "terminal"
+    drawer.search_bar.search_input.setText("terminal")
+    launch_sec = next(s for s in drawer.accordion.sections if s.category_dto.id == "launchers")
+    assert launch_sec.isVisible() is True
+    assert launch_sec.is_expanded is True
+
+    # 3. Очистка поиска
+    drawer.search_bar.btn_clear.click()
+    assert drawer.search_bar.get_query() == ""
+
+
+def test_action_drawer_fast_assignment_to_empty_slot(qapp, qtbot, tmp_path):
+    """
+    Быстрое наполнение (Шаг 3.3/3.4): клик по карточке в библиотеке, когда слот не выбран,
+    автоматически находит первый свободный/неконфигурированный слот и назначает пресет.
+    """
+    from modules.deck.editor.adapter import DeckConfigAdapter
+    from modules.deck.models import DeckConfigLoader
+
+    cfg_file = str(tmp_path / "deck_config_fast_assign.json")
+    DeckConfigAdapter.save_deck_config_atomic(DeckConfigLoader.get_default_config(), cfg_file)
+
+    window = DeckEditorWindow(config_path=cfg_file)
+    window._skip_close_dialog = True
+    window.show()
+    qtbot.addWidget(window)
+
+    # Убеждаемся, что слот 0 пуст
+    assert window._button_slots[0].title == "" or window._button_slots[0].action_type in ("", "none", "unconfigured")
+
+    # Сбрасываем выбор на холсте
+    window.canvas_widget.clear_selection()
+    assert window.canvas_widget.get_selected_target() is None
+
+    # Находим действие в каталоге (например, в категории system)
+    system_sec = next(
+        s for s in window.action_drawer.accordion.sections if s.category_dto.id == "system"
+    )
+    system_sec.set_expanded(True)
+    hotkey_item = next(w for w in system_sec.item_widgets if w.item_dto.id == "hotkey")
+
+    # Кликаем по карточке без предварительного выбора слота
+    qtbot.mouseClick(hotkey_item, Qt.LeftButton)
+
+    # Проверяем, что первый свободный слот (слот 0) автоматически заполнился и выделился
+    assert window.canvas_widget.get_selected_target() == ("button", 0)
+    assert window._button_slots[0].action_type == "hotkey"
+    assert window.inspector.button_form.combo_actions.currentData() == "hotkey"
+
+    window._is_dirty = False
+    window._undo_stack.setClean()
+    window.close()
+

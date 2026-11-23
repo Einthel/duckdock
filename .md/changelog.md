@@ -5,7 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.7.0] - 2026-11-22
+## [0.6.3] - 2026-11-23
+
+### Added
+- **Реорганизация действий DuckDeck и эталонная матрица пресетов (Этапы 1–4, `.md/deck/deck_action.md`)**:
+  - **8 базовых примитивов (`modules/deck/models.py`)**: Сокращение пространства действий до 8 ортогональных примитивов: `hotkey`, `launch`, `audio`, `media`, `text`, `system`, `deck_nav`, `macro` со строгой Pydantic v2 валидацией параметров без `Any`.
+  - **Реестр пресетов `ActionPresetsRegistry` (`modules/deck/presets/`)**: Каталог из 6 категорий (`system_tools`, `audio_comm`, `media_control`, `apps_launch`, `navigation`, `macros`) и 20+ преднастроенных карточек с предзаполненными иконками, цветами акцента, статусами и параметрами.
+  - **Прозрачный нормализатор `DeckActionNormalizer`**: Автоматическая бесшовная миграция всех 18+ устаревших типов конфигураций (`website`, `volume_control`, `audio_device`, `play_audio`, `stop_audio`, `open_path` и др.) в 8 базовых примитивов при загрузке.
+  - **Инвариант чистого первого запуска (Factory Default)**: `DeckConfigLoader.get_default_config()` возвращает ровно одну пустую страницу сетки без демо-данных.
+  - **Диспетчер действий `ActionDispatcher`**: Полный рефакторинг на чистый `match-case` по 8 базовым примитивам, изоляция COM-аудио через `EventBus`, подавление дребезга (cooldown 250 мс) и сторожевой таймер.
+  - **Компактный инспектор `ButtonPropertyForm` и выпадающее меню пресетов**: Выпадающий список пресетов «⚡ Шаблоны...», компактные подформы параметров высотой $\le 28$ px (`DeckNavSubform`, `UnconfiguredSubform`, `AudioSubform`, `LaunchSubform` и др.), бюджет высоты инспектора строго укладывается в 220 px.
+  - **Шторка библиотеки пресетов `ActionLibraryDrawer`**: Интеграция 6 категорий пресетов с живым поиском по двуязычным тегам и кнопкой быстрого назначения на свободный слот.
+  - **Связующий слой адаптера и холста (`DeckConfigAdapter`, `window.py`, `grid_cell.py`, `deck_canvas.py`)**: Поддержка сохранения и обновления цветов акцентов (`color_accent`), Drag-and-Drop пресетов на ячейки холста с полной инициализацией параметров слота, поддержка истории Undo/Redo при смене пресетов.
+  - **Сквозное E2E тестирование (`tests/integration/test_deck_editor_e2e.py`)**: Сценарии полного цикла (выбор слота, применение пресета, кастомизация, атомарное сохранение, Drag & Drop и Undo/Redo) и верификация обратной совместимости legacy-конфигов.
+  - **Качество и локализация**: 100% паритет ключей `locales/ru.json` и `locales/en.json`, проверенный AST-линтером, 538 тестов со статусом 100% PASS (0 failed, 36 deprecation warnings).
+
+## [0.6.2] - 2026-11-22
 
 ### Added
 - **Кастомизация типографики и всплывающее меню шрифтов (Спринт 7.1, `FontCustomizationPopover`)**:

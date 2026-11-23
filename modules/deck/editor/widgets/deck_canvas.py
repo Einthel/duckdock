@@ -198,12 +198,15 @@ class DeckCanvasWidget(QWidget):
             data["text_alignment"] = str(val) if val is not None else "bottom"
         elif prop == "hide_title":
             data["hide_title"] = bool(val)
+        elif prop == "color_accent":
+            data["color_accent"] = str(val) if val is not None else "#38bdf8"
         cell.set_button_data(
             title=data.get("title", ""),
             icon=data.get("icon", ""),
             category=data.get("category", ""),
             hotkey=data.get("hotkey", ""),
             status_source=data.get("status_source", "none"),
+            color_accent=data.get("color_accent", "#38bdf8"),
             font_size=data.get("font_size", 11),
             font_color=data.get("font_color", "#d4d4d8"),
             text_alignment=data.get("text_alignment", "bottom"),

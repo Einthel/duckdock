@@ -65,6 +65,10 @@ def main(argv: list[str] | None = None) -> int:
     app.setApplicationName("DuckDock")
     app.setOrganizationName("DuckDockOrg")
 
+    # Инициализация ClipboardHelper в главном потоке GUI
+    from modules.deck.actions.screen_capture import ClipboardHelper
+    ClipboardHelper.get_instance()
+
     if cli_args.editor:
         print("[*] Запуск DuckDeck Button & Touchbar Editor...")
         from modules.deck.editor.window import DeckEditorWindow

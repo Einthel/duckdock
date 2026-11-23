@@ -337,6 +337,33 @@ def test_capture_screen_primary(mock_get_screen, mock_copy, qapp):
     mock_copy.assert_called_once_with(fake_pixmap)
 
 
+def test_clipboard_helper_cross_thread_dispatch(qapp):
+    """Тест безопасной передачи QPixmap в буфер обмена из фонового потока на GUI-поток."""
+    import threading
+    from PySide6.QtCore import QThread
+    from modules.deck.actions.screen_capture import ClipboardHelper, copy_pixmap_to_clipboard
+
+    slot_thread = []
+
+    def mock_on_copy(pixmap):
+        slot_thread.append(QThread.currentThread())
+
+    helper = ClipboardHelper.get_instance()
+    helper._on_copy_pixmap = mock_on_copy
+
+    # Вызов из фонового потока
+    fake_pixmap = QPixmap(32, 32)
+    worker = threading.Thread(target=lambda: copy_pixmap_to_clipboard(fake_pixmap))
+    worker.start()
+    worker.join()
+
+    # Обработка очереди событий GUI потока
+    qapp.processEvents()
+
+    assert len(slot_thread) == 1
+    assert slot_thread[0] == qapp.thread(), "Слот _on_copy_pixmap обязан выполняться в главном потоке GUI"
+
+
 # -------------------------------------------------------------
 # 6. Тесты action_dispatcher.py (антидребезг и потокобезопасность)
 # -------------------------------------------------------------

@@ -200,6 +200,7 @@ def test_bidirectional_page_synchronization(qapp, sample_root_config, tmp_path):
 
     view = DeckView(config_path=str(cfg_file))
     editor = DeckEditorWindow()
+    editor._skip_close_dialog = True
     editor.config_path = str(cfg_file)
     editor.load_configuration()
 
@@ -248,6 +249,7 @@ def test_page_switch_auto_saves_progress(tmp_path, sample_root_config):
     DeckConfigAdapter.save_deck_config_atomic(sample_root_config, str(cfg_file))
 
     editor = DeckEditorWindow()
+    editor._skip_close_dialog = True
     editor.config_path = str(cfg_file)
     editor.load_configuration()
 

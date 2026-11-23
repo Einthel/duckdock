@@ -140,6 +140,7 @@ class ActionLibraryDrawer(QWidget):
     ) -> None:
         super().__init__(parent)
         self.setObjectName("actionLibraryDrawer")
+        self.setFocusPolicy(Qt.NoFocus)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
@@ -156,23 +157,33 @@ class ActionLibraryDrawer(QWidget):
         self.separator.setFrameShape(QFrame.HLine)
         self.separator.setFrameShadow(QFrame.Plain)
         self.separator.setFixedHeight(1)
+        self.separator.setFocusPolicy(Qt.NoFocus)
         layout.addWidget(self.separator)
 
         # 3. Аккордеон библиотеки действий (растягиваемый QScrollArea)
         self.accordion = ActionAccordionWidget(self)
+        self.accordion.setFocusPolicy(Qt.NoFocus)
         layout.addWidget(self.accordion, 1)
 
         # Подключение внутренних сигналов
         self.search_bar.search_changed.connect(self.accordion.filter_actions)
         self.accordion.action_selected.connect(self.action_picked.emit)
 
-        # Заполнение каталога, если передан начальный список
-        if categories is not None:
-            self.populate_actions(categories)
+        # Заполнение каталога: по умолчанию из ActionPresetsRegistry
+        if categories is None:
+            from modules.deck.presets import ActionPresetsRegistry
+            categories = ActionPresetsRegistry.get_categories_dto()
+
+        self.populate_actions(categories)
 
     def populate_actions(self, categories: List[ActionCategoryDTO]) -> None:
         """Заполняет каталог действий структурой категорий."""
         self.accordion.load_categories(categories)
+
+    def load_presets_registry(self) -> None:
+        """Загружает категории и пресеты из ActionPresetsRegistry."""
+        from modules.deck.presets import ActionPresetsRegistry
+        self.populate_actions(ActionPresetsRegistry.get_categories_dto())
 
     def retranslate_ui(self) -> None:
         """Каскадно обновляет локализацию поисковой строки и аккордеона."""

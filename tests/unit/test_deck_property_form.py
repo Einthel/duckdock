@@ -11,12 +11,15 @@ from typing import Any
 import pytest
 from PySide6.QtWidgets import QApplication
 
-from core.i18n import I18nManager
+from core.i18n import I18nManager, t
 from modules.deck.editor.dto import ButtonSlotDTO
 from modules.deck.editor.styles import INSPECTOR_HEIGHT
 from modules.deck.editor.widgets.button_property_form import (
     ACCENT_COLORS,
+    ACTION_PRIMITIVE_KEYS,
     ButtonPropertyForm,
+    DeckNavSubform,
+    UnconfiguredSubform,
 )
 
 
@@ -161,3 +164,115 @@ def test_property_form_retranslate_preserves_extended_inputs(qapp: QApplication)
     assert form.lbl_title_field.text() == "Название:"
     assert form.lbl_params_field.text() == "Параметры:"
     assert form.edit_title.text() == "Название"
+
+
+# ==============================================================================
+# Тесты Шага 3.4 (8 базовых примитивов, Unconfigured State, Presets Menu)
+# ==============================================================================
+
+
+def test_property_form_8_primitives_switching(qapp: QApplication) -> None:
+    """Проверка переключения 8 базовых примитивов и эмиссии сигналов."""
+    form = ButtonPropertyForm()
+    signals: list[tuple[str, Any]] = []
+    form.property_changed.connect(lambda name, val: signals.append((name, val)))
+
+    expected_primitives = [
+        "hotkey",
+        "launch",
+        "audio",
+        "media",
+        "text",
+        "system",
+        "deck_nav",
+        "macro",
+    ]
+    assert ACTION_PRIMITIVE_KEYS == expected_primitives
+
+    # Переключаем сначала на другой индекс, чтобы при переборе hotkey тоже гарантированно генерировал сигнал
+    form.combo_actions.setCurrentIndex(1)
+    signals.clear()
+
+    for prim in expected_primitives:
+        idx = form.combo_actions.findData(prim)
+        assert idx >= 0, f"Primitive {prim} must be in combo_actions"
+        form.combo_actions.setCurrentIndex(idx)
+        assert ("action_type", prim) in signals
+        assert form.height() == 260
+
+
+def test_property_form_unconfigured_state_on_empty_slot(qapp: QApplication) -> None:
+    """При пустом слоте первого запуска форма переходит в нейтральное UnconfiguredSubform."""
+    form = ButtonPropertyForm()
+
+    empty_dto = ButtonSlotDTO(
+        slot_index=0,
+        title="",
+        icon="",
+        action_type="",
+        hotkey="",
+    )
+    form.load_slot_data(empty_dto)
+
+    assert form._is_unconfigured is True
+    assert isinstance(form.params_stack.currentWidget(), UnconfiguredSubform)
+    assert form.lbl_category.text() == t("deck.editor.inspector.unconfigured_title")
+    assert form.edit_title.placeholderText() == t("deck.editor.inspector.unconfigured_placeholder")
+    assert form.btn_test.isEnabled() is False
+
+
+def test_property_form_apply_preset_and_unconfigured_recovery(qapp: QApplication) -> None:
+    """Применение пресета переводит неконфигурированный слот в настроенный со всеми полями."""
+    form = ButtonPropertyForm()
+
+    empty_dto = ButtonSlotDTO(slot_index=0, title="", action_type="")
+    form.load_slot_data(empty_dto)
+    assert form._is_unconfigured is True
+
+    # Применяем пресет Mute микрофона
+    form.apply_preset("mic_mute_toggle")
+
+    assert form._is_unconfigured is False
+    assert form.btn_test.isEnabled() is True
+    assert form.btn_delete.isEnabled() is True
+    assert form.preview_tile.get_icon() == "🎙️"
+    assert form.edit_title.text() == t("deck.editor.presets.mic_mute_toggle.title")
+    assert form.combo_actions.currentData() == "audio"
+    assert form.combo_status_source.currentData() == "mic_mute"
+
+
+def test_property_form_delete_resets_to_unconfigured(qapp: QApplication) -> None:
+    """Клик по кнопке корзины сбрасывает кнопку в неконфигурированное состояние."""
+    form = ButtonPropertyForm()
+    delete_fired = False
+
+    def on_delete() -> None:
+        nonlocal delete_fired
+        delete_fired = True
+
+    form.delete_requested.connect(on_delete)
+
+    # Загружаем настроенную кнопку
+    dto = ButtonSlotDTO(slot_index=1, title="Test Button", action_type="launch", icon="🚀")
+    form.load_slot_data(dto)
+    assert form._is_unconfigured is False
+
+    # Кликаем корзину
+    form.btn_delete.click()
+    assert delete_fired is True
+    assert form._is_unconfigured is True
+    assert isinstance(form.params_stack.currentWidget(), UnconfiguredSubform)
+    assert form.edit_title.text() == ""
+    assert form.preview_tile.get_icon() in ("", "➕")
+
+
+def test_property_form_presets_menu_button_stealth_focus(qapp: QApplication) -> None:
+    """Кнопка '⚡ Шаблоны...' имеет Qt.NoFocus и корректный текст/тултип."""
+    from PySide6.QtCore import Qt
+
+    form = ButtonPropertyForm()
+    assert hasattr(form, "btn_presets_menu")
+    assert form.btn_presets_menu.focusPolicy() == Qt.NoFocus
+    assert "⚡" in form.btn_presets_menu.text()
+    assert t("deck.editor.inspector.presets_menu") in form.btn_presets_menu.text()
+

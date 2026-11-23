@@ -40,10 +40,10 @@ def canvas_widget(qapp):
 
 
 @pytest.fixture
-def editor_window(qapp):
+def editor_window(qapp, sample_two_page_deck_config_path):
     """Фикстура для создания экземпляра главного окна DeckEditorWindow."""
     initial_lang = I18nManager().current_language
-    window = DeckEditorWindow()
+    window = DeckEditorWindow(config_path=sample_two_page_deck_config_path)
     window.show()
     qapp.processEvents()
     yield window

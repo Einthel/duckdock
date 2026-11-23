@@ -462,9 +462,9 @@ def test_button_property_form_signals(qapp: QApplication) -> None:
     form.edit_title.textEdited.emit("New Title")
     assert ("title", "New Title") in signals
 
-    # 2. Выбор действия в комбобоксе
-    form.combo_actions.setCurrentIndex(1)  # hotkey_switch
-    assert ("action_type", "hotkey_switch") in signals
+    # 2. Выбор действия в комбобоксе (индекс 1 = launch из 8 примитивов)
+    form.combo_actions.setCurrentIndex(1)  # launch
+    assert ("action_type", "launch") in signals
 
     # 3. Изменение хоткея
     form.btn_hotkey.hotkey_changed.emit("Ctrl+Alt+T")

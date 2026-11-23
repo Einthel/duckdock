@@ -259,6 +259,20 @@
       },
       "inspector": {
         "placeholder": "Select a key to configure its action.",
+        "presets_menu": "Presets...",
+        "open_library": "Open Action Library...",
+        "pick_preset": "Select Preset...",
+        "unconfigured_title": "Unconfigured Slot",
+        "unconfigured_placeholder": "Untitled",
+        "unconfigured_hint": "Slot is empty. Select a primitive above or apply a preset",
+        "select_action_type": "— Select Action —",
+        "nav_commands": {
+          "next_page": "Next Page",
+          "prev_page": "Previous Page",
+          "goto_page": "Go to Page...",
+          "folder_open": "Open Folder",
+          "folder_back": "Back from Folder"
+        },
         "hints": {
           "no_params_required": "Action requires no additional parameters",
           "stop_audio_hint": "Instantly mutes all active soundboard effects"
@@ -276,6 +290,7 @@
           "actions": "Actions:",
           "hotkey": "Hotkey:",
           "params": "Params:",
+          "page_id": "Page ID:",
           "url": "Website URL:",
           "path": "Path:",
           "executable": "Application:",

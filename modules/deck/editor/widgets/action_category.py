@@ -44,6 +44,7 @@ class ActionCategoryHeader(QFrame):
         self.setProperty("expanded", "true" if is_expanded else "false")
         self.setFixedHeight(CATEGORY_HEADER_HEIGHT)
         self.setCursor(Qt.PointingHandCursor)
+        self.setFocusPolicy(Qt.NoFocus)
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(8, 0, 8, 0)

@@ -7,7 +7,7 @@ import logging
 import os
 from typing import Optional, Tuple
 
-from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtCore import QObject, QThread, Qt, Signal
 from PySide6.QtGui import QGuiApplication, QPixmap
 from PySide6.QtWidgets import QApplication
 
@@ -24,7 +24,8 @@ except ImportError:
 class ClipboardHelper(QObject):
     """
     Потокобезопасный диспетчер записи в системный буфер обмена QClipboard.
-    Гарантирует вызов QClipboard строго в главном потоке GUI через механизм сигналов Qt.
+    Гарантирует вызов QClipboard строго в главном потоке GUI через механизм сигналов Qt
+    с принудительным QueuedConnection и гарантированной привязкой объекта к потоку GUI.
     """
     _instance: Optional["ClipboardHelper"] = None
     copy_pixmap_signal = Signal(QPixmap)
@@ -32,16 +33,24 @@ class ClipboardHelper(QObject):
     @classmethod
     def get_instance(cls) -> "ClipboardHelper":
         if cls._instance is None:
-            cls._instance = ClipboardHelper()
+            app = QApplication.instance()
+            helper = cls()
+            if app is not None and helper.thread() != app.thread():
+                helper.moveToThread(app.thread())
+            cls._instance = helper
         return cls._instance
 
     def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)
-        ClipboardHelper._instance = self
-        self.copy_pixmap_signal.connect(self._on_copy_pixmap)
+        self.copy_pixmap_signal.connect(self._on_copy_pixmap, Qt.ConnectionType.QueuedConnection)
 
     def _on_copy_pixmap(self, pixmap: QPixmap) -> None:
         try:
+            app = QApplication.instance()
+            if app is not None and QThread.currentThread() != app.thread():
+                logger.error("Критическая ошибка: _on_copy_pixmap вызван вне главного GUI потока")
+                return
+
             clipboard = QGuiApplication.clipboard()
             if clipboard is not None:
                 clipboard.setPixmap(pixmap)

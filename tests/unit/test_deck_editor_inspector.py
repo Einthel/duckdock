@@ -46,10 +46,10 @@ def inspector_widget(qapp):
 
 
 @pytest.fixture
-def editor_window(qapp):
+def editor_window(qapp, sample_two_page_deck_config_path):
     """Фикстура создания и гарантированного закрытия окна DeckEditorWindow."""
     initial_lang = I18nManager().current_language
-    window = DeckEditorWindow()
+    window = DeckEditorWindow(config_path=sample_two_page_deck_config_path)
     window._skip_close_dialog = True
     window.show()
     qapp.processEvents()

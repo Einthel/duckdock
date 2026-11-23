@@ -17,8 +17,10 @@
 """
 from __future__ import annotations
 
+import json
 import pytest
-from PySide6.QtCore import QPoint, Qt
+from PySide6.QtCore import QMimeData, QPoint, QPointF, Qt
+from PySide6.QtGui import QDropEvent
 
 from core.event_bus import bus
 from core.i18n import I18nManager, t
@@ -597,4 +599,303 @@ def test_deck_editor_full_runtime_integration_journey(qapp, qtbot, tmp_path):
         view.cleanup()
         view.deleteLater()
         qapp.processEvents()
+
+
+# ==============================================================================
+# Этап 4: Интеграционные E2E тесты пресетов, обратной совместимости и Drag-and-Drop
+# ==============================================================================
+
+
+def test_deck_editor_e2e_preset_workflow_and_atomic_save(qapp, qtbot, tmp_path):
+    """
+    Сквозной E2E сценарий Этапа 4 (Шаг 4.2.1):
+      1. Запуск DeckEditorWindow с чистой конфигурацией в изолированном tmp_path.
+      2. Выбор ячейки сетки (слот 0).
+      3. Выбор пресета 'output_device_toggle' из категории 'audio_comm' в правой шторке.
+      4. Проверка обновления DTO слота (иконка 🎧, цвет #06b6d4, статус audio_device, действие audio).
+      5. Проверка работы Undo / Redo для назначения пресета.
+      6. Изменение параметров через подформу аудиоустройств.
+      7. Сохранение конфигурации в deck_config.json и валидация схемы Pydantic v2 на диске.
+    """
+    from modules.deck.editor.adapter import DeckConfigAdapter
+    from modules.deck.models import DeckConfigLoader, DeckRootConfig
+
+    I18nManager().set_language("en", emit_signal=False)
+
+    cfg_file = tmp_path / "deck_preset_workflow.json"
+    root_cfg = DeckConfigLoader.get_default_config()
+    DeckConfigAdapter.save_deck_config_atomic(root_cfg, str(cfg_file))
+
+    window = DeckEditorWindow(config_path=str(cfg_file))
+    window._skip_close_dialog = True
+    window.action_drawer.load_presets_registry()
+    window.show()
+    qtbot.addWidget(window)
+    qapp.processEvents()
+
+    try:
+        canvas = window.canvas_widget
+        inspector = window.inspector
+        drawer = window.action_drawer
+
+        # 1. Выбор слота [0]
+        cell0 = canvas.get_cell(0)
+        assert cell0 is not None
+        qtbot.mouseClick(cell0, Qt.LeftButton)
+        qapp.processEvents()
+
+        assert canvas.get_selected_target() == ("button", 0)
+        assert inspector.stack.currentIndex() == 1
+
+        # 2. Поиск и раскрытие категории audio_comm в шторке
+        audio_sec = next(
+            s for s in drawer.accordion.sections if s.category_dto.id == "audio_comm"
+        )
+        audio_sec.set_expanded(True)
+        qapp.processEvents()
+
+        # 3. Выбор пресета output_device_toggle
+        preset_item = next(
+            w for w in audio_sec.item_widgets if w.item_dto.id == "output_device_toggle"
+        )
+        qtbot.mouseClick(preset_item, Qt.LeftButton)
+        qapp.processEvents()
+
+        # 4. Проверка DTO слота [0]
+        dto0 = window._button_slots[0]
+        assert dto0.action_type == "audio"
+        assert dto0.icon == "🎧"
+        assert dto0.color_accent == "#06b6d4"
+        assert dto0.status_source == "audio_device"
+        assert dto0.action_params.get("command") == "toggle_device"
+        assert dto0.action_params.get("target") == "device"
+
+        # Проверка обновления UI ячейки и инспектора
+        assert cell0.lbl_icon.text() == "🎧"
+        assert inspector.button_form.preview_tile.get_icon() == "🎧"
+        assert inspector.button_form.accent_picker._current_color == "#06b6d4"
+
+        # 5. Проверка Undo / Redo
+        window._undo_stack.undo()
+        qapp.processEvents()
+        dto_undone = window._button_slots[0]
+        assert dto_undone.action_type != "audio" or not dto_undone.title
+
+        window._undo_stack.redo()
+        qapp.processEvents()
+        dto_redone = window._button_slots[0]
+        assert dto_redone.action_type == "audio"
+        assert dto_redone.icon == "🎧"
+        assert dto_redone.color_accent == "#06b6d4"
+        assert dto_redone.status_source == "audio_device"
+
+        # 6. Изменение параметров через подформу (смена режима на 'cycle')
+        subform = inspector.button_form.subform_audio_device
+        idx_cycle = subform.combo_mode.findData("cycle")
+        if idx_cycle >= 0:
+            subform.combo_mode.setCurrentIndex(idx_cycle)
+            qapp.processEvents()
+            assert window._button_slots[0].action_params.get("mode") == "cycle"
+
+        # 7. Атомарное сохранение конфигурации
+        saved = window.save_configuration()
+        assert saved is True
+
+        # Верификация файла на диске через валидацию Pydantic v2
+        with open(cfg_file, "r", encoding="utf-8") as f:
+            disk_content = f.read()
+
+        saved_root = DeckRootConfig.model_validate_json(disk_content)
+        assert len(saved_root.pages) >= 1
+        page = saved_root.pages[0]
+        btn = next(b for b in page.buttons if b.slot_index == 0)
+        assert btn.action.action_type == "audio"
+        assert btn.icon == "🎧"
+        assert btn.color_accent == "#06b6d4"
+        assert btn.status_source == "audio_device"
+        assert btn.action.params.get("command") == "toggle_device"
+    finally:
+        window.close()
+        window.deleteLater()
+        qapp.processEvents()
+
+
+def test_deck_editor_e2e_legacy_config_backward_compatibility(qapp, qtbot, tmp_path):
+    """
+    Тест обратной совместимости (Шаг 4.2.2):
+      Загрузка устаревшего конфигурационного файла (website, volume_control, audio_device).
+      Проверка корректной инициализации редактора и прозрачной нормализации в 8 примитивов.
+    """
+    import json
+    from modules.deck.editor.adapter import DeckConfigAdapter
+    from modules.deck.models import DeckRootConfig
+
+    I18nManager().set_language("en", emit_signal=False)
+
+    legacy_json = {
+        "active_profile": "default",
+        "simulation_mode": False,
+        "pages": [
+            {
+                "id": "default",
+                "name": "Main",
+                "grid_rows": 2,
+                "grid_cols": 5,
+                "buttons": [
+                    {
+                        "id": "btn_legacy_web",
+                        "slot_index": 0,
+                        "title": "Google",
+                        "icon": "🌐",
+                        "color_accent": "#38bdf8",
+                        "action": {
+                            "action_type": "website",
+                            "url": "https://google.com",
+                        },
+                    },
+                    {
+                        "id": "btn_legacy_vol",
+                        "slot_index": 1,
+                        "title": "Mute Focus",
+                        "icon": "🔇",
+                        "color_accent": "#10b981",
+                        "action": {
+                            "action_type": "volume_control",
+                            "target": "focus_app",
+                            "command": "toggle_mute",
+                        },
+                    },
+                    {
+                        "id": "btn_legacy_dev",
+                        "slot_index": 2,
+                        "title": "Audio Dev",
+                        "icon": "🎧",
+                        "color_accent": "#06b6d4",
+                        "action": {
+                            "action_type": "audio_device",
+                            "mode": "toggle",
+                            "devices": ["Headphones", "Speakers"],
+                        },
+                    },
+                ],
+            }
+        ],
+    }
+
+    legacy_file = tmp_path / "legacy_deck_config.json"
+    with open(legacy_file, "w", encoding="utf-8") as f:
+        json.dump(legacy_json, f, indent=2)
+
+    # 1. Загрузка через DeckConfigAdapter
+    root_cfg = DeckConfigAdapter.load_deck_config(str(legacy_file))
+    assert isinstance(root_cfg, DeckRootConfig)
+    page = root_cfg.pages[0]
+    assert len(page.buttons) == 3
+
+    # Нормализация в новые примитивы
+    assert page.buttons[0].action.action_type == "launch"
+    assert page.buttons[0].action.params["target"] == "https://google.com"
+
+    assert page.buttons[1].action.action_type == "audio"
+    assert page.buttons[1].action.params["command"] == "toggle_mute"
+
+    assert page.buttons[2].action.action_type == "audio"
+    assert page.buttons[2].action.params["command"] == "toggle_device"
+
+    # 2. Инициализация DeckEditorWindow с устаревшим файлом
+    window = DeckEditorWindow(config_path=str(legacy_file))
+    window._skip_close_dialog = True
+    window.show()
+    qtbot.addWidget(window)
+    qapp.processEvents()
+
+    try:
+        canvas = window.canvas_widget
+        assert canvas.get_cell(0).lbl_title.text() == "Google"
+        assert canvas.get_cell(1).lbl_title.text() == "Mute Focus"
+        assert canvas.get_cell(2).lbl_title.text() == "Audio Dev"
+
+        # Клик по слоту 0 -> инспектор корректно открывается
+        cell0 = canvas.get_cell(0)
+        qtbot.mouseClick(cell0, Qt.LeftButton)
+        qapp.processEvents()
+
+        assert window.inspector.stack.currentIndex() == 1
+        assert window.inspector.button_form.edit_title.text() == "Google"
+        assert window.inspector.button_form.preview_tile.get_icon() == "🌐"
+    finally:
+        window.close()
+        window.deleteLater()
+        qapp.processEvents()
+
+
+def test_deck_editor_e2e_preset_drag_and_drop(qapp, qtbot, tmp_path):
+    """
+    Сквозной тест Drag-and-Drop пресета из библиотеки на ячейку холста (Шаг 4.1.3 & 4.2).
+    Перетаскивание пресета конфигурирует иконку, акцент, статус и действие кнопки.
+    """
+    from modules.deck.editor.adapter import DeckConfigAdapter
+    from modules.deck.models import DeckConfigLoader
+
+    cfg_file = tmp_path / "deck_dnd_test.json"
+    root_cfg = DeckConfigLoader.get_default_config()
+    DeckConfigAdapter.save_deck_config_atomic(root_cfg, str(cfg_file))
+
+    window = DeckEditorWindow(config_path=str(cfg_file))
+    window._skip_close_dialog = True
+    window.action_drawer.load_presets_registry()
+    window.show()
+    qtbot.addWidget(window)
+    qapp.processEvents()
+
+    try:
+        cell4 = window.canvas_widget.get_cell(4)
+        assert cell4 is not None
+
+        # Эмуляция сброса пресета toggle_dimmer на слот 4
+        payload = {
+            "id": "toggle_dimmer",
+            "title": "Dimmer",
+            "icon": "🌙",
+            "category": "deck.editor.categories.system_control",
+        }
+        mime = QMimeData()
+        mime.setData("application/x-duckdeck-action", json.dumps(payload).encode("utf-8"))
+        drop_evt = QDropEvent(
+            QPointF(10.0, 10.0),
+            Qt.CopyAction,
+            mime,
+            Qt.LeftButton,
+            Qt.NoModifier,
+        )
+        cell4.dropEvent(drop_evt)
+        qapp.processEvents()
+
+        # Проверка параметров слота 4
+        dto4 = window._button_slots[4]
+        assert dto4.action_type == "system"
+        assert dto4.icon == "🌙"
+        assert dto4.status_source == "dimmer"
+        assert dto4.color_accent == "#f59e0b"
+        assert dto4.action_params.get("command") == "dimmer"
+        assert cell4.lbl_icon.text() == "🌙"
+
+        # Undo сброса
+        window._undo_stack.undo()
+        qapp.processEvents()
+        dto_after_undo = window._button_slots[4]
+        assert dto_after_undo.action_type != "system" or not dto_after_undo.title
+
+        # Redo сброса
+        window._undo_stack.redo()
+        qapp.processEvents()
+        dto_after_redo = window._button_slots[4]
+        assert dto_after_redo.action_type == "system"
+        assert dto_after_redo.icon == "🌙"
+        assert dto_after_redo.status_source == "dimmer"
+    finally:
+        window.close()
+        window.deleteLater()
+        qapp.processEvents()
+
 

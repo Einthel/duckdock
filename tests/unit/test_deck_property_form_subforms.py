@@ -14,7 +14,15 @@ from modules.deck.editor.dto import ButtonSlotDTO
 from modules.deck.editor.styles import INSPECTOR_HEIGHT
 from modules.deck.editor.widgets.button_property_form import (
     ACCENT_COLORS,
+    AudioSubform,
     ButtonPropertyForm,
+    DeckNavSubform,
+    LaunchSubform,
+    MacroSubform,
+    NoParamsSubform,
+    PathUrlSubform,
+    UnconfiguredSubform,
+    VolumeSubform,
 )
 
 
@@ -189,4 +197,92 @@ def test_btn_test_action_requested(qapp: QApplication) -> None:
     assert form.btn_test.toolTip() == t("deck.editor.inspector.tooltips.test_action")
     form.btn_test.click()
     assert emitted == [3]
+
+
+# ==============================================================================
+# Тесты Шага 3.4: DeckNavSubform, UnconfiguredSubform, семантические шимы
+# ==============================================================================
+
+
+def test_deck_nav_subform_lifecycle_and_signals(qapp: QApplication) -> None:
+    """Проверка подформы навигации DeckNavSubform: команды, ввод page_id и Qt.NoFocus."""
+    from PySide6.QtCore import Qt
+
+    subform = DeckNavSubform()
+    subform.show()
+    assert subform.height() <= 56
+    assert subform.combo_target.focusPolicy() == Qt.NoFocus
+    assert subform.edit_page.focusPolicy() == Qt.NoFocus
+
+    emitted_params = []
+    subform.params_changed.connect(lambda p: emitted_params.append(p))
+
+    # По умолчанию next_page, edit_page скрыт
+    assert subform.edit_page.isHidden() is True
+
+    # Переключаем на goto_page
+    idx_goto = subform.combo_target.findData("goto_page")
+    assert idx_goto >= 0
+    subform.combo_target.setCurrentIndex(idx_goto)
+    assert subform.edit_page.isHidden() is False
+
+    # Вводим номер страницы
+    subform.edit_page.setText("page_3")
+    subform.edit_page.textEdited.emit("page_3")
+    assert emitted_params[-1] == {"target": "goto_page", "page_id": "page_3"}
+
+    # Проверка set_params
+    subform.set_params({"target": "goto_page", "page_id": "custom_profile"})
+    assert subform.combo_target.currentData() == "goto_page"
+    assert subform.edit_page.text() == "custom_profile"
+    assert subform.edit_page.isHidden() is False
+
+    # Переключение на folder_open
+    subform.set_params({"target": "folder_open"})
+    assert subform.combo_target.currentData() == "folder_open"
+    assert subform.edit_page.isHidden() is True
+
+    # Retranslate
+    mgr = I18nManager()
+    mgr.set_language("en")
+    subform.retranslate_ui()
+    assert subform.combo_target.currentData() == "folder_open"
+    mgr.set_language("ru")
+    subform.retranslate_ui()
+
+
+def test_unconfigured_subform_lifecycle(qapp: QApplication) -> None:
+    """Проверка плашки пустого состояния UnconfiguredSubform: сигнал вызова шаблонов и Qt.NoFocus."""
+    from PySide6.QtCore import Qt
+
+    subform = UnconfiguredSubform()
+    assert subform.height() <= 56
+    assert subform.btn_pick_preset.focusPolicy() == Qt.NoFocus
+
+    menu_requested = False
+
+    def on_req() -> None:
+        nonlocal menu_requested
+        menu_requested = True
+
+    subform.pick_preset_requested.connect(on_req)
+    subform.btn_pick_preset.click()
+    assert menu_requested is True
+
+    # Retranslate
+    mgr = I18nManager()
+    mgr.set_language("en")
+    subform.retranslate_ui()
+    assert "template" in subform.btn_pick_preset.text().lower() or "preset" in subform.btn_pick_preset.text().lower()
+    mgr.set_language("ru")
+    subform.retranslate_ui()
+    assert "шаблон" in subform.btn_pick_preset.text().lower()
+
+
+def test_semantic_shims_presence() -> None:
+    """Проверка наличия семантических псевдонимов подформ для обратной совместимости."""
+    assert LaunchSubform is PathUrlSubform
+    assert AudioSubform is VolumeSubform
+    assert MacroSubform is NoParamsSubform
+
 

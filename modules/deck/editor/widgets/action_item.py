@@ -42,6 +42,7 @@ class ActionItemWidget(QFrame):
         self.setProperty("class", "ActionItemCard")
         self.setFixedHeight(ACTION_ITEM_HEIGHT)
         self.setCursor(Qt.PointingHandCursor)
+        self.setFocusPolicy(Qt.NoFocus)
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(4, 2, 8, 2)

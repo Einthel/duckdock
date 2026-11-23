@@ -50,9 +50,7 @@ class KeyPreviewTile(QFrame):
         self.lbl_icon.setObjectName("lblTileIcon")
         self.lbl_icon.setAlignment(Qt.AlignCenter)
         self.lbl_icon.setAttribute(Qt.WA_TransparentForMouseEvents, True)
-        font = self.lbl_icon.font()
-        font.setPointSize(28)
-        self.lbl_icon.setFont(font)
+        self.lbl_icon.setStyleSheet("font-size: 28px; background: transparent;")
 
         # Левая верхняя микро-кнопка '+' (библиотека иконок)
         self.btn_add = QPushButton("+", self)

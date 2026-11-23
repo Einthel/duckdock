@@ -81,9 +81,9 @@ def test_get_demo_editor_profile_structure():
     assert telemetry.refresh_interval_s == 2
 
 
-def test_load_demo_profile_into_window(qapp):
+def test_load_demo_profile_into_window(qapp, sample_two_page_deck_config_path):
     """Проверка загрузки эталонного профиля в главное окно DeckEditorWindow."""
-    window = DeckEditorWindow()
+    window = DeckEditorWindow(config_path=sample_two_page_deck_config_path)
 
     load_demo_profile_into_window(window)
 

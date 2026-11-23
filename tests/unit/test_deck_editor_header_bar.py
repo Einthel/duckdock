@@ -94,10 +94,10 @@ def header_bar(qapp):
 
 
 @pytest.fixture
-def editor_window(qapp):
+def editor_window(qapp, sample_two_page_deck_config_path):
     """Фикстура для создания и закрытия DeckEditorWindow."""
     initial_lang = I18nManager().current_language
-    win = DeckEditorWindow()
+    win = DeckEditorWindow(config_path=sample_two_page_deck_config_path)
     yield win
     win.close()
     win.deleteLater()

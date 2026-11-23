@@ -161,7 +161,7 @@ def test_deck_editor_window_auto_loads_saved_config_on_init(qapp, tmp_path: Path
     DeckConfigAdapter.save_deck_config_atomic(root, str(cfg_file))
 
     # Создаем окно редактора, привязанное к файлу
-    window = DeckEditorWindow(parent=None)
+    window = DeckEditorWindow(parent=None, config_path=str(cfg_file))
     window.load_configuration(config_path=str(cfg_file), page_id="default")
 
     # Проверяем, что слоты 0 и 1 заполнены
