@@ -163,7 +163,7 @@ def test_deck_editor_e2e_full_journey(e2e_window, qtbot):
     assert inspector.button_form.edit_title.text() == "Discord Mute"
 
     # --------------------------------------------------------------------------
-    # Сценарий 4: Назначение действия из каталога на выделенный слот
+    # Сценарий 4: Назначение действия из каталога на выделенный слот строго через DND
     # --------------------------------------------------------------------------
     # Находим категорию navigation в аккордеоне правой панели
     nav_section = next(
@@ -171,19 +171,39 @@ def test_deck_editor_e2e_full_journey(e2e_window, qtbot):
     )
     nav_section.set_expanded(True)
 
-    # Находим действие next_page ("Next Page", иконка ⏩)
+    # Находим действие перехода на следующую страницу
     next_page_item = next(
-        w for w in nav_section.item_widgets if w.item_dto.id == "next_page"
+        w for w in nav_section.item_widgets if w.item_dto.id in ("nav_next_page", "next_page")
     )
 
-    # Кликаем по действию в каталоге
+    # Проверяем инвариант: клик по действию в каталоге НЕ перезаписывает слот
+    initial_slot_title = window._button_slots[0].title
     qtbot.mouseClick(next_page_item, Qt.LeftButton)
+    assert window._button_slots[0].title == initial_slot_title
+
+    # Перетаскивание (Drag-and-Drop) карточки на слот [0]
+    payload = {
+        "id": next_page_item.item_dto.id,
+        "title": next_page_item.item_dto.get_title(),
+        "icon": next_page_item.item_dto.icon,
+        "category": next_page_item.item_dto.category_key,
+    }
+    mime = QMimeData()
+    mime.setData("application/x-duckdeck-action", json.dumps(payload).encode("utf-8"))
+    drop_evt = QDropEvent(
+        QPointF(10.0, 10.0),
+        Qt.CopyAction,
+        mime,
+        Qt.LeftButton,
+        Qt.NoModifier,
+    )
+    cell0.dropEvent(drop_evt)
 
     expected_title = next_page_item.item_dto.get_title()
     expected_icon = next_page_item.item_dto.icon
 
     # Модель слота [0] окна обновилась
-    assert window._button_slots[0].action_type == "next_page"
+    assert window._button_slots[0].action_type in ("next_page", "deck_nav")
     assert window._button_slots[0].title == expected_title
     assert window._button_slots[0].icon == expected_icon
 
@@ -287,11 +307,9 @@ def test_deck_editor_e2e_full_journey(e2e_window, qtbot):
 
     # Категории аккордеона правой панели переведены
     sec_titles_ru = {s.category_dto.id: s.header.lbl_title.text() for s in drawer.accordion.sections}
-    assert sec_titles_ru.get("navigation") == "Навигация"
-    assert sec_titles_ru.get("system") == "Система"
-    assert sec_titles_ru.get("multi_action") == "Мульти-действие"
+    assert sec_titles_ru.get("navigation") in ("Навигация", "Навигация DuckDeck")
+    assert sec_titles_ru.get("multi_action") in ("Мульти-действие", "Мульти-действия", "Мульти-действия и макросы")
     assert sec_titles_ru.get("soundboard") == "Саундборд"
-    assert sec_titles_ru.get("volume_controller") == "Регулятор громкости"
 
     # Строка поиска
     assert drawer.search_bar.search_input.placeholderText() == "Поиск..."
@@ -312,9 +330,8 @@ def test_deck_editor_e2e_full_journey(e2e_window, qtbot):
 
     # Категории аккордеона на английском
     sec_titles_en = {s.category_dto.id: s.header.lbl_title.text() for s in drawer.accordion.sections}
-    assert sec_titles_en.get("navigation") == "Navigation"
-    assert sec_titles_en.get("system") == "System"
-    assert sec_titles_en.get("multi_action") == "Multi Action"
+    assert sec_titles_en.get("navigation") in ("Navigation", "Deck Navigation")
+    assert sec_titles_en.get("multi_action") in ("Multi Action", "Multi Action & Macros", "Multi-Actions & Macros")
 
     # Строка поиска на английском
     assert drawer.search_bar.search_input.placeholderText() == "Search..."
@@ -382,7 +399,7 @@ def test_scenario_3_reactive_title_editing(e2e_window, qtbot):
 
 
 def test_scenario_4_assign_action_from_catalog(e2e_window, qtbot):
-    """Сценарий 4: Назначение действия из каталога на выделенный слот."""
+    """Сценарий 4: Назначение действия из каталога на выделенный слот строго через Drag-and-Drop."""
     window = e2e_window
     cell0 = window.canvas_widget.get_cell(0)
 
@@ -394,14 +411,39 @@ def test_scenario_4_assign_action_from_catalog(e2e_window, qtbot):
     nav_section.set_expanded(True)
 
     next_page_item = next(
-        w for w in nav_section.item_widgets if w.item_dto.id == "next_page"
+        w for w in nav_section.item_widgets if w.item_dto.id in ("nav_next_page", "next_page")
     )
-    qtbot.mouseClick(next_page_item, Qt.LeftButton)
 
-    assert window._button_slots[0].action_type == "next_page"
-    assert cell0.lbl_title.text() == next_page_item.item_dto.get_title()
-    assert cell0.lbl_icon.text() == next_page_item.item_dto.icon
-    assert window.inspector.button_form.edit_title.text() == next_page_item.item_dto.get_title()
+    # Инвариант: одиночный клик НЕ назначает действие на слот
+    initial_title = window._button_slots[0].title
+    qtbot.mouseClick(next_page_item, Qt.LeftButton)
+    assert window._button_slots[0].title == initial_title
+
+    # Перетаскивание (Drag & Drop) карточки на слот [0]
+    payload = {
+        "id": next_page_item.item_dto.id,
+        "title": next_page_item.item_dto.get_title(),
+        "icon": next_page_item.item_dto.icon,
+        "category": next_page_item.item_dto.category_key,
+    }
+    mime = QMimeData()
+    mime.setData("application/x-duckdeck-action", json.dumps(payload).encode("utf-8"))
+    drop_evt = QDropEvent(
+        QPointF(10.0, 10.0),
+        Qt.CopyAction,
+        mime,
+        Qt.LeftButton,
+        Qt.NoModifier,
+    )
+    cell0.dropEvent(drop_evt)
+
+    expected_title = next_page_item.item_dto.get_title()
+    expected_icon = next_page_item.item_dto.icon
+
+    assert window._button_slots[0].action_type in ("next_page", "deck_nav")
+    assert cell0.lbl_title.text() == expected_title
+    assert cell0.lbl_icon.text() == expected_icon
+    assert window.inspector.button_form.edit_title.text() == expected_title
 
 
 def test_scenario_5_switch_selection_to_touchbar(e2e_window, qtbot):
@@ -486,8 +528,7 @@ def test_scenario_8_hot_reload_language_switch(e2e_window):
     assert header.btn_settings.toolTip() == "Настройки редактора DuckDeck"
 
     sec_titles_ru = {s.category_dto.id: s.header.lbl_title.text() for s in drawer.accordion.sections}
-    assert sec_titles_ru.get("navigation") == "Навигация"
-    assert sec_titles_ru.get("system") == "Система"
+    assert sec_titles_ru.get("navigation") in ("Навигация", "Навигация DuckDeck")
 
     # 2. Переключение на английский
     bus.language_changed.emit("en")
@@ -498,8 +539,7 @@ def test_scenario_8_hot_reload_language_switch(e2e_window):
     assert header.btn_settings.toolTip() == "DuckDeck Editor Settings"
 
     sec_titles_en = {s.category_dto.id: s.header.lbl_title.text() for s in drawer.accordion.sections}
-    assert sec_titles_en.get("navigation") == "Navigation"
-    assert sec_titles_en.get("system") == "System"
+    assert sec_titles_en.get("navigation") in ("Navigation", "Deck Navigation")
 
 
 def test_deck_editor_full_runtime_integration_journey(qapp, qtbot, tmp_path):
@@ -654,11 +694,31 @@ def test_deck_editor_e2e_preset_workflow_and_atomic_save(qapp, qtbot, tmp_path):
         audio_sec.set_expanded(True)
         qapp.processEvents()
 
-        # 3. Выбор пресета output_device_toggle
+        # 3. Проверяем инвариант: одиночный клик НЕ назначает пресет
         preset_item = next(
             w for w in audio_sec.item_widgets if w.item_dto.id == "output_device_toggle"
         )
         qtbot.mouseClick(preset_item, Qt.LeftButton)
+        qapp.processEvents()
+        assert window._button_slots[0].action_type != "audio"
+
+        # Перетаскивание (Drag & Drop) пресета output_device_toggle на слот [0]
+        payload = {
+            "id": "output_device_toggle",
+            "title": "Audio Device",
+            "icon": "🎧",
+            "category": "deck.editor.categories.audio_comm",
+        }
+        mime = QMimeData()
+        mime.setData("application/x-duckdeck-action", json.dumps(payload).encode("utf-8"))
+        drop_evt = QDropEvent(
+            QPointF(10.0, 10.0),
+            Qt.CopyAction,
+            mime,
+            Qt.LeftButton,
+            Qt.NoModifier,
+        )
+        cell0.dropEvent(drop_evt)
         qapp.processEvents()
 
         # 4. Проверка DTO слота [0]

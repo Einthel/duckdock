@@ -1,6 +1,6 @@
 # DuckDock / TouchWM: Архитектурная спецификация модулей
 
-> **Статус:** v0.5.6 (8 базовых примитивов, матрица пресетов, инспектор свойств, 538 тестов 100% PASS)  
+> **Статус:** v0.5.7 (Pure DND инвариант шторки действий, матрица пресетов ActionPresetsRegistry, относительная навигация страниц деки, 539 тестов 100% PASS)  
 > **Целевая среда:** Windows 10/11 x64, 27" Primary (dGPU) + 7" 1024×600 JRP7813S Touchscreen (iGPU AMD Radeon Graphics).
 
 ---
@@ -207,11 +207,11 @@ flowchart TD
 - `widgets.mini_media_bar.MiniMediaBar`: Сенсорный виджет управления медиа в сайдбаре (64×54px) с бегущей строкой `MarqueeLabel` и кнопками ⏮ ⏯ ⏭.
 - `view.YouTubeView(TouchModuleView)`: Полноэкранный плеер с двунаправленной синхронизацией состояния через `EventBus`.
 
-### `modules.deck` — Сенсорная макро-панель DuckDeck v0.5.6
+### `modules.deck` — Сенсорная макро-панель DuckDeck v0.5.7
 
 - `models.py`: Pydantic V2 модели конфигурации DuckDeck (`DeckRootConfig`, `DeckPageConfig`, `DeckButtonConfig`, `DeckActionConfig`, `SoundSettings`, `SoundboardParams`). Пространство действий сведено к 8 ортогональным примитивам (`hotkey`, `launch`, `audio`, `media`, `text`, `system`, `deck_nav`, `macro`). Прозрачный нормализатор `DeckActionNormalizer` автоматически мигрирует 18+ устаревших типов конфигураций при загрузке. Чистый первый запуск (Factory Default): ровно 1 пустая страница без демо-данных.
-- `presets/`: Реестр эталонных пресетов `ActionPresetsRegistry` (6 категорий, 20+ преднастроенных действий: `system_tools`, `audio_comm`, `media_control`, `apps_launch`, `navigation`, `macros`).
-- `action_dispatcher.DeckActionDispatcher`: Асинхронный диспетчер задач в пуле `QThreadPool` на базе чистого `match-case` по 8 базовым примитивам с антидребезгом (250 мс), сторожевым таймером (5000 мс), режимом заглушек `simulation_mode`, изоляцией COM-аудио и безопасной потоковой маршрутизацией звуков саундборда через сигналы `play_sound_requested` / `stop_sound_requested`.
+- `presets/`: Реестр эталонных пресетов `ActionPresetsRegistry` (8 категорий, 33 преднастроенных действия: `system_tools`, `audio_comm`, `media_control`, `apps_launch`, `navigation`, `macros`, включая `open_url` и `launch_app`).
+- `action_dispatcher.DeckActionDispatcher`: Асинхронный диспетчер задач в пуле `QThreadPool` на базе чистого `match-case` по 8 базовым примитивам с антидребезгом (250 мс), сторожевым таймером (5000 мс), режимом заглушек `simulation_mode`, изоляцией COM-аудио и безопасной потоковой маршрутизацией звуков саундборда через сигналы `play_sound_requested` / `stop_sound_requested`. Маршрутизация навигации `next_page` / `prev_page` / `folder_back` через `DeckNavExecutor` с безопасным фолбэком.
 - `sound_engine.DeckSoundEngine`: Звуковой движок интерфейса (Zero-Latency Audio) на базе `PySide6.QtMultimedia.QSoundEffect` с предзагрузкой семплов в RAM (tap, page_switch, offline/error, online/success), регулировкой громкости, поддержкой индивидуального `sound_override`, неблокирующим саундбордом (`play_soundboard`, пул до 8 одновременных звуков, `stop_soundboard`) и предпрослушкой `preview_sound`.
 - `actions/`:
   - `hotkey_sender.py`: Аппаратные скан-коды `SendInput` (`KEYEVENTF_SCANCODE`) с восстановлением фокуса целевого окна.
@@ -265,7 +265,8 @@ flowchart TD
   - `button_property_form.py`:
     - `ButtonPropertyForm`: Комбобокс выбора 8 базовых примитивов, выпадающее меню пресетов «⚡ Шаблоны...», компактные подформы параметров высотой $\le 28$ px (`DeckNavSubform`, `UnconfiguredSubform`, `AudioSubform`, `LaunchSubform` и др.).
     - `ColorAccentPicker`: Компактный горизонтальный стрип свотчей выбора цвета акцента кнопки (`#38bdf8`, `#10b981`, `#f59e0b`, `#f43f5e`, `#a855f7` и кастомные).
-  - `action_drawer.py` (`ActionLibraryDrawer`): Панель каталога пресетов со строкой поиска `ActionSearchBar` и аккордеоном 6 категорий, живым поиском и Drag & Drop карточек.
+  - `action_drawer.py` (`ActionLibraryDrawer`): Панель каталога пресетов со строкой поиска `ActionSearchBar` и аккордеоном категорий `ActionPresetsRegistry.get_categories_dto()`.
+  - `Pure DND Invariant`: Назначение пресетов на кнопки холста производится строго через Drag & Drop. Клик по карточке в шторке нейтрализован (No-Op), исключая случайную перезапись выделенного или свободного слота. При Drop карточки на ячейку холста выполняется автоматическое выделение слота в `KeyPropertyInspector`.
 
 ### `modules.settings` — Управление конфигурацией приложения
 

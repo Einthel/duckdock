@@ -389,6 +389,11 @@ class DeckView(TouchModuleView):
                     target_page = p
                     break
 
+        # Fallback если запрошен 'default', но страницы 'default' нет в конфигурации
+        if target_page is None and page_id == "default" and display_pages:
+            target_page = display_pages[0]
+            target_index = 0
+
         if not target_page:
             logger.warning("Страница '%s' не найдена в конфигурации DuckDeck", page_id)
             return
@@ -420,7 +425,11 @@ class DeckView(TouchModuleView):
         """Реакция на внешнюю смену страницы через шину событий EventBus."""
         if getattr(self, "_is_emitting_page_changed", False):
             return
-        if page_id != self.active_page_id:
+        if page_id == "next_page":
+            self.next_page()
+        elif page_id == "prev_page":
+            self.prev_page()
+        elif page_id != self.active_page_id:
             self.set_active_page(page_id, emit_signal=False, animated_dots=True)
 
     def _on_deck_config_updated(self) -> None:
@@ -477,8 +486,19 @@ class DeckView(TouchModuleView):
         if btn_config.action.action_type in ("navigation", "deck_nav"):
             typed = btn_config.action.get_typed_params()
             if isinstance(typed, NavigationParams):
-                self.set_active_page(typed.target_page_id)
-                self.set_status(f"Страница: {typed.target_page_id}")
+                target = getattr(typed, "target", "goto_page")
+                if target == "next_page":
+                    self.next_page()
+                elif target in ("prev_page", "folder_back"):
+                    self.prev_page()
+                elif target in ("goto_page", "folder_open"):
+                    target_id = typed.page_id or typed.target_page_id
+                    if target_id:
+                        self.set_active_page(target_id)
+                else:
+                    self.set_active_page(typed.target_page_id)
+
+                self.set_status(f"Страница: {self.active_page_id}")
                 btn = self.grid.get_button(btn_config.id)
                 if btn:
                     btn.set_state("success")

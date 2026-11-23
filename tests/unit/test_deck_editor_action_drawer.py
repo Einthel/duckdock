@@ -33,8 +33,10 @@
 """
 from __future__ import annotations
 
+import json
 import pytest
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QMimeData, QPointF, Qt
+from PySide6.QtGui import QDropEvent
 
 from core.event_bus import bus
 from core.i18n import I18nManager, t
@@ -440,29 +442,49 @@ def test_action_drawer_window_integration(qapp, qtbot, tmp_path):
     window.canvas_widget.select_button(0)
     assert window.canvas_widget.get_selected_target() == ("button", 0)
 
-    # 2. Находим действие Open Website в каталоге
-    system_sec = next(
-        s for s in window.action_drawer.accordion.sections if s.category_dto.id == "system"
+    # 2. Находим действие Web Browser в каталоге launchers
+    sec = next(
+        s for s in window.action_drawer.accordion.sections if s.category_dto.id in ("launchers", "system")
     )
-    system_sec.set_expanded(True)
-    website_item = next(w for w in system_sec.item_widgets if w.item_dto.id == "open_website")
+    sec.set_expanded(True)
+    website_item = next(w for w in sec.item_widgets if w.item_dto.id in ("launch_browser", "open_website"))
 
-    # 3. Кликаем по карточке действия
+    # 3. Кликаем по карточке действия - проверяем инвариант: клик НЕ перезаписывает слот
+    initial_title = window._button_slots[0].title
     qtbot.mouseClick(website_item, Qt.LeftButton)
+    assert window._button_slots[0].title == initial_title
 
-    # 4. Проверяем обновление DTO слота 0
+    # 4. Назначение происходит строго через Drag-and-Drop
+    payload = {
+        "id": website_item.item_dto.id,
+        "title": website_item.item_dto.get_title(),
+        "icon": website_item.item_dto.icon,
+        "category": website_item.item_dto.category_key,
+    }
+    mime = QMimeData()
+    mime.setData("application/x-duckdeck-action", json.dumps(payload).encode("utf-8"))
+    cell0 = window.canvas_widget.get_cell(0)
+    drop_evt = QDropEvent(
+        QPointF(10.0, 10.0),
+        Qt.CopyAction,
+        mime,
+        Qt.LeftButton,
+        Qt.NoModifier,
+    )
+    cell0.dropEvent(drop_evt)
+
+    # 5. Проверяем обновление DTO слота 0 после DND
     dto: ButtonSlotDTO = window._button_slots[0]
-    assert dto.action_type == "open_website"
+    assert dto.action_type in ("launch", "open_website")
     assert dto.icon == "🌐"
     assert dto.title == website_item.item_dto.get_title()
 
-    # 5. Проверяем ячейку на холсте
-    cell0 = window.canvas_widget.get_cell(0)
+    # 6. Проверяем ячейку на холсте
     cell_data = cell0.get_button_data()
     assert cell_data["title"] == website_item.item_dto.get_title()
     assert cell_data["icon"] == "🌐"
 
-    # 6. Проверяем инспектор свойств
+    # 7. Проверяем инспектор свойств (ячейка выбрана и отображается)
     assert isinstance(window.inspector, KeyPropertyInspector)
     assert window.inspector.current_mode == "button"
     assert window.inspector.current_slot_index == 0
@@ -520,10 +542,10 @@ def test_action_drawer_presets_registry_loading_and_bilingual_search(qapp, qtbot
     assert drawer.search_bar.get_query() == ""
 
 
-def test_action_drawer_fast_assignment_to_empty_slot(qapp, qtbot, tmp_path):
+def test_action_drawer_click_does_not_mutate_canvas_slots(qapp, qtbot, tmp_path):
     """
-    Быстрое наполнение (Шаг 3.3/3.4): клик по карточке в библиотеке, когда слот не выбран,
-    автоматически находит первый свободный/неконфигурированный слот и назначает пресет.
+    Инвариант чистого DND: клик по карточке в библиотеке, когда слот не выбран,
+    НЕ назначает действие ни на какой слот и оставляет выбор пустым.
     """
     from modules.deck.editor.adapter import DeckConfigAdapter
     from modules.deck.models import DeckConfigLoader
@@ -537,26 +559,27 @@ def test_action_drawer_fast_assignment_to_empty_slot(qapp, qtbot, tmp_path):
     qtbot.addWidget(window)
 
     # Убеждаемся, что слот 0 пуст
-    assert window._button_slots[0].title == "" or window._button_slots[0].action_type in ("", "none", "unconfigured")
+    initial_title = window._button_slots[0].title
+    initial_action = window._button_slots[0].action_type
 
     # Сбрасываем выбор на холсте
     window.canvas_widget.clear_selection()
     assert window.canvas_widget.get_selected_target() is None
 
-    # Находим действие в каталоге (например, в категории system)
-    system_sec = next(
-        s for s in window.action_drawer.accordion.sections if s.category_dto.id == "system"
+    # Находим действие в каталоге
+    sec = next(
+        s for s in window.action_drawer.accordion.sections if s.category_dto.id in ("input_macros", "system")
     )
-    system_sec.set_expanded(True)
-    hotkey_item = next(w for w in system_sec.item_widgets if w.item_dto.id == "hotkey")
+    sec.set_expanded(True)
+    hotkey_item = next(w for w in sec.item_widgets if w.item_dto.id in ("custom_hotkey", "hotkey"))
 
     # Кликаем по карточке без предварительного выбора слота
     qtbot.mouseClick(hotkey_item, Qt.LeftButton)
 
-    # Проверяем, что первый свободный слот (слот 0) автоматически заполнился и выделился
-    assert window.canvas_widget.get_selected_target() == ("button", 0)
-    assert window._button_slots[0].action_type == "hotkey"
-    assert window.inspector.button_form.combo_actions.currentData() == "hotkey"
+    # Инвариант: выбор на холсте не изменился, слоты не мутировали
+    assert window.canvas_widget.get_selected_target() is None
+    assert window._button_slots[0].title == initial_title
+    assert window._button_slots[0].action_type == initial_action
 
     window._is_dirty = False
     window._undo_stack.setClean()

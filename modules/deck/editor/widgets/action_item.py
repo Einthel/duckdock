@@ -95,18 +95,27 @@ class ActionItemWidget(QFrame):
         self.update()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        """Обработка клика левой кнопкой мыши: эмиссия сигнала item_clicked."""
+        """Фиксация точки начала взаимодействия для детекции Drag-and-Drop."""
         if event.button() == Qt.LeftButton:
-            self._drag_start_pos = event.pos()
-            self.item_clicked.emit(self.item_dto)
+            self._drag_start_pos = event.position().toPoint() if hasattr(event, "position") else event.pos()
             event.accept()
             return
         super().mousePressEvent(event)
 
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        """Сброс координаты перетаскивания и локальное уведомление о клике."""
+        if event.button() == Qt.LeftButton:
+            self._drag_start_pos = None
+            self.item_clicked.emit(self.item_dto)
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
+
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         """Инициализация Drag-and-Drop при перемещении с зажатой ЛКМ."""
         if (event.buttons() & Qt.LeftButton) and self._drag_start_pos is not None:
-            dist = (event.pos() - self._drag_start_pos).manhattanLength()
+            pos = event.position().toPoint() if hasattr(event, "position") else event.pos()
+            dist = (pos - self._drag_start_pos).manhattanLength()
             if dist >= QApplication.startDragDistance():
                 self._drag_start_pos = None
 
@@ -128,7 +137,7 @@ class ActionItemWidget(QFrame):
                 drag.setMimeData(mime)
                 pixmap = self.grab()
                 drag.setPixmap(pixmap)
-                drag.setHotSpot(event.pos())
+                drag.setHotSpot(pos)
                 drag.exec(Qt.CopyAction)
                 return
         super().mouseMoveEvent(event)

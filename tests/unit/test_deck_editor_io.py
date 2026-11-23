@@ -440,8 +440,7 @@ def test_deck_editor_window_save_triggers_bus_signal(isolated_config_file: str, 
       - Эмитирует сигнал bus.deck_config_updated.
       - Показывает визуальную обратную связь в HeaderBar ('✓ Сохранено!').
     """
-    win = DeckEditorWindow()
-    win.config_path = isolated_config_file
+    win = DeckEditorWindow(config_path=isolated_config_file)
     qapp.processEvents()
 
     events_received: list[bool] = []

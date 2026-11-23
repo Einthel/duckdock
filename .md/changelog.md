@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.7] - 2026-11-23
+
+### Added
+- **Предустановки URL и приложений в реестре (`ActionPresetsRegistry`)**:
+  - Карточка `open_url` (`id="open_url"`, иконка 🔗, `target="https://"`, тип действия `launch` с `kind="url"`).
+  - Карточка `launch_app` (`id="launch_app"`, иконка 🚀, тип действия `launch` с `kind="app"`).
+  - Полная двуязычная локализация для новых пресетов в `locales/ru.json` и `locales/en.json` (100% паритет ключей).
+
+### Fixed
+- **Безопасный Drag-and-Drop в библиотеке действий редактора (`Pure DND Invariant`)**:
+  - Устранено случайное автоматическое назначение карточки действия на первый свободный слот или замена выделенной кнопки при обычном клике на карточку в правой панели `ActionLibraryDrawer`.
+  - Метод `_on_action_drawer_action_picked` нейтрализован (No-Op): клик по карточке в шторке не перезаписывает кнопки холста. Назначение шаблонов осуществляется строго через Drag & Drop в ячейку.
+  - В `ActionItemWidget` удалена преждевременная эмиссия сигнала `item_clicked` в `mousePressEvent` (перенесено в `mouseReleaseEvent` при отсутствии драга с вычислением через `event.position().toPoint()`).
+  - При успешном Drop карточки на холст (`_on_canvas_action_dropped`) целевой слот автоматически выделяется в `KeyPropertyInspector` для мгновенной настройки.
+- **Интеграция полной матрицы пресетов в шторку действий редактора**:
+  - Правая панель `ActionLibraryDrawer` переведена с абстрактного каталога сырых типов на полный реестр готовых карточек-шаблонов `ActionPresetsRegistry.get_categories_dto()` (33 преднастроенных шаблона по 8 категориям).
+- **Относительная навигация по страницам деки (`DeckView` & `DeckNavExecutor`)**:
+  - Исправлена маршрутизация переходов `next_page`, `prev_page` и `folder_back` в `DeckNavExecutor` и `DeckView`: относительные переходы вызывают `self.next_page()` и `self.prev_page()` без ложных попыток резолва несуществующей страницы `default`.
+  - В `DeckView.set_active_page` добавлен безопасный фолбэк на первую доступную страницу (`display_pages[0]`) при отсутствии явной страницы `default` без вывода предупреждений в логи.
+- **Стабильность EventFilter холста редактора (`DeckCanvasWidget`)**:
+  - Безопасный доступ к `grid_container` через `getattr(self, "grid_container", None)` в `eventFilter` до завершения инициализации дочерних компонентов.
+- **Качество и автоматическое тестирование**:
+  - Все 539 тестов репозитория имеют статус **100% PASS** (539 passed, 0 failed, 28 warnings).
+  - Полное соответствие и 100% паритет словарей локализации (`pytest tests/core/test_i18n_linter.py` -> 6/6 PASS).
+
 ## [0.5.6] - 2026-11-23
 
 ### Added

@@ -236,12 +236,13 @@ class DeckCanvasWidget(QWidget):
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         """Перехват кликов в промежутках между ячейками grid_container для сброса выделения."""
-        if watched is self.grid_container and event.type() == QEvent.MouseButtonPress:
+        grid_cont = getattr(self, "grid_container", None)
+        if grid_cont is not None and watched is grid_cont and event.type() == QEvent.MouseButtonPress:
             mouse_evt = cast(QMouseEvent, event)
             if mouse_evt.button() == Qt.LeftButton:
                 pos = mouse_evt.position().toPoint() if hasattr(mouse_evt, "position") else mouse_evt.pos()
-                child = self.grid_container.childAt(pos)
-                if child is None or child is self.grid_container:
+                child = grid_cont.childAt(pos)
+                if child is None or child is grid_cont:
                     self.clear_selection()
                     return True
         return super().eventFilter(watched, event)

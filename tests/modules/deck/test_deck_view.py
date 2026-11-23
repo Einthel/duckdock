@@ -534,3 +534,61 @@ def test_deck_view_retranslate_ui(qapp):
         mgr.set_language("ru", emit_signal=False)
         view.cleanup()
         view.deleteLater()
+
+
+def test_deck_view_nav_button_next_and_prev_page(qapp):
+    """Проверка срабатывания кнопок навигации next_page и prev_page без ID 'default'."""
+    with tempfile.NamedTemporaryFile("w+", delete=False, suffix=".json", encoding="utf-8") as tf:
+        json.dump({
+            "active_profile": "page_3",
+            "pages": [
+                {
+                    "id": "page_3",
+                    "name": "Page 3",
+                    "grid_rows": 2,
+                    "grid_cols": 5,
+                    "buttons": [{
+                        "id": "btn_next",
+                        "title": "Next",
+                        "icon": "▶",
+                        "action": {"action_type": "deck_nav", "params": {"target": "next_page", "page_id": None}}
+                    }]
+                },
+                {
+                    "id": "page_2",
+                    "name": "Page 2",
+                    "grid_rows": 2,
+                    "grid_cols": 5,
+                    "buttons": [{
+                        "id": "btn_prev",
+                        "title": "Prev",
+                        "icon": "◀",
+                        "action": {"action_type": "deck_nav", "params": {"target": "prev_page", "page_id": None}}
+                    }]
+                }
+            ]
+        }, tf)
+        tmp_path = tf.name
+
+    try:
+        view = DeckView(config_path=tmp_path)
+        assert view.active_page_id == "page_3"
+
+        # Нажатие на кнопку next_page должно переключить на page_2
+        btn_next = view.grid.get_button("btn_next")
+        assert btn_next is not None
+        view._on_button_triggered(btn_next.button_config)
+        assert view.active_page_id == "page_2"
+
+        # Нажатие на кнопку prev_page должно вернуть на page_3
+        btn_prev = view.grid.get_button("btn_prev")
+        assert btn_prev is not None
+        view._on_button_triggered(btn_prev.button_config)
+        assert view.active_page_id == "page_3"
+    finally:
+        view.cleanup()
+        view.deleteLater()
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass

@@ -468,7 +468,13 @@ class DeckNavExecutor:
     @staticmethod
     def execute(params: DeckNavActionParams) -> Tuple[bool, str]:
         target = params.target
-        target_page = params.page_id or getattr(params, "target_page_id", "default")
+        if target == "next_page":
+            target_page = "next_page"
+        elif target in ("prev_page", "folder_back"):
+            target_page = "prev_page"
+        else:
+            target_page = params.page_id or getattr(params, "target_page_id", "default")
+
         try:
             if hasattr(bus, "deck_page_changed"):
                 bus.deck_page_changed.emit(target_page)

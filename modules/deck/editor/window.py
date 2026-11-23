@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
 
 from core.event_bus import bus
 from core.i18n import t
-from modules.deck.editor.actions_registry import get_default_action_catalog
+from modules.deck.presets import ActionPresetsRegistry
 from modules.deck.editor.commands import (
     AssignActionCommand,
     ClearSlotCommand,
@@ -112,7 +112,7 @@ class DeckEditorWindow(QMainWindow):
         self.set_pagination_bar(PageNavigationBar(self))
         self.set_inspector_widget(KeyPropertyInspector(self))
         drawer = ActionLibraryDrawer(self)
-        drawer.populate_actions(get_default_action_catalog())
+        drawer.populate_actions(ActionPresetsRegistry.get_categories_dto())
         self.set_action_drawer(drawer)
         self._center_on_primary_screen()
         apply_editor_theme(self)
@@ -412,6 +412,8 @@ class DeckEditorWindow(QMainWindow):
 
         cmd = AssignActionCommand(self, slot_idx, new_dto, old_dto)
         self._undo_stack.push(cmd)
+        if isinstance(self.canvas_widget, DeckCanvasWidget):
+            self.canvas_widget.select_button(slot_idx)
 
     def _on_canvas_slot_dropped(self, src_slot: int, dst_slot: int, is_copy: bool) -> None:
         """Обработка перетаскивания и сброса между слотами холста (Swap / Copy)."""
@@ -931,69 +933,12 @@ class DeckEditorWindow(QMainWindow):
 
     def _on_action_drawer_action_picked(self, item_dto: object) -> None:
         """
-        Обрабатывает выбор действия в каталоге через AssignActionCommand.
+        Информационный обработчик выбора карточки в каталоге.
+        В соответствии с инвариантом чистого Drag-and-Drop клик по карточке в каталоге
+        не вносит изменений в ячейки холста (требуется явное перетаскивание на слот).
         """
-        if not hasattr(item_dto, "id") or not hasattr(item_dto, "icon"):
-            return
-
-        selected_target = None
-        if isinstance(self.canvas_widget, DeckCanvasWidget):
-            selected_target = self.canvas_widget.get_selected_target()
-
-        if selected_target is not None and selected_target[0] == "button":
-            slot_idx = int(selected_target[1])
-        else:
-            # Быстрое наполнение: ищем первый свободный/неконфигурированный слот
-            slot_idx = 0
-            for idx in range(10):
-                s = self.get_slot_dto(idx)
-                if not s.title and (not s.action_type or s.action_type.lower() in ("none", "unconfigured", "")):
-                    slot_idx = idx
-                    break
-            if isinstance(self.canvas_widget, DeckCanvasWidget):
-                self.canvas_widget.select_button(slot_idx)
-
-        old_dto = self.get_slot_dto(slot_idx)
-
-        from modules.deck.presets import ActionPresetsRegistry
-        preset = ActionPresetsRegistry.get_preset_by_id(getattr(item_dto, "id", ""))
-
-        new_dto = old_dto.model_copy(deep=True)
-        if preset is not None:
-            new_dto.title = t(preset.title_key)
-            new_dto.icon = preset.icon
-            new_dto.color_accent = preset.color_accent or "#38bdf8"
-            new_dto.status_source = preset.status_source
-            new_dto.category = t(f"deck.editor.categories.{preset.category}")
-            new_dto.action_type = preset.base_action.action_type
-            new_dto.action_params = dict(preset.base_action.params)
-            if preset.base_action.action_type == "hotkey":
-                keys = preset.base_action.params.get("keys", [])
-                new_dto.hotkey = "+".join(keys) if isinstance(keys, list) else str(keys)
-        else:
-            title_text = item_dto.get_title() if hasattr(item_dto, "get_title") else ""
-            category_key = getattr(item_dto, "category_key", "")
-            cat_name = t(category_key) if category_key else ""
-            category_text = f"{cat_name}: {title_text}" if cat_name else title_text
-
-            new_dto.title = title_text
-            new_dto.icon = getattr(item_dto, "icon", "🖲️")
-            new_dto.category = category_text
-            new_dto.action_type = getattr(item_dto, "id", "")
-            new_dto.action_params = {}
-            if new_dto.action_type not in ("hotkey", "hotkey_switch"):
-                new_dto.hotkey = ""
-
-        logger.info(
-            "Assigned action '%s' to slot %d: title='%s', icon='%s'",
-            new_dto.action_type,
-            slot_idx,
-            new_dto.title,
-            new_dto.icon,
-        )
-
-        cmd = AssignActionCommand(self, slot_idx, new_dto, old_dto)
-        self._undo_stack.push(cmd)
+        item_id = getattr(item_dto, "id", "")
+        logger.debug("Action drawer item clicked (palette preview, no canvas mutation): %s", item_id)
 
     def _on_test_action_requested(self, slot_idx: int) -> None:
         """Безопасный тестовый запуск действия выбранной кнопки без потери фокуса."""

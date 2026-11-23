@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Tuple
 
-from modules.deck.editor.actions_registry import get_default_action_catalog
+from modules.deck.presets import ActionPresetsRegistry
 from modules.deck.editor.dto import (
     ButtonSlotDTO,
     TouchbarClockDTO,
@@ -145,6 +145,6 @@ def load_demo_profile_into_window(window: DeckEditorWindow) -> None:
     # Наполнение каталога библиотеки действий
     drawer = getattr(window, "action_drawer", None)
     if drawer is not None and hasattr(drawer, "populate_actions"):
-        drawer.populate_actions(get_default_action_catalog())
+        drawer.populate_actions(ActionPresetsRegistry.get_categories_dto())
 
     logger.info("Demo profile successfully loaded into DeckEditorWindow")

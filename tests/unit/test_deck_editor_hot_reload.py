@@ -64,8 +64,7 @@ def isolated_deck_config(tmp_path):
 @pytest.fixture
 def editor_window(qapp, isolated_deck_config):
     """Фикстура окна редактора с изолированным путем к файлу настроек."""
-    win = DeckEditorWindow()
-    win.config_path = isolated_deck_config
+    win = DeckEditorWindow(config_path=isolated_deck_config)
     yield win
     win.close()
     win.deleteLater()
