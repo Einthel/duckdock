@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.9] - 2026-11-24
+
+### Changed
+- **Архивирование и консолидация дорожных карт DuckDeck**:
+  - Документы `edit_action.md` (первоначальный аудит дефектов) и `edit_deckv2.md` (генеральный мастер-план) перенесены в архив `.md/.archive/deck/` в связи со 100% выполнением Спринтов 6–7 и декомпозицией оставшихся задач.
+  - В качестве единых актуальных дорожных карт зафиксированы:
+    - [`.md/deck/edit_atrib1.md`](file:///d:/Projects_X/duckdock/.md/deck/edit_atrib1.md) — 5-фазный план стабилизации редактора, ликвидации циклического импорта, инверсии приоритета hotkey и утверждения `ActionPresetsRegistry` как SSOT.
+    - [`.md/deck/edit_atrib2.md`](file:///d:/Projects_X/duckdock/.md/deck/edit_atrib2.md) — спецификация и редизайн панели инспектора `ButtonPropertyForm`.
+- **Синхронизация контекста памяти**:
+  - Актуализированы слепки архитектуры в семантической памяти Serena (`deck_editor`, `deck_architecture`).
+  - Обновлены файлы Memory Bank проекта `duckdock` (`activeContext.md`, `progress.md`).
+  - Актуализирована спецификация в `.md/backend.md`.
+
 ## [0.5.8] - 2026-11-24
 
 ### Added

@@ -207,10 +207,10 @@ flowchart TD
 - `widgets.mini_media_bar.MiniMediaBar`: Сенсорный виджет управления медиа в сайдбаре (64×54px) с бегущей строкой `MarqueeLabel` и кнопками ⏮ ⏯ ⏭.
 - `view.YouTubeView(TouchModuleView)`: Полноэкранный плеер с двунаправленной синхронизацией состояния через `EventBus`.
 
-### `modules.deck` — Сенсорная макро-панель DuckDeck v0.5.7
+### `modules.deck` — Сенсорная макро-панель DuckDeck v0.6.3
 
 - `models.py`: Pydantic V2 модели конфигурации DuckDeck (`DeckRootConfig`, `DeckPageConfig`, `DeckButtonConfig`, `DeckActionConfig`, `SoundSettings`, `SoundboardParams`). Пространство действий сведено к 8 ортогональным примитивам (`hotkey`, `launch`, `audio`, `media`, `text`, `system`, `deck_nav`, `macro`). Прозрачный нормализатор `DeckActionNormalizer` автоматически мигрирует 18+ устаревших типов конфигураций при загрузке. Чистый первый запуск (Factory Default): ровно 1 пустая страница без демо-данных.
-- `presets/`: Реестр эталонных пресетов `ActionPresetsRegistry` (8 категорий, 33 преднастроенных действия: `system_tools`, `audio_comm`, `media_control`, `apps_launch`, `navigation`, `macros`, включая `open_url` и `launch_app`).
+- `presets.py`: Реестр эталонных пресетов `ActionPresetsRegistry` (Единый источник правды — SSOT): 8 категорий таксономии и 26+ преднастроенных действий с типизированными `base_action`, цветами акцента и `status_source`. Устаревший `actions_registry.py` переведен на фасад над `ActionPresetsRegistry.get_categories_dto()`.
 - `action_dispatcher.DeckActionDispatcher`: Асинхронный диспетчер задач в пуле `QThreadPool` на базе чистого `match-case` по 8 базовым примитивам с антидребезгом (250 мс), сторожевым таймером (5000 мс), режимом заглушек `simulation_mode`, изоляцией COM-аудио и безопасной потоковой маршрутизацией звуков саундборда через сигналы `play_sound_requested` / `stop_sound_requested`. Маршрутизация навигации `next_page` / `prev_page` / `folder_back` через `DeckNavExecutor` с безопасным фолбэком.
 - `sound_engine.DeckSoundEngine`: Звуковой движок интерфейса (Zero-Latency Audio) на базе `PySide6.QtMultimedia.QSoundEffect` с предзагрузкой семплов в RAM (tap, page_switch, offline/error, online/success), регулировкой громкости, поддержкой индивидуального `sound_override`, неблокирующим саундбордом (`play_soundboard`, пул до 8 одновременных звуков, `stop_soundboard`) и предпрослушкой `preview_sound`.
 - `actions/`:
@@ -263,10 +263,13 @@ flowchart TD
   - `pagination_bar.py` (`PageNavigationBar`): Нижняя панель пагинации 36 px со стрелками и точечными индикаторами (`● ○ ○`).
   - `property_inspector.py` (`KeyPropertyInspector`): Инспектор свойств на базе `QStackedWidget` с бюджетом высоты 220 px.
   - `button_property_form.py`:
-    - `ButtonPropertyForm`: Комбобокс выбора 8 базовых примитивов, выпадающее меню пресетов «⚡ Шаблоны...», компактные подформы параметров высотой $\le 28$ px (`DeckNavSubform`, `UnconfiguredSubform`, `AudioSubform`, `LaunchSubform` и др.).
+    - `ButtonPropertyForm`: Комбобокс выбора 8 базовых примитивов, выпадающее меню пресетов «⚡ Шаблоны...», компактные подформы параметров высотой $\le 28$ px (`DeckNavSubform`, `UnconfiguredSubform`, `AudioDeviceSubform`, `VolumeSubform`, `ScreenshotSubform`, `SystemSubform`, `PathUrlSubform`, `SoundboardSubform` и др.).
+    - `resolve_subform_route`: Детерминированная матрица маршрутизации пресетов в соответствующие подформы параметров.
+    - Изоляция `action_params`: Селективная загрузка параметров только в активную подформу без взаимного загрязнения словарей.
     - `ColorAccentPicker`: Компактный горизонтальный стрип свотчей выбора цвета акцента кнопки (`#38bdf8`, `#10b981`, `#f59e0b`, `#f43f5e`, `#a855f7` и кастомные).
   - `action_drawer.py` (`ActionLibraryDrawer`): Панель каталога пресетов со строкой поиска `ActionSearchBar` и аккордеоном категорий `ActionPresetsRegistry.get_categories_dto()`.
   - `Pure DND Invariant`: Назначение пресетов на кнопки холста производится строго через Drag & Drop. Клик по карточке в шторке нейтрализован (No-Op), исключая случайную перезапись выделенного или свободного слота. При Drop карточки на ячейку холста выполняется автоматическое выделение слота в `KeyPropertyInspector`.
+  - Дорожные карты и архивация: Исторические планы `edit_action.md` и `edit_deckv2.md` перемещены в архив `.md/.archive/deck/`. Актуальные дорожные карты разработки: `.md/deck/edit_atrib1.md` (стабилизация ядра и типов) и `.md/deck/edit_atrib2.md` (спецификация и редизайн инспектора).
 
 ### `modules.settings` — Управление конфигурацией приложения
 
