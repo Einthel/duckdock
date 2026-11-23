@@ -1,6 +1,6 @@
 # DuckDock / TouchWM: Архитектурная спецификация модулей
 
-> **Статус:** v0.5.7 (Pure DND инвариант шторки действий, матрица пресетов ActionPresetsRegistry, относительная навигация страниц деки, 539 тестов 100% PASS)  
+> **Статус:** v0.5.8 (Контекстное меню ячеек EditorGridCell, сигнал slot_clear_requested холста, интеграция с ClearSlotCommand и UndoStack, 543 теста 100% PASS)  
 > **Целевая среда:** Windows 10/11 x64, 27" Primary (dGPU) + 7" 1024×600 JRP7813S Touchscreen (iGPU AMD Radeon Graphics).
 
 ---

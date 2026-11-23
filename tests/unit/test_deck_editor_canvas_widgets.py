@@ -337,3 +337,64 @@ def test_pagination_bar_retranslate_ui(qapp):
     assert bar.btn_add.toolTip() == "Создать новую страницу"
 
     I18nManager().set_language("en", emit_signal=False)
+
+
+def test_grid_cell_context_menu_structure_and_stubs(qapp):
+    cell = EditorGridCell(slot_index=2)
+    cell.set_button_data(title="Test Action", icon="🔥", hotkey="Ctrl+Alt+T")
+
+    menu = cell.show_context_menu(global_pos=None)
+    assert menu is not None
+    assert menu.objectName() == "cellContextMenu"
+
+    actions = menu.actions()
+    action_texts = [a.text() for a in actions if not a.isSeparator()]
+    assert len(action_texts) == 5
+
+    # Проверка: заготовки под будущее отключены (disabled)
+    act_copy = actions[0]
+    act_cut = actions[1]
+    act_paste = actions[2]
+    act_duplicate = actions[3]
+    act_delete = actions[5]
+
+    assert not act_copy.isEnabled()
+    assert not act_cut.isEnabled()
+    assert not act_paste.isEnabled()
+    assert not act_duplicate.isEnabled()
+    assert act_delete.isEnabled()
+
+
+def test_grid_cell_context_menu_delete_clears_button(qapp):
+    cell = EditorGridCell(slot_index=4)
+    cell.set_button_data(title="Mute Mic", icon="🎙️", hotkey="F13")
+    assert cell.get_button_data()["title"] == "Mute Mic"
+
+    cleared_slots = []
+    cell.clear_requested.connect(lambda idx: cleared_slots.append(idx))
+
+    menu = cell.show_context_menu(global_pos=None)
+    delete_action = [a for a in menu.actions() if not a.isSeparator() and "🗑️" in a.text()][0]
+    delete_action.trigger()
+
+    assert cleared_slots == [4]
+    data = cell.get_button_data()
+    assert data["title"] == ""
+    assert data["icon"] == ""
+    assert data["hotkey"] == ""
+
+
+def test_grid_cell_right_click_selects_and_opens_menu(qapp):
+    cell = EditorGridCell(slot_index=1)
+    clicked_slots = []
+    cell.cell_clicked.connect(lambda idx: clicked_slots.append(idx))
+
+    press_event = QMouseEvent(
+        QMouseEvent.Type.MouseButtonPress,
+        QPoint(10, 10),
+        Qt.RightButton,
+        Qt.RightButton,
+        Qt.NoModifier,
+    )
+    cell.mousePressEvent(press_event)
+    assert clicked_slots == [1]

@@ -376,6 +376,7 @@ class DeckEditorWindow(QMainWindow):
             widget.selection_cleared.connect(self._on_canvas_selection_cleared)
             widget.action_dropped.connect(self._on_canvas_action_dropped)
             widget.slot_dropped.connect(self._on_canvas_slot_dropped)
+            widget.slot_clear_requested.connect(self._on_inspector_slot_cleared)
 
     def _on_canvas_action_dropped(self, slot_idx: int, action_data: dict) -> None:
         """Обработка сброса действия или пресета из библиотеки на ячейку холста."""

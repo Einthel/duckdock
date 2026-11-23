@@ -235,6 +235,13 @@
         }
       },
       "canvas": {
+        "context_menu": {
+          "delete": "Delete",
+          "copy": "Copy",
+          "paste": "Paste",
+          "cut": "Cut",
+          "duplicate": "Duplicate"
+        },
         "pagination": {
           "home_tooltip": "Home Page",
           "add_tooltip": "Create New Page",

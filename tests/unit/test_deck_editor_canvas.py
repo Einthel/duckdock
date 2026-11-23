@@ -307,3 +307,42 @@ def test_canvas_retranslate_ui(editor_window):
     assert editor_window.canvas_widget.touchbar_strip.sec_clock.toolTip() == t("deck.editor.canvas.touchbar.clock_title")
     assert editor_window.canvas_widget.touchbar_strip.sec_telemetry.toolTip() == "Телеметрия"
     assert editor_window.canvas_widget.touchbar_strip.sec_telemetry.toolTip() == t("deck.editor.canvas.touchbar.telemetry_title")
+
+
+def test_canvas_right_click_delete_command_integration(editor_window, qtbot):
+    """
+    Проверка сквозного вызова контекстного меню ПКМ и команды удаления слота:
+    - Слот 0 изначально получает данные.
+    - Вызов контекстного меню слота 0 и нажатие действия 'Удалить'.
+    - Слот 0 на холсте и в модели данных очищается.
+    - В инспекторе отображается плейсхолдер.
+    - Проверка Undo (Ctrl+Z): данные слота восстанавливаются.
+    """
+    canvas = editor_window.canvas_widget
+    cell_0 = canvas.get_cell(0)
+    assert cell_0 is not None
+
+    from modules.deck.editor.dto import ButtonSlotDTO
+    initial_dto = ButtonSlotDTO(
+        slot_index=0,
+        title="Launch Game",
+        icon="🎮",
+        action_type="hotkey",
+        hotkey="Ctrl+G",
+    )
+    editor_window.apply_slot_dto(0, initial_dto)
+    assert cell_0.lbl_title.text() == "Launch Game"
+
+    # Вызываем контекстное меню и нажимаем 'Удалить'
+    menu = cell_0.show_context_menu(global_pos=None)
+    delete_action = [a for a in menu.actions() if not a.isSeparator() and "🗑️" in a.text()][0]
+    delete_action.trigger()
+
+    # Слот 0 очищен на холсте и в модели
+    assert cell_0.lbl_title.text() == ""
+    assert editor_window.get_slot_dto(0).title == ""
+
+    # Проверка Undo
+    editor_window._undo_stack.undo()
+    assert cell_0.lbl_title.text() == "Launch Game"
+    assert editor_window.get_slot_dto(0).title == "Launch Game"

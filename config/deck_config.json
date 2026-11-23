@@ -210,53 +210,24 @@
           "id": "btn_slot_7",
           "slot_index": 7,
           "name": "Диспетчер задач",
-          "title": "Диспетчер задач",
-          "category": "shortcut",
-          "icon": "⚡",
-          "icon_path": null,
-          "icon_size": 48,
-          "font_size": 11,
-          "font_color": "#d4d4d8",
-          "text_alignment": "bottom",
-          "hide_title": false,
-          "color_accent": "#10b981",
-          "background_color": "#161b26",
-          "action": {
-            "action_type": "hotkey",
-            "params": {
-              "keys": [
-                "ctrl",
-                "shift",
-                "esc"
-              ],
-              "mode": "press",
-              "toggle_keys": []
-            }
-          },
-          "toggle_action": null,
-          "status_source": null,
-          "sound_override": null
-        },
-        {
-          "id": "btn_slot_8",
-          "slot_index": 8,
-          "name": "Следующая страница",
-          "title": "Закрыть окно",
+          "title": "Скриншот экрана",
           "category": "system",
-          "icon": "❌",
+          "icon": "📸",
           "icon_path": null,
           "icon_size": 48,
           "font_size": 11,
           "font_color": "#d4d4d8",
           "text_alignment": "bottom",
           "hide_title": false,
-          "color_accent": "#ef4444",
+          "color_accent": "#38bdf8",
           "background_color": "#161b26",
           "action": {
             "action_type": "system",
             "params": {
-              "command": "close_window",
-              "screenshot_target": "primary"
+              "command": "screenshot",
+              "screenshot_target": "primary",
+              "clipboard": true,
+              "save_path": null
             }
           },
           "toggle_action": null,
@@ -324,6 +295,42 @@
           "sound_override": null
         },
         {
+          "id": "btn_slot_1",
+          "slot_index": 1,
+          "name": "Переключение аудиовыхода",
+          "title": "Переключение аудиовыхода",
+          "category": "system",
+          "icon": "🎧",
+          "icon_path": null,
+          "icon_size": 48,
+          "font_size": 11,
+          "font_color": "#d4d4d8",
+          "text_alignment": "bottom",
+          "hide_title": false,
+          "color_accent": "#06b6d4",
+          "background_color": "#161b26",
+          "action": {
+            "action_type": "audio",
+            "params": {
+              "target": "device",
+              "command": "toggle_device",
+              "step_percent": 5,
+              "devices": [
+                "Наушники",
+                "Динамики"
+              ],
+              "file_path": "",
+              "volume": 1.0,
+              "stop_others": false,
+              "mode": "toggle",
+              "target_device_id": null
+            }
+          },
+          "toggle_action": null,
+          "status_source": "audio_device",
+          "sound_override": null
+        },
+        {
           "id": "btn_slot_5",
           "slot_index": 5,
           "name": "Предыдущая страница",
@@ -343,6 +350,78 @@
             "params": {
               "target": "prev_page",
               "page_id": null
+            }
+          },
+          "toggle_action": null,
+          "status_source": null,
+          "sound_override": null
+        },
+        {
+          "id": "btn_slot_6",
+          "slot_index": 6,
+          "name": "Mute микрофона",
+          "title": "Mute микрофона",
+          "category": "system",
+          "icon": "🎙️",
+          "icon_path": null,
+          "icon_size": 48,
+          "font_size": 11,
+          "font_color": "#d4d4d8",
+          "text_alignment": "bottom",
+          "hide_title": false,
+          "color_accent": "#ef4444",
+          "background_color": "#161b26",
+          "action": {
+            "action_type": "audio",
+            "params": {
+              "target": "mic",
+              "command": "toggle_mute",
+              "step_percent": 5,
+              "devices": [
+                "Наушники",
+                "Динамики"
+              ],
+              "file_path": "",
+              "volume": 1.0,
+              "stop_others": false,
+              "mode": "toggle",
+              "target_device_id": null
+            }
+          },
+          "toggle_action": null,
+          "status_source": "mic_mute",
+          "sound_override": null
+        },
+        {
+          "id": "btn_slot_7",
+          "slot_index": 7,
+          "name": "Mute звука",
+          "title": "Mute звука",
+          "category": "system",
+          "icon": "🔇",
+          "icon_path": null,
+          "icon_size": 48,
+          "font_size": 11,
+          "font_color": "#d4d4d8",
+          "text_alignment": "bottom",
+          "hide_title": false,
+          "color_accent": "#ef4444",
+          "background_color": "#161b26",
+          "action": {
+            "action_type": "audio",
+            "params": {
+              "target": "master",
+              "command": "toggle_mute",
+              "step_percent": 5,
+              "devices": [
+                "Наушники",
+                "Динамики"
+              ],
+              "file_path": "",
+              "volume": 1.0,
+              "stop_others": false,
+              "mode": "toggle",
+              "target_device_id": null
             }
           },
           "toggle_action": null,

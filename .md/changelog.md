@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.8] - 2026-11-24
+
+### Added
+- **Контекстное меню кнопок в редакторе DuckDeck (`EditorGridCell`)**:
+  - Вызов по нажатию правой кнопки мыши (ПКМ) или клавише вызова меню на любой из 10 ячеек сетки.
+  - Автоматическая подсветка и фокусировка ячейки в `KeyPropertyInspector` при клике ПКМ.
+  - Действие «Удалить» (`deck.editor.canvas.context_menu.delete`) для быстрой очистки данных кнопки со слота.
+  - Заготовки под будущие операции: «Копировать» (`copy`), «Вырезать» (`cut`), «Вставить» (`paste`), «Дублировать» (`duplicate`) в состоянии `disabled`.
+  - Стилизация меню в соответствии с дизайн-системой Dark Obsidian v2 (`SURFACE_1_PANEL`, неоновый фокус, скругление 8px, разделители).
+  - 100% двуязычная локализация RU/EN (`deck.editor.canvas.context_menu.*`) с паритетом ключей.
+
+### Fixed
+- **Сквозная интеграция очистки слота холста (`ClearSlotCommand` в UndoStack)**:
+  - В `EditorGridCell` реализован сигнал `clear_requested(slot_index)`.
+  - В `DeckCanvasWidget` добавлен сигнал `slot_clear_requested(slot_index)`.
+  - В `DeckEditorWindow` сигнал подключен к обработчику `_on_inspector_slot_cleared`, активирующему команду `ClearSlotCommand` в `_undo_stack`. Очистка слота поддерживает отмену по Ctrl+Z (Undo) и повтор по Ctrl+Y (Redo), сбрасывая инспектор к плейсхолдеру и синхронизируя модель `ButtonSlotDTO`.
+- **Автоматическое тестирование**:
+  - Написаны модульные и интеграционные тесты для контекстного меню ячейки, сигналов очистки и отмены Undo: 543 теста со статусом **100% PASS** (543 passed, 0 failed, 29 warnings).
+
 ## [0.5.7] - 2026-11-23
 
 ### Added

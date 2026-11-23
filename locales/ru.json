@@ -237,6 +237,13 @@
         }
       },
       "canvas": {
+        "context_menu": {
+          "delete": "Удалить",
+          "copy": "Копировать",
+          "paste": "Вставить",
+          "cut": "Вырезать",
+          "duplicate": "Дублировать"
+        },
         "pagination": {
           "home_tooltip": "Домашняя страница",
           "add_tooltip": "Создать новую страницу",

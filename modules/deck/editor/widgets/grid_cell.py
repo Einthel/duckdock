@@ -12,6 +12,7 @@ from typing import Any, Optional
 
 from PySide6.QtCore import QPoint, Qt, Signal, QMimeData
 from PySide6.QtGui import (
+    QContextMenuEvent,
     QDrag,
     QDragEnterEvent,
     QDragLeaveEvent,
@@ -26,10 +27,12 @@ from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
+    QMenu,
     QVBoxLayout,
     QWidget,
 )
 
+from core.i18n import t
 from modules.deck.editor.styles import GRID_CELL_SIZE
 
 logger = logging.getLogger(__name__)
@@ -46,6 +49,7 @@ class EditorGridCell(QFrame):
     """
 
     cell_clicked = Signal(int)
+    clear_requested = Signal(int)
     action_dropped = Signal(int, dict)
     slot_dropped = Signal(int, int, bool)
 
@@ -63,6 +67,7 @@ class EditorGridCell(QFrame):
         self._text_alignment = "bottom"
         self._hide_title = False
         self._drag_start_pos: Optional[QPoint] = None
+        self._context_menu: Optional[QMenu] = None
 
         self.setObjectName("editorGridCell")
         self.setProperty("editorGridCell", "true")
@@ -289,14 +294,65 @@ class EditorGridCell(QFrame):
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         """
-        Обработка клика мыши: эмиттирует cell_clicked(slot_index) при нажатии ЛКМ.
+        Обработка клика мыши: эмиттирует cell_clicked(slot_index) при нажатии ЛКМ или ПКМ.
         """
         if event.button() == Qt.LeftButton:
             self._drag_start_pos = event.pos()
             self.cell_clicked.emit(self.slot_index)
             event.accept()
+        elif event.button() == Qt.RightButton:
+            self.cell_clicked.emit(self.slot_index)
+            super().mousePressEvent(event)
         else:
             super().mousePressEvent(event)
+
+    def contextMenuEvent(self, event: QContextMenuEvent) -> None:
+        """
+        Обработка вызова контекстного меню по клику ПКМ или клавише меню.
+        """
+        self.cell_clicked.emit(self.slot_index)
+        self.show_context_menu(event.globalPos())
+        event.accept()
+
+    def show_context_menu(self, global_pos: Optional[QPoint] = None) -> QMenu:
+        """
+        Отображает стилизованное контекстное меню для ячейки кнопки холста.
+        Содержит действие 'Удалить' (очистка кнопки) и заготовки под будущее (Копировать, Вставить и др.).
+        """
+        menu = QMenu(self)
+        menu.setObjectName("cellContextMenu")
+
+        act_copy = menu.addAction(f"📋 {t('deck.editor.canvas.context_menu.copy')}")
+        act_copy.setEnabled(False)
+
+        act_cut = menu.addAction(f"✂️ {t('deck.editor.canvas.context_menu.cut')}")
+        act_cut.setEnabled(False)
+
+        act_paste = menu.addAction(f"📥 {t('deck.editor.canvas.context_menu.paste')}")
+        act_paste.setEnabled(False)
+
+        act_duplicate = menu.addAction(f"🔄 {t('deck.editor.canvas.context_menu.duplicate')}")
+        act_duplicate.setEnabled(False)
+
+        menu.addSeparator()
+
+        act_delete = menu.addAction(f"🗑️ {t('deck.editor.canvas.context_menu.delete')}")
+        act_delete.setEnabled(True)
+        act_delete.triggered.connect(self._on_delete_action_triggered)
+
+        self._context_menu = menu
+
+        if global_pos is not None:
+            menu.exec(global_pos)
+
+        return menu
+
+    def _on_delete_action_triggered(self) -> None:
+        """
+        Очищает данные кнопки и эмитирует сигнал clear_requested.
+        """
+        self.clear_button_data()
+        self.clear_requested.emit(self.slot_index)
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         """
