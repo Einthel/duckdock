@@ -1,6 +1,6 @@
 # DuckDock / TouchWM: Архитектурная спецификация модулей
 
-> **Статус:** v0.6.1 (Спринт 6: QUndoStack, Drag-and-Drop, Защитная валидация, 455 тестов 100% PASS)  
+> **Статус:** v0.5.6 (8 базовых примитивов, матрица пресетов, инспектор свойств, 538 тестов 100% PASS)  
 > **Целевая среда:** Windows 10/11 x64, 27" Primary (dGPU) + 7" 1024×600 JRP7813S Touchscreen (iGPU AMD Radeon Graphics).
 
 ---
@@ -207,7 +207,7 @@ flowchart TD
 - `widgets.mini_media_bar.MiniMediaBar`: Сенсорный виджет управления медиа в сайдбаре (64×54px) с бегущей строкой `MarqueeLabel` и кнопками ⏮ ⏯ ⏭.
 - `view.YouTubeView(TouchModuleView)`: Полноэкранный плеер с двунаправленной синхронизацией состояния через `EventBus`.
 
-### `modules.deck` — Сенсорная макро-панель DuckDeck v0.6.3
+### `modules.deck` — Сенсорная макро-панель DuckDeck v0.5.6
 
 - `models.py`: Pydantic V2 модели конфигурации DuckDeck (`DeckRootConfig`, `DeckPageConfig`, `DeckButtonConfig`, `DeckActionConfig`, `SoundSettings`, `SoundboardParams`). Пространство действий сведено к 8 ортогональным примитивам (`hotkey`, `launch`, `audio`, `media`, `text`, `system`, `deck_nav`, `macro`). Прозрачный нормализатор `DeckActionNormalizer` автоматически мигрирует 18+ устаревших типов конфигураций при загрузке. Чистый первый запуск (Factory Default): ровно 1 пустая страница без демо-данных.
 - `presets/`: Реестр эталонных пресетов `ActionPresetsRegistry` (6 категорий, 20+ преднастроенных действий: `system_tools`, `audio_comm`, `media_control`, `apps_launch`, `navigation`, `macros`).

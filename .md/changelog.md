@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.3] - 2026-11-23
+## [0.5.6] - 2026-11-23
 
 ### Added
 - **Реорганизация действий DuckDeck и эталонная матрица пресетов (Этапы 1–4, `.md/deck/deck_action.md`)**:
@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Сквозное E2E тестирование (`tests/integration/test_deck_editor_e2e.py`)**: Сценарии полного цикла (выбор слота, применение пресета, кастомизация, атомарное сохранение, Drag & Drop и Undo/Redo) и верификация обратной совместимости legacy-конфигов.
   - **Качество и локализация**: 100% паритет ключей `locales/ru.json` и `locales/en.json`, проверенный AST-линтером, 538 тестов со статусом 100% PASS (0 failed, 36 deprecation warnings).
 
-## [0.6.2] - 2026-11-22
+## [0.5.5] - 2026-11-22
 
 ### Added
 - **Кастомизация типографики и всплывающее меню шрифтов (Спринт 7.1, `FontCustomizationPopover`)**:
@@ -44,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Новые тестовые наборы: `test_deck_font_popover.py`, `test_deck_soundboard.py`, `test_deck_live_tiles.py`.
   - Все 479 тестов репозитория имеют статус **100% PASS** (473 passed, 6 skipped).
 
-## [0.6.1] - 2026-11-22
+## [0.5.4] - 2026-11-22
 
 ### Added
 - **DuckDeck Editor Undo/Redo Engine & Safe UX (`modules/deck/editor/commands.py`, `window.py`)**:
@@ -65,7 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Все 455 тестов репозитория имеют статус **100% PASS** (0 failed, 6 skipped).
   - 100% паритет словарей локализации RU/EN, подтвержденный AST-линтером.
 
-## [0.6.0] - 2026-11-22
+## [0.5.3] - 2026-11-22
 
 ### Added
 - **DuckDeck Editor Ergonomics & Live Autosave (Доработки редактора и верстки)**:
@@ -107,10 +107,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - 100% паритет RU/EN в `locales/ru.json` и `locales/en.json`, подтвержденный AST-сканером `test_i18n_linter.py`.
   - **Релизные метрики качества**:
     - 418 тестов со статусом **100% PASS** (0 failures, 0 regressions).
-
-## [0.5.3] - 2026-11-22
-
-### Added
 - **DuckDeck Editor Icon Ecosystem (Спринт 3 из `.md/deck/edit_func.md`)**:
   - **Контекстное меню быстрого доступа кнопки 'v' (`modules/deck/editor/widgets/key_preview_tile.py`)**:
     - Интерактивное меню `QMenu` в стиле Dark Obsidian v2 под микро-кнопкой `btn_menu`.
