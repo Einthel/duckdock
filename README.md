@@ -13,6 +13,49 @@
 
 ---
 
+## 📸 Галерея интерфейса
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <b>🎬 Медиа-панель (YouTube Music / YouTube / Twitch)</b><br/>
+      <sub>Изолированный Chromium на iGPU с AdBlock и Mini Media Bar</sub><br/><br/>
+      <img src="docs/screenshots/01_media_youtube.jpg" alt="Медиа-панель YouTube" width="100%"/>
+    </td>
+    <td width="50%" align="center">
+      <b>📊 Hardware Telemetry NOC (Ring 0)</b><br/>
+      <sub>Прямой опрос LibreHardwareMonitor, Sparkline-графики и пинг</sub><br/><br/>
+      <img src="docs/screenshots/02_telemetry_noc.png" alt="Hardware Telemetry NOC" width="100%"/>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <b>🎛 DuckDeck — Сенсорная макро-панель (2×5 + Touchbar)</b><br/>
+      <sub>Кастомные PNG/SVG иконки, медиа-пульт, часы и телеметрия</sub><br/><br/>
+      <img src="docs/screenshots/03_duckdeck_panel.png" alt="Панель DuckDeck" width="100%"/>
+    </td>
+    <td width="50%" align="center">
+      <b>🔊 Windows Core Audio Mixer</b><br/>
+      <sub>Посессионные слайдеры приложений, Master Volume и переключение вывода</sub><br/><br/>
+      <img src="docs/screenshots/04_audio_mixer.png" alt="Аудиомикшер Windows Core Audio" width="100%"/>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <b>⚙ Диагностика подсистем, Диммер и Локализация (RU/EN)</b><br/>
+      <sub>Контроль инвариантов Stealth Focus, ночной режим и Hot Reload языка</sub><br/><br/>
+      <img src="docs/screenshots/05_settings_diagnostics.png" alt="Настройки и диагностика DuckDock" width="100%"/>
+    </td>
+    <td width="50%" align="center">
+      <b>🧩 WYSIWYG-редактор DuckDeck (Dark Obsidian v2)</b><br/>
+      <sub>8 чистых подформ инспектора, кастомные вкладки, кнопка ⭐ и Pure DND</sub><br/><br/>
+      <img src="docs/screenshots/06_deck_editor.jpg" alt="WYSIWYG-редактор DuckDeck" width="100%"/>
+    </td>
+  </tr>
+</table>
+
+---
+
 ## 🎯 Ключевые возможности
 
 ### 1. 🛡 Stealth Touch & Anti-Cursor Warp (Win32 Foundation)
