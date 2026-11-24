@@ -50,6 +50,7 @@ class EditorGridCell(QFrame):
 
     cell_clicked = Signal(int)
     clear_requested = Signal(int)
+    save_to_library_requested = Signal(int)
     action_dropped = Signal(int, dict)
     slot_dropped = Signal(int, int, bool)
 
@@ -335,6 +336,10 @@ class EditorGridCell(QFrame):
         act_duplicate.setEnabled(False)
 
         menu.addSeparator()
+
+        act_save_lib = menu.addAction(f"⭐ {t('deck.editor.canvas.context_menu.save_to_library')}")
+        act_save_lib.setEnabled(bool(self._title) or bool(self._hotkey) or (bool(self._icon) and self._icon != "🖲️"))
+        act_save_lib.triggered.connect(lambda: self.save_to_library_requested.emit(self.slot_index))
 
         act_delete = menu.addAction(f"🗑️ {t('deck.editor.canvas.context_menu.delete')}")
         act_delete.setEnabled(True)

@@ -592,3 +592,54 @@ def test_deck_view_nav_button_next_and_prev_page(qapp):
             os.remove(tmp_path)
         except OSError:
             pass
+
+
+def test_deck_button_custom_icon_rendering(qapp, tmp_path):
+    """
+    Фаза 0: Полиморфный рендеринг кастомных графических иконок (PNG -> QPixmap)
+    и фолбэк на Unicode/эмодзи в DeckButtonWidget (_setup_ui, update_config, update_status).
+    """
+    from PySide6.QtGui import QColor, QImage
+
+    icon_file = tmp_path / "custom_icon_64.png"
+    img = QImage(64, 64, QImage.Format_ARGB32)
+    img.fill(QColor("#38bdf8"))
+    assert img.save(str(icon_file))
+
+    # 1. Инициализация с PNG-иконкой (в поле icon) — масштабируется под размер тайла
+    cfg_png = DeckButtonConfig(
+        id="btn_custom_png",
+        title="FileZilla",
+        icon=str(icon_file),
+        icon_size=48,
+        action=DeckActionConfig(action_type="launch", params={"target": "calc.exe", "kind": "app"}),
+    )
+    btn = DeckButtonWidget(cfg_png)
+    try:
+        assert btn.focusPolicy() == Qt.NoFocus
+        assert btn.lbl_icon.text() == ""
+        pm = btn.lbl_icon.pixmap()
+        assert not pm.isNull()
+        # На тайле 174x168 квадратная иконка заполняет доступную область (121x121)
+        assert pm.width() > 48
+        assert pm.height() > 48
+        assert pm.width() <= btn.tile_width - 24
+        assert pm.height() <= btn.tile_height - 20
+
+        # 2. update_config на эмодзи -> фолбэк на текст без остаточного QPixmap
+        cfg_emoji = cfg_png.model_copy(update={"icon": "🚀", "icon_path": None})
+        btn.update_config(cfg_emoji)
+        assert btn.lbl_icon.text() == "🚀"
+        assert btn.lbl_icon.pixmap().isNull()
+
+        # 3. update_status обратно на PNG-путь
+        btn.update_status(icon=str(icon_file))
+        assert btn.lbl_icon.text() == ""
+        assert not btn.lbl_icon.pixmap().isNull()
+
+        # 4. update_status обратно на эмодзи
+        btn.update_status(icon="🎧")
+        assert btn.lbl_icon.text() == "🎧"
+        assert btn.lbl_icon.pixmap().isNull()
+    finally:
+        btn.deleteLater()

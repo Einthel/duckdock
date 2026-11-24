@@ -55,13 +55,14 @@ class KeyPropertyInspector(QFrame):
     touchbar_updated = Signal(str, str, object)
     slot_cleared = Signal(int)
     test_action_requested = Signal(int)
+    save_to_library_requested = Signal(int)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
 
         self.setObjectName("propertyInspector")
         self.setProperty("class", "KeyPropertyInspector")
-        self.setFixedHeight(INSPECTOR_HEIGHT)
+        self.setFixedHeight(INSPECTOR_HEIGHT + 4)
 
         self._current_slot_index: Optional[int] = None
         self._current_section_type: Optional[str] = None
@@ -72,7 +73,7 @@ class KeyPropertyInspector(QFrame):
     def _setup_ui(self) -> None:
         """Инициализация стека форм и подключение сигналов."""
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(2, 2, 2, 2)
         layout.setSpacing(0)
 
         self.stack = QStackedWidget(self)
@@ -102,6 +103,7 @@ class KeyPropertyInspector(QFrame):
         self.button_form.property_changed.connect(self._on_button_property_changed)
         self.button_form.delete_requested.connect(self._on_button_delete_requested)
         self.button_form.test_action_requested.connect(self.test_action_requested.emit)
+        self.button_form.save_to_library_requested.connect(self._on_button_save_to_library_requested)
         self.stack.addWidget(self.button_form)
 
         # ----------------------------------------------------------------------
@@ -133,6 +135,10 @@ class KeyPropertyInspector(QFrame):
     # ==========================================================================
     # Публичный API управления отображением и загрузки данных
     # ==========================================================================
+
+    def set_audio_devices(self, devices: list[tuple[str, str]]) -> None:
+        """DI-метод передачи списка доступных аудиоустройств в форму кнопки."""
+        self.button_form.set_audio_devices(devices)
 
     def show_placeholder(self) -> None:
         """Переключает инспектор в нейтральное состояние плейсхолдера (Index 0)."""
@@ -211,6 +217,11 @@ class KeyPropertyInspector(QFrame):
             slot_idx = self._current_slot_index
             self.slot_cleared.emit(slot_idx)
             self.show_placeholder()
+
+    def _on_button_save_to_library_requested(self) -> None:
+        """Транслирует запрос сохранения текущей кнопки в пользовательскую библиотеку."""
+        if self._current_slot_index is not None:
+            self.save_to_library_requested.emit(self._current_slot_index)
 
     def _on_touchbar_property_changed(self, sec_type: str, prop: str, val: object) -> None:
         """Транслирует изменение параметров секции тачбара наружу."""

@@ -137,8 +137,9 @@ def test_slot_to_dto_and_back_preserves_all_extended_fields(sample_button_config
     assert dto.status_source == "mic_mute"
     assert dto.sound_override == "resources/deck/sounds/custom_click.wav"
     assert dto.toggle_action is not None
-    assert dto.toggle_action.action_type == "system"
-    assert dto.toggle_action.params["command"] == "toggle_mic_mute"
+    assert dto.toggle_action.action_type == "audio"
+    assert dto.toggle_action.params["target"] == "mic"
+    assert dto.toggle_action.params["command"] == "toggle_mute"
     assert dto.hotkey == "Ctrl + Shift + M"
 
     # 2. Конвертация DTO -> Config (обратно)
@@ -152,8 +153,8 @@ def test_slot_to_dto_and_back_preserves_all_extended_fields(sample_button_config
     assert reconstructed.status_source == "mic_mute"
     assert reconstructed.sound_override == "resources/deck/sounds/custom_click.wav"
     assert reconstructed.toggle_action is not None
-    assert reconstructed.toggle_action.action_type == "system"
-    assert reconstructed.toggle_action.params["command"] == "toggle_mic_mute"
+    assert reconstructed.toggle_action.action_type == "audio"
+    assert reconstructed.toggle_action.params["command"] == "toggle_mute"
     assert reconstructed.action.action_type == "hotkey"
     assert reconstructed.action.params["keys"] == ["ctrl", "shift", "m"]
 
@@ -181,7 +182,7 @@ def test_dto_modification_preserves_unmodified_extended_fields(sample_button_con
     assert reconstructed.status_source == "mic_mute"
     assert reconstructed.sound_override == "resources/deck/sounds/custom_click.wav"
     assert reconstructed.toggle_action is not None
-    assert reconstructed.toggle_action.params["command"] == "toggle_mic_mute"
+    assert reconstructed.toggle_action.params["command"] == "toggle_mute"
 
 
 def test_dto_to_slot_creates_valid_new_button_without_original():
@@ -224,7 +225,7 @@ def test_slot_to_dto_handles_all_action_types():
         ("audio_device", {"mode": "toggle", "devices": ["A", "B"]}, "Audio Device", "System: Audio Device"),
         ("system", {"command": "toggle_dimmer"}, "System", "System"),
         ("screenshot", {"target": "primary_screen"}, "Screenshot", "System: Screenshot"),
-        ("http_request", {"url": "http://127.0.0.1"}, "HTTP Request", "API: HTTP Request"),
+        ("http_request", {"url": "http://127.0.0.1"}, "Open Application", "System: Open Application"),
         ("navigation", {"target_page_id": "page_2"}, "Navigation", "Navigation"),
     ]
 
@@ -453,19 +454,22 @@ def test_save_deck_config_atomic_handles_validation_error():
 
 def test_all_catalog_actions_convert_and_save_without_validation_error():
     """
-    Проверяет, что ВСЕ действия из каталога библиотеки (actions_registry.py),
-    включая create_folder, play_audio, stop_audio, brightness, multi_action и др.,
-    безошибочно конвертируются через dto_to_slot и apply_slots_to_page без ValidationError.
+    Проверяет, что ВСЕ действия из единого каталога библиотеки (actions_registry.py -> ActionPresetsRegistry)
+    безошибочно конвертируются через dto_to_slot и apply_slots_to_page без ValidationError,
+    а удаленные фантомные действия отсутствуют.
     """
     from modules.deck.editor.actions_registry import get_default_action_catalog
 
     catalog = get_default_action_catalog()
     all_action_ids = [item.id for cat in catalog for item in cat.items]
 
-    # Гарантируем, что в каталоге присутствуют ключевые действия
-    assert "create_folder" in all_action_ids
-    assert "play_audio" in all_action_ids
-    assert "stop_audio" in all_action_ids
+    # Гарантируем, что в каталоге присутствуют ключевые действия и отсутствуют фантомные
+    assert "nav_next_page" in all_action_ids
+    assert "soundboard_play" not in all_action_ids
+    assert "soundboard_stop" not in all_action_ids
+    assert "create_folder" not in all_action_ids
+    assert "brightness" not in all_action_ids
+    assert "page_indicator" not in all_action_ids
 
     slots = []
     for idx, act_id in enumerate(all_action_ids[:10]):
@@ -485,3 +489,36 @@ def test_all_catalog_actions_convert_and_save_without_validation_error():
     root = DeckConfigLoader.get_default_config()
     updated = DeckConfigAdapter.apply_slots_to_page(root, "default", slots)
     assert len(updated.pages[0].buttons) == 10
+
+
+def test_dto_to_slot_switches_from_hotkey_to_launch_without_reversion(sample_button_config: DeckButtonConfig):
+    """
+    Проверка, что кнопка с существующим хоткеем при установке dto.action_type = "launch"
+    сохраняется как launch, а не откатывается в hotkey из-за наличия dto.hotkey.
+    """
+    dto = DeckConfigAdapter.slot_to_dto(sample_button_config)
+    assert dto.action_type == "Hotkey"
+    assert dto.hotkey == "Ctrl + Shift + M"
+
+    # Пользователь сменил действие на запуск программы, оставив или очистив строку хоткея
+    dto.action_type = "launch"
+    dto.action_params = {"target": "notepad.exe", "kind": "app"}
+    dto.hotkey = "Ctrl + Shift + M"  # Симулируем случай, когда в DTO еще оставалось значение хоткея
+
+    btn = DeckConfigAdapter.dto_to_slot(dto, original_config=sample_button_config)
+    assert btn.action.action_type == "launch"
+    assert btn.action.params.get("target") == "notepad.exe"
+
+
+def test_dto_to_slot_clears_hotkey_on_audio_action(sample_button_config: DeckButtonConfig):
+    """
+    Проверка сохранения аудио-действия без отката в хоткей при смене типа с hotkey на audio.
+    """
+    dto = DeckConfigAdapter.slot_to_dto(sample_button_config)
+    dto.action_type = "audio"
+    dto.action_params = {"target": "master", "command": "toggle_mute"}
+
+    btn = DeckConfigAdapter.dto_to_slot(dto, original_config=sample_button_config)
+    assert btn.action.action_type == "audio"
+    assert btn.action.params.get("target") == "master"
+    assert btn.action.params.get("command") == "toggle_mute"

@@ -240,7 +240,7 @@ def test_adapter_rename_duplicate_delete_page(sample_root_config):
     assert deleted.pages[1].name == "Рабочий стол (Копия)"
 
 
-def test_page_switch_auto_saves_progress(tmp_path, sample_root_config):
+def test_page_switch_auto_saves_progress(qapp, tmp_path, sample_root_config):
     """
     Требование: при переключении страниц в редакторе изменения на текущей странице
     автоматически сохраняются без необходимости нажимать кнопку 'Сохранить'.

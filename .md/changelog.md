@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-11-25
+
+### Added
+- **Кастомная библиотека кнопок и пользовательские вкладки (`modules/deck/custom_library.py`)**:
+  - Реализовано хранилище `CustomLibraryStorage` (Pydantic v2 модели `CustomTabConfig`, `CustomButtonPreset`, `CustomLibraryData`) с атомарной записью в `config/deck_custom_library.json` (изолированно от системных пресетов).
+  - В правой панели `ActionLibraryDrawer` добавлена кнопка `+ Вкладка` (`btnAddTab`), контекстное меню переименования/удаления вкладок (`ActionCategorySection`) и пользовательских карточек (`ActionItemWidget`).
+  - В шапке инспектора `ButtonPropertyForm` добавлена кнопка `⭐` (`btnSaveToLibrary`) и пункт «Сохранить в библиотеку...» в контекстном меню `EditorGridCell` с поддержкой полного Drag-and-Drop кастомных кнопок на холст.
+  - В `dto.py` добавлены `raw_title` и `is_custom` для обхода `t()` у пользовательских названий при сохранении 100% чистоты `test_i18n_linter.py`.
+
+### Changed
+- **Переработка системы действий, инспектора и геометрии Dark Obsidian v2 (Фазы 0–5 по `.md/deck/edit_atrib2.md`)**:
+  - **Модели, исполнители и пресеты**: удалён дефолтный список `devices` в `AudioActionParams`, полностью вычищен саундборд (`soundboard_play`/`soundboard_stop`, `SoundboardSubform`), оставлены 7 категорий пресетов с сериализацией `exclude_none=True`, `macro_sequence` сохранён как заготовка (`is_wip=True`). Синхронизированы `AudioExecutor`, `SystemActionParams` и передача `audio_manager` в тестовый запуск `▶`.
+  - **8 чистых подформ инспектора (`ButtonPropertyForm`) и `DeckConfigAdapter`**: удалены `btn_presets_menu`, `LEGACY_ACTION_KEYS` и разрозненные подформы; реализованы 8 ортогональных подформ (`HotkeySubform`, `LaunchSubform`, `AudioSubform` с DI-списком аудиоустройств, `MediaSubform`, `TextSubform`, `SystemSubform`, `DeckNavSubform`, `MacroSubform`) и чистая маршрутизация `stack_idx` без cross-contamination параметров.
+  - **Геометрия и визуальный полиш Dark Obsidian v2**: `FORM_LABEL_WIDTH = 96` (устранена обрезка «Живой статус:» и «Параметры:» в RU/EN), карточный контур `KeyPropertyInspector` (`border-radius: 10px`), компактный `ColorAccentPicker` (`82 px`), симметричная строка 3 без layout-сдвигов, `formVerticalSeparator`, `feedbackSeparator` и неоновая подсветка фокуса с сохранением `Qt.NoFocus` на кнопках.
+  - **Локализация и тестирование**: удалены устаревшие ключи `soundboard` и `actions_presets` из `locales/ru.json` и `locales/en.json`; все 552 теста (`pytest tests/`) и 6 проверок `test_i18n_linter.py` пройдены со статусом **100% PASS**.
+
+### Fixed
+- **Рендеринг кастомных графических иконок в `DeckButtonWidget`**: внедрён полиморфный метод `_render_icon()` с проверкой файла (абсолютный путь, относительно `cwd` и `resources/`) и масштабированием `QPixmap` вместо вывода текстового пути на экран.
+
+## [0.5.10] - 2026-11-24
+
+### Fixed
+- **Архитектурная стабилизация редактора кнопок DuckDeck (Фазы 1–5 по `.md/deck/edit_atrib1.md`)**:
+  - **Разрыв циклического импорта и коллизии хоткеев**: ленивый импорт DTO в `presets.py`, инверсия приоритета `norm_type == "hotkey"` в `DeckConfigAdapter.dto_to_slot`, принудительный сброс `hotkey` при выборе других примитивов в `ButtonPropertyForm` и при Drag-and-Drop.
+  - **Единый источник правды (SSOT) и чистка каталога**: `actions_registry.py` (`get_default_action_catalog()`) переведен на фасад над `ActionPresetsRegistry.get_categories_dto()`; удалены фантомные действия (`create_folder`, `brightness`, `page_indicator`, `folder_open`); `switch_profile` заблокирован заглушкой под будущие авто-профили; `macro_sequence` помечен как WIP (`is_wip=True`, opacity `0.5`, блокировка клика и DND).
+  - **Детерминированная маршрутизация подформ**: реализован `ButtonPropertyForm.resolve_subform_route`, синхронизированы команды `SystemSubform` (`dimmer`/`toggle_dimmer`, `lock_pc`/`lock_workstation`), `ScreenshotSubform`, `VolumeSubform` и `PathUrlSubform`.
+  - **Изоляция `action_params`**: добавлены `_default_params_for_type`, `_reset_inactive_subforms` и валидация `DeckConfigAdapter._is_params_valid_for_type` против взаимного загрязнения словарей при смене типа действия.
+  - **Локализация RU/EN и тесты**: удалены устаревшие ключи локалей, добавлены ключи WIP/тултипов, пройдены все 553 теста (`pytest tests/`) и линтер локализации (`test_i18n_linter.py`).
+
 ## [0.5.9] - 2026-11-24
 
 ### Changed

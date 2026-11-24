@@ -29,6 +29,7 @@ from modules.deck.actions.process_launcher import CREATE_NO_WINDOW, DETACHED_PRO
 from modules.deck.actions.screen_capture import capture_screen, copy_pixmap_to_clipboard, get_primary_screen
 from modules.deck.models import (
     ActionCategory,
+    AudioActionParams,
     AudioDeviceParams,
     DeckActionConfig,
     DeckButtonConfig,
@@ -36,11 +37,11 @@ from modules.deck.models import (
     DeckPageConfig,
     DeckRootConfig,
     HotkeyParams,
-    HttpRequestParams,
+    LaunchActionParams,
     LaunchParams,
     NavigationParams,
-    ScreenshotParams,
     SoundSettings,
+    SystemActionParams,
     SystemParams,
 )
 from core.focus_guardian import FocusGuardian
@@ -60,11 +61,11 @@ def test_deck_action_typed_params_factory():
     # Audio Device
     act_audio = DeckActionConfig(
         action_type="audio_device",
-        params={"mode": "cycle", "devices": ["Headphones", "Speakers"]},
+        params={"mode": "toggle", "devices": ["Headphones", "Speakers"]},
     )
     typed_audio = act_audio.get_typed_params()
-    assert isinstance(typed_audio, AudioDeviceParams)
-    assert typed_audio.mode == "cycle"
+    assert isinstance(typed_audio, AudioActionParams)
+    assert typed_audio.mode == "toggle"
     assert typed_audio.devices == ["Headphones", "Speakers"]
 
     # Launch
@@ -73,39 +74,41 @@ def test_deck_action_typed_params_factory():
         params={"path": "notepad.exe", "args": ["file.txt"], "detached": True},
     )
     typed_launch = act_launch.get_typed_params()
-    assert isinstance(typed_launch, LaunchParams)
-    assert typed_launch.path == "notepad.exe"
+    assert isinstance(typed_launch, LaunchActionParams)
+    assert typed_launch.target == "notepad.exe"
     assert typed_launch.args == ["file.txt"]
     assert typed_launch.detached is True
 
-    # Http Request
+    # Http Request -> normalized to LaunchActionParams (kind="url")
     act_http = DeckActionConfig(
         action_type="http_request",
         params={"url": "http://127.0.0.1:8000/api", "method": "GET", "timeout_sec": 2.0},
     )
     typed_http = act_http.get_typed_params()
-    assert isinstance(typed_http, HttpRequestParams)
-    assert typed_http.url == "http://127.0.0.1:8000/api"
-    assert typed_http.timeout_sec == 2.0
+    assert isinstance(typed_http, LaunchActionParams)
+    assert typed_http.target == "http://127.0.0.1:8000/api"
+    assert typed_http.kind == "url"
 
-    # Screenshot
+    # Screenshot -> normalized to SystemActionParams
     act_shot = DeckActionConfig(
         action_type="screenshot",
         params={"target": "primary_screen", "clipboard": True},
     )
     typed_shot = act_shot.get_typed_params()
-    assert isinstance(typed_shot, ScreenshotParams)
-    assert typed_shot.target == "primary_screen"
+    assert isinstance(typed_shot, SystemActionParams)
+    assert typed_shot.command == "screenshot"
+    assert typed_shot.screenshot_target == "primary"
     assert typed_shot.clipboard is True
 
-    # System
+    # System (legacy toggle_mic_mute -> normalized to audio)
     act_sys = DeckActionConfig(
         action_type="system",
         params={"command": "toggle_mic_mute"},
     )
     typed_sys = act_sys.get_typed_params()
-    assert isinstance(typed_sys, SystemParams)
-    assert typed_sys.command == "toggle_mic_mute"
+    assert isinstance(typed_sys, AudioActionParams)
+    assert typed_sys.target == "mic"
+    assert typed_sys.command == "toggle_mute"
 
     # Navigation
     act_nav = DeckActionConfig(
@@ -846,19 +849,17 @@ from pydantic import ValidationError
         ("http_request", {"url": "http://127.0.0.1:8000/api", "method": "POST"}, "launch", "http://127.0.0.1:8000/api", None),
         ("hotkey", {"keys": ["ctrl", "c"]}, "hotkey", None, None),
         ("hotkey_switch", {"state_1": {"keys": ["f1"]}, "state_2": {"keys": ["f2"]}}, "hotkey", None, None),
-        ("volume_control", {"target": "master", "command": "volume_up", "step_percent": 10}, "audio", "master", "step"),
+        ("volume_control", {"target": "master", "command": "volume_up", "step_percent": 10}, "audio", "master", "volume_up"),
         ("volume_control", {"target": "microphone", "command": "toggle_mute"}, "audio", "mic", "toggle_mute"),
         ("audio_device", {"mode": "toggle", "devices": ["Наушники", "Динамики"]}, "audio", "device", "toggle_device"),
-        ("play_audio", {"file_path": "click.wav"}, "audio", "soundboard", "play_sound"),
-        ("stop_audio", {}, "audio", "soundboard", "stop_sound"),
         ("multimedia", {"command": "next_track"}, "media", None, "next_track"),
         ("text_macro", {"text": "Hello World", "send_enter": True}, "text", None, None),
         ("screenshot", {"target": "primary_screen"}, "system", None, "screenshot"),
         ("close_window", {"target": "active_window"}, "system", None, "close_window"),
-        ("brightness", {}, "system", None, "dimmer"),
+        ("brightness", {}, "system", None, "toggle_dimmer"),
         ("sleep_display", {}, "system", None, "sleep_display"),
-        ("system", {"command": "toggle_dimmer"}, "system", None, "dimmer"),
-        ("system", {"command": "lock_workstation"}, "system", None, "lock_pc"),
+        ("system", {"command": "toggle_dimmer"}, "system", None, "toggle_dimmer"),
+        ("system", {"command": "lock_workstation"}, "system", None, "lock_workstation"),
         ("navigation", {"target_page_id": "page_gaming"}, "deck_nav", "page_gaming", "goto_page"),
         ("create_folder", {"page_id": "tools_folder"}, "deck_nav", "tools_folder", "folder_open"),
         ("switch_profile", {"page_id": "profile_dev"}, "deck_nav", "profile_dev", "goto_page"),
@@ -952,8 +953,8 @@ def test_eight_core_primitives_strict_validation():
     assert txt.send_enter is True
 
     # 6. SystemActionParams
-    sys_p = SystemActionParams(command="dimmer", screenshot_target="primary")
-    assert sys_p.command == "dimmer"
+    sys_p = SystemActionParams(command="toggle_dimmer", screenshot_target="primary")
+    assert sys_p.command == "toggle_dimmer"
     assert sys_p.screenshot_target == "primary"
     with pytest.raises(ValidationError):
         SystemActionParams(command="non_existent_sys_cmd")  # type: ignore

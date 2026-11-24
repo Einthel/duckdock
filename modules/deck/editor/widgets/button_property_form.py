@@ -1,16 +1,16 @@
 """
 Форма инспектора свойств кнопки (ButtonPropertyForm).
-Включает шапку с категорией и корзиной 🗑️, плитку превью иконки (84x84 px),
-палитру акцентных цветов ColorAccentPicker (5 неоновых свотчей), поля Title, Actions (пресеты)
-и динамический стек подформ параметров QStackedLayout (Hotkey, Hotkey Switch, Path/URL, Multimedia, Text Macro, Volume Control).
-Строго соблюдает бюджет высоты 220 px и инвариант In-place Retranslate без потери данных.
+Включает шапку с категорией, кнопками тестирования ▶ и очистки 🗑️, плитку превью иконки (84x84 px),
+палитру акцентных цветов ColorAccentPicker (5 неоновых свотчей), поля Title, Actions (8 примитивов)
+и динамический стек из 8 чистых подформ параметров QStackedLayout + UnconfiguredSubform.
+Строго соблюдает бюджет высоты INSPECTOR_HEIGHT (260 px), Qt.NoFocus и In-place Retranslate.
 """
 from __future__ import annotations
 
 import os
 from typing import Any, Optional
 
-from PySide6.QtCore import QPoint, Qt, Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -21,9 +21,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QMenu,
     QPushButton,
-    QSlider,
     QStackedLayout,
     QVBoxLayout,
     QWidget,
@@ -50,7 +48,7 @@ ACCENT_COLORS = [
     "#a855f7",  # Violet
 ]
 
-# Базовые 8 примитивов действий DuckDeck
+# Ровно 8 базовых ортогональных примитивов DuckDeck
 ACTION_PRIMITIVE_KEYS = [
     "hotkey",
     "launch",
@@ -61,25 +59,6 @@ ACTION_PRIMITIVE_KEYS = [
     "deck_nav",
     "macro",
 ]
-
-# Устаревшие ключи действий для 100% обратной совместимости
-LEGACY_ACTION_KEYS = [
-    "hotkey_switch",
-    "website",
-    "open_app",
-    "open_path",
-    "close_window",
-    "text_macro",
-    "multimedia",
-    "volume_control",
-    "audio_device",
-    "screenshot",
-    "play_audio",
-    "stop_audio",
-]
-
-# Полный список для совместимости существующих вызовов
-ACTION_PRESET_KEYS = ACTION_PRIMITIVE_KEYS + LEGACY_ACTION_KEYS
 
 # Источники данных живых тайлов (Live Status Tiles)
 STATUS_SOURCE_KEYS = [
@@ -98,6 +77,45 @@ CLICK_SOUND_KEYS = [
     "custom",
 ]
 
+# Режимы хоткея
+HOTKEY_MODE_KEYS = [
+    "press",
+    "toggle",
+]
+
+# Типы запуска Launch
+LAUNCH_KIND_KEYS = [
+    "app",
+    "file",
+    "url",
+]
+
+# Категории аудиоподсистемы
+AUDIO_CATEGORY_KEYS = [
+    "volume",
+    "device",
+]
+
+# Цели регулировки громкости
+VOLUME_TARGET_KEYS = [
+    "focus_app",
+    "master",
+    "mic",
+]
+
+# Действия со звуком
+VOLUME_ACTION_KEYS = [
+    "toggle_mute",
+    "volume_up",
+    "volume_down",
+]
+
+# Режимы аудиоустройства
+AUDIO_DEVICE_MODE_KEYS = [
+    "toggle",
+    "set",
+]
+
 # Команды мультимедиа
 MEDIA_COMMAND_KEYS = [
     "play_pause",
@@ -109,67 +127,81 @@ MEDIA_COMMAND_KEYS = [
     "volume_down",
 ]
 
-# Цели регулировки звука
-VOLUME_TARGET_KEYS = [
-    "focus_app",
-    "master",
-    "microphone",
-]
-
-# Действия со звуком
-VOLUME_ACTION_KEYS = [
-    "toggle_mute",
-    "volume_up",
-    "volume_down",
-]
-
-# Режимы аудиоустройства
-AUDIO_MODE_KEYS = [
-    "toggle",
-    "specific",
+# Системные команды (все 5 команд SystemActionParams)
+SYSTEM_COMMAND_KEYS = [
+    "toggle_dimmer",
+    "screenshot",
+    "lock_workstation",
+    "sleep_display",
+    "close_window",
 ]
 
 # Цели скриншота
 SCREENSHOT_TARGET_KEYS = [
-    "primary_screen",
+    "primary",
     "active_window",
 ]
 
-# Системные команды
-SYSTEM_COMMAND_KEYS = [
-    "toggle_dimmer",
-    "lock_workstation",
-    "sleep_display",
-]
+
+def _parse_keys_list(hotkey_str: str) -> list[str]:
+    """Парсит строку 'Ctrl + Shift + D' в ['ctrl', 'shift', 'd']."""
+    if not hotkey_str or not hotkey_str.strip():
+        return []
+    return [k.strip().lower() for k in hotkey_str.split("+") if k.strip()]
+
+
+def _format_keys_list(keys: Any) -> str:
+    """Форматирует список клавиш ['ctrl', 'd'] в 'Ctrl + D'."""
+    if not isinstance(keys, list):
+        return str(keys) if keys else ""
+    parts: list[str] = []
+    for k in keys:
+        lk = str(k).strip().lower()
+        if not lk:
+            continue
+        if lk == "ctrl":
+            parts.append("Ctrl")
+        elif lk == "alt":
+            parts.append("Alt")
+        elif lk == "shift":
+            parts.append("Shift")
+        elif lk in ("win", "cmd", "meta"):
+            parts.append("Win")
+        elif lk.startswith("f") and lk[1:].isdigit():
+            parts.append(lk.upper())
+        elif len(lk) == 1:
+            parts.append(lk.upper())
+        else:
+            parts.append(lk.capitalize())
+    return " + ".join(parts)
 
 
 class ColorAccentPicker(QWidget):
-    """
-    Горизонтальный стрип выбора акцентного цвета кнопки из 5 круглых свотчей (20x20 px).
-    """
+    """Горизонтальный стрип выбора акцентного цвета кнопки из 5 круглых свотчей."""
 
     color_selected = Signal(str)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.setObjectName("colorAccentPicker")
-        self.setFixedHeight(28)
+        self.setFixedSize(82, 22)
 
         self._current_color: str = ACCENT_COLORS[0]
         self._buttons: list[QPushButton] = []
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 2, 0, 2)
-        layout.setSpacing(6)
+        layout.setSpacing(3)
         layout.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
 
         for col in ACCENT_COLORS:
             btn = QPushButton(self)
             btn.setProperty("class", "ColorAccentSwatch")
-            btn.setFixedSize(20, 20)
+            btn.setFixedSize(14, 14)
             btn.setCursor(Qt.PointingHandCursor)
+            btn.setFocusPolicy(Qt.NoFocus)
             btn.setStyleSheet(
-                f"background-color: {col}; border-radius: 10px; border: 1px solid {BORDER_SURFACE_2};"
+                f"background-color: {col}; border-radius: 7px; border: 1px solid {BORDER_SURFACE_2};"
             )
             btn.clicked.connect(lambda checked=False, c=col: self._on_color_clicked(c))
             layout.addWidget(btn)
@@ -185,15 +217,15 @@ class ColorAccentPicker(QWidget):
         self._current_color = hex_color or ACCENT_COLORS[0]
         matched = False
         for btn, col in zip(self._buttons, ACCENT_COLORS):
-            is_active = (col.lower() == target)
+            is_active = col.lower() == target
             if is_active:
                 matched = True
                 self._current_color = col
                 btn.setProperty("selected", "true")
-                btn.setStyleSheet(f"background-color: {col}; border-radius: 10px; border: 2px solid #ffffff;")
+                btn.setStyleSheet(f"background-color: {col}; border-radius: 7px; border: 2px solid #ffffff;")
             else:
                 btn.setProperty("selected", "false")
-                btn.setStyleSheet(f"background-color: {col}; border-radius: 10px; border: 1px solid {BORDER_SURFACE_2};")
+                btn.setStyleSheet(f"background-color: {col}; border-radius: 7px; border: 1px solid {BORDER_SURFACE_2};")
             btn.style().unpolish(btn)
             btn.style().polish(btn)
 
@@ -206,8 +238,9 @@ class ColorAccentPicker(QWidget):
 
 
 class HotkeySubform(QWidget):
-    """Подформа 0: Одиночный захват горячей клавиши."""
+    """Подформа 0: Одиночный хоткей или двухпозиционный тумблер (28 px)."""
 
+    params_changed = Signal(dict)
     hotkey_changed = Signal(str)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
@@ -216,188 +249,449 @@ class HotkeySubform(QWidget):
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        layout.setSpacing(6)
+
+        self.combo_mode = QComboBox(self)
+        self.combo_mode.setFixedHeight(INPUT_HEIGHT)
+        self.combo_mode.setFixedWidth(104)
+        self.combo_mode.setCursor(Qt.PointingHandCursor)
+        self.combo_mode.setFocusPolicy(Qt.NoFocus)
+        for key in HOTKEY_MODE_KEYS:
+            self.combo_mode.addItem(t(f"deck.editor.inspector.hotkey_modes.{key}"), key)
+        self.combo_mode.currentIndexChanged.connect(self._on_mode_changed)
 
         self.btn_hotkey = HotkeyCaptureButton(self)
-        self.btn_hotkey.hotkey_changed.connect(self.hotkey_changed.emit)
-        layout.addWidget(self.btn_hotkey)
+        self.btn_hotkey.setFocusPolicy(Qt.NoFocus)
+        self.btn_hotkey.hotkey_changed.connect(self._on_primary_hotkey_changed)
+
+        self.lbl_arrow = QLabel("⇄", self)
+        self.lbl_arrow.setProperty("class", "InspectorFieldLabel")
+        self.lbl_arrow.setAlignment(Qt.AlignCenter)
+        self.lbl_arrow.setVisible(False)
+
+        self.btn_toggle_hotkey = HotkeyCaptureButton(self)
+        self.btn_toggle_hotkey.setFocusPolicy(Qt.NoFocus)
+        self.btn_toggle_hotkey.hotkey_changed.connect(self._on_toggle_hotkey_changed)
+        self.btn_toggle_hotkey.setVisible(False)
+
+        layout.addWidget(self.combo_mode)
+        layout.addWidget(self.btn_hotkey, 1)
+        layout.addWidget(self.lbl_arrow)
+        layout.addWidget(self.btn_toggle_hotkey, 1)
+
+        self.retranslate_ui()
+
+    def _on_mode_changed(self, _index: int) -> None:
+        mode = self.combo_mode.currentData() or "press"
+        is_toggle = mode == "toggle"
+        self.lbl_arrow.setVisible(is_toggle)
+        self.btn_toggle_hotkey.setVisible(is_toggle)
+        self._emit_params()
+
+    def _on_primary_hotkey_changed(self, hk: str) -> None:
+        self.hotkey_changed.emit(hk)
+        self._emit_params()
+
+    def _on_toggle_hotkey_changed(self, _hk: str) -> None:
+        self._emit_params()
+
+    def _emit_params(self) -> None:
+        self.params_changed.emit(self.get_params())
 
     def get_hotkey(self) -> str:
         return self.btn_hotkey.get_hotkey()
 
     def set_hotkey(self, hotkey: str) -> None:
-        self.btn_hotkey.set_hotkey(hotkey)
+        self.btn_hotkey.blockSignals(True)
+        try:
+            self.btn_hotkey.set_hotkey(hotkey)
+        finally:
+            self.btn_hotkey.blockSignals(False)
 
-    def retranslate_ui(self) -> None:
-        self.btn_hotkey.retranslate_ui()
-
-
-class HotkeySwitchSubform(QWidget):
-    """Подформа 1: Двухпозиционный переключатель хоткеев (State 1 ⇄ State 2)."""
-
-    params_changed = Signal(dict)
-
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
-        super().__init__(parent)
-        self.setFixedHeight(INPUT_HEIGHT)
-
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(6)
-
-        self.lbl_s1 = QLabel(self)
-        self.lbl_s1.setProperty("class", "InspectorFieldLabel")
-        self.btn_s1 = HotkeyCaptureButton(self)
-
-        self.lbl_arrow = QLabel("⇄", self)
-        self.lbl_arrow.setProperty("class", "InspectorFieldLabel")
-        self.lbl_arrow.setAlignment(Qt.AlignCenter)
-
-        self.lbl_s2 = QLabel(self)
-        self.lbl_s2.setProperty("class", "InspectorFieldLabel")
-        self.btn_s2 = HotkeyCaptureButton(self)
-
-        self.btn_s1.hotkey_changed.connect(self._emit_params)
-        self.btn_s2.hotkey_changed.connect(self._emit_params)
-
-        layout.addWidget(self.lbl_s1)
-        layout.addWidget(self.btn_s1, 1)
-        layout.addWidget(self.lbl_arrow)
-        layout.addWidget(self.lbl_s2)
-        layout.addWidget(self.btn_s2, 1)
-
-        self.retranslate_ui()
-
-    def _emit_params(self) -> None:
-        s1_keys = [k.strip() for k in self.btn_s1.get_hotkey().split("+") if k.strip()]
-        s2_keys = [k.strip() for k in self.btn_s2.get_hotkey().split("+") if k.strip()]
-        params = {
-            "state_1": {"title": "State 1", "keys": s1_keys},
-            "state_2": {"title": "State 2", "keys": s2_keys},
-            "current_state": 1,
+    def get_params(self) -> dict[str, Any]:
+        mode = self.combo_mode.currentData() or "press"
+        keys = _parse_keys_list(self.btn_hotkey.get_hotkey())
+        toggle_keys = _parse_keys_list(self.btn_toggle_hotkey.get_hotkey()) if mode == "toggle" else []
+        return {
+            "mode": mode,
+            "keys": keys,
+            "toggle_keys": toggle_keys,
         }
-        self.params_changed.emit(params)
 
     def set_params(self, params: dict[str, Any]) -> None:
-        self.btn_s1.blockSignals(True)
-        self.btn_s2.blockSignals(True)
+        mode = str(params.get("mode", "press"))
+        if mode not in HOTKEY_MODE_KEYS:
+            mode = "press"
+        keys = params.get("keys", [])
+        toggle_keys = params.get("toggle_keys", [])
+
+        self.combo_mode.blockSignals(True)
+        self.btn_hotkey.blockSignals(True)
+        self.btn_toggle_hotkey.blockSignals(True)
         try:
-            s1 = params.get("state_1", {})
-            s2 = params.get("state_2", {})
-            k1 = s1.get("keys", []) if isinstance(s1, dict) else getattr(s1, "keys", [])
-            k2 = s2.get("keys", []) if isinstance(s2, dict) else getattr(s2, "keys", [])
-            self.btn_s1.set_hotkey(" + ".join(k1) if k1 else "")
-            self.btn_s2.set_hotkey(" + ".join(k2) if k2 else "")
+            idx = self.combo_mode.findData(mode)
+            self.combo_mode.setCurrentIndex(idx if idx >= 0 else 0)
+            is_toggle = mode == "toggle"
+            self.lbl_arrow.setVisible(is_toggle)
+            self.btn_toggle_hotkey.setVisible(is_toggle)
+            self.btn_hotkey.set_hotkey(_format_keys_list(keys))
+            self.btn_toggle_hotkey.set_hotkey(_format_keys_list(toggle_keys))
         finally:
-            self.btn_s1.blockSignals(False)
-            self.btn_s2.blockSignals(False)
+            self.combo_mode.blockSignals(False)
+            self.btn_hotkey.blockSignals(False)
+            self.btn_toggle_hotkey.blockSignals(False)
 
     def retranslate_ui(self) -> None:
-        self.lbl_s1.setText(t("deck.editor.inspector.fields.state_1"))
-        self.lbl_s2.setText(t("deck.editor.inspector.fields.state_2"))
-        self.btn_s1.retranslate_ui()
-        self.btn_s2.retranslate_ui()
+        self.combo_mode.blockSignals(True)
+        try:
+            for i in range(self.combo_mode.count()):
+                key = self.combo_mode.itemData(i)
+                if key:
+                    self.combo_mode.setItemText(i, t(f"deck.editor.inspector.hotkey_modes.{key}"))
+        finally:
+            self.combo_mode.blockSignals(False)
+        self.btn_hotkey.retranslate_ui()
+        self.btn_toggle_hotkey.retranslate_ui()
 
 
-class PathUrlSubform(QWidget):
-    """Подформа 2: Поле ввода URL или пути к приложению/папке с кнопкой обзора 📂."""
+class LaunchSubform(QWidget):
+    """Подформа 1: Запуск приложения, файла/папки или веб-ссылки (28 px)."""
 
     params_changed = Signal(dict)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.setFixedHeight(INPUT_HEIGHT)
-        self._mode: str = "website"  # "website", "open_app", "open_path"
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(6)
 
-        self.edit_input = QLineEdit(self)
-        self.edit_input.setProperty("class", "InspectorLineEdit")
-        self.edit_input.setFixedHeight(INPUT_HEIGHT)
-        self.edit_input.textEdited.connect(self._on_text_edited)
-        self.edit_path = self.edit_input
+        self.combo_kind = QComboBox(self)
+        self.combo_kind.setFixedHeight(INPUT_HEIGHT)
+        self.combo_kind.setFixedWidth(120)
+        self.combo_kind.setCursor(Qt.PointingHandCursor)
+        self.combo_kind.setFocusPolicy(Qt.NoFocus)
+        for key in LAUNCH_KIND_KEYS:
+            self.combo_kind.addItem(t(f"deck.editor.inspector.launch_kinds.{key}"), key)
+        self.combo_kind.currentIndexChanged.connect(self._on_kind_changed)
+
+        self.edit_target = QLineEdit(self)
+        self.edit_target.setProperty("class", "InspectorLineEdit")
+        self.edit_target.setFixedHeight(INPUT_HEIGHT)
+        self.edit_target.textEdited.connect(self._emit_params)
+        self.edit_input = self.edit_target
+        self.edit_path = self.edit_target
 
         self.btn_browse = QPushButton(self)
         self.btn_browse.setProperty("class", "InspectorBrowseButton")
         self.btn_browse.setFixedSize(INPUT_HEIGHT, INPUT_HEIGHT)
         self.btn_browse.setCursor(Qt.PointingHandCursor)
+        self.btn_browse.setFocusPolicy(Qt.NoFocus)
         self.btn_browse.clicked.connect(self._on_browse_clicked)
 
-        layout.addWidget(self.edit_input, 1)
+        layout.addWidget(self.combo_kind)
+        layout.addWidget(self.edit_target, 1)
         layout.addWidget(self.btn_browse)
 
+        self._sync_kind_ui("app")
         self.retranslate_ui()
 
-    def get_path_or_url(self) -> str:
-        return self.edit_input.text()
-
-    def set_path_or_url(self, text: str) -> None:
-        self.edit_input.setText(text)
-        self._on_text_edited(text)
-
-    def set_mode(self, mode: str) -> None:
-        self._mode = mode
-        if mode == "website":
-            self.edit_input.setPlaceholderText("https://...")
+    def _sync_kind_ui(self, kind: str) -> None:
+        if kind == "url":
+            self.edit_target.setPlaceholderText("https://...")
             self.btn_browse.setVisible(False)
-        elif mode == "open_app":
-            self.edit_input.setPlaceholderText("C:\\Program Files\\...")
+        elif kind == "file":
+            self.edit_target.setPlaceholderText("C:\\Folder\\Document.pdf")
             self.btn_browse.setVisible(True)
-        else:  # open_path
-            self.edit_input.setPlaceholderText("C:\\Folder\\Document.pdf")
+        else:
+            self.edit_target.setPlaceholderText("C:\\Program Files\\...")
             self.btn_browse.setVisible(True)
 
-    def _on_text_edited(self, text: str) -> None:
-        if self._mode == "website":
-            self.params_changed.emit({"url": text})
-        elif self._mode == "open_app":
-            self.params_changed.emit({"executable": text, "args": []})
-        else:
-            self.params_changed.emit({"path": text})
+    def _on_kind_changed(self, _index: int) -> None:
+        kind = self.combo_kind.currentData() or "app"
+        self._sync_kind_ui(kind)
+        self._emit_params()
+
+    def _emit_params(self) -> None:
+        self.params_changed.emit(self.get_params())
 
     def _on_browse_clicked(self) -> None:
-        if self._mode == "open_app":
+        kind = self.combo_kind.currentData() or "app"
+        if kind == "app":
             file_path, _ = QFileDialog.getOpenFileName(
-                self,
+                self.window(),
                 t("deck.editor.inspector.fields.executable"),
                 os.path.expandvars("%ProgramFiles%"),
                 "Executable (*.exe *.bat *.cmd);;All Files (*.*)",
             )
-            if file_path:
-                self.edit_input.setText(file_path)
-                self._on_text_edited(file_path)
-        elif self._mode == "open_path":
+        else:
             file_path, _ = QFileDialog.getOpenFileName(
-                self,
+                self.window(),
                 t("deck.editor.inspector.fields.path"),
                 os.path.expanduser("~"),
                 "All Files (*.*)",
             )
-            if file_path:
-                self.edit_input.setText(file_path)
-                self._on_text_edited(file_path)
+        if file_path:
+            self.edit_target.setText(file_path)
+            self._emit_params()
+
+    def get_params(self) -> dict[str, Any]:
+        kind = self.combo_kind.currentData() or "app"
+        return {
+            "kind": kind,
+            "target": self.edit_target.text().strip(),
+        }
 
     def set_params(self, params: dict[str, Any]) -> None:
-        self.edit_input.blockSignals(True)
+        kind = str(params.get("kind") or "app")
+        target_val = str(
+            params.get("target")
+            or params.get("url")
+            or params.get("path")
+            or params.get("executable")
+            or ""
+        )
+        if kind not in LAUNCH_KIND_KEYS:
+            kind = "url" if target_val.startswith(("http://", "https://")) else "app"
+
+        self.combo_kind.blockSignals(True)
+        self.edit_target.blockSignals(True)
         try:
-            if self._mode == "website":
-                self.edit_input.setText(params.get("url", ""))
-            elif self._mode == "open_app":
-                target_val = params.get("executable") or params.get("path") or ""
-                self.edit_input.setText(target_val)
-            else:
-                self.edit_input.setText(params.get("path", ""))
+            idx = self.combo_kind.findData(kind)
+            self.combo_kind.setCurrentIndex(idx if idx >= 0 else 0)
+            self._sync_kind_ui(kind)
+            self.edit_target.setText(target_val)
         finally:
-            self.edit_input.blockSignals(False)
+            self.combo_kind.blockSignals(False)
+            self.edit_target.blockSignals(False)
 
     def retranslate_ui(self) -> None:
+        self.combo_kind.blockSignals(True)
+        try:
+            for i in range(self.combo_kind.count()):
+                key = self.combo_kind.itemData(i)
+                if key:
+                    self.combo_kind.setItemText(i, t(f"deck.editor.inspector.launch_kinds.{key}"))
+        finally:
+            self.combo_kind.blockSignals(False)
         self.btn_browse.setText(t("deck.editor.inspector.fields.browse"))
 
 
-class MultimediaSubform(QWidget):
-    """Подформа 3: Выбор мультимедийной команды Windows."""
+class AudioSubform(QWidget):
+    """
+    Подформа 2: Единая панель аудиоподсистемы (28 px).
+    Переключатель режима: 'Громкость / Mute' | 'Аудиоустройство'.
+    Список аудиоустройств передается через Dependency Injection (set_audio_devices).
+    """
+
+    params_changed = Signal(dict)
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self.setFixedHeight(INPUT_HEIGHT)
+        self._audio_devices: list[tuple[str, str]] = []
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+
+        self.combo_category = QComboBox(self)
+        self.combo_category.setFixedHeight(INPUT_HEIGHT)
+        self.combo_category.setFixedWidth(130)
+        self.combo_category.setCursor(Qt.PointingHandCursor)
+        self.combo_category.setFocusPolicy(Qt.NoFocus)
+        for key in AUDIO_CATEGORY_KEYS:
+            self.combo_category.addItem(t(f"deck.editor.inspector.audio_categories.{key}"), key)
+        self.combo_category.currentIndexChanged.connect(self._on_category_changed)
+
+        # Группа громкости / Mute
+        self.combo_target = QComboBox(self)
+        self.combo_target.setFixedHeight(INPUT_HEIGHT)
+        self.combo_target.setCursor(Qt.PointingHandCursor)
+        self.combo_target.setFocusPolicy(Qt.NoFocus)
+        for key in VOLUME_TARGET_KEYS:
+            loc_k = "microphone" if key == "mic" else key
+            self.combo_target.addItem(t(f"deck.editor.inspector.volume_targets.{loc_k}"), key)
+        self.combo_target.currentIndexChanged.connect(self._emit_params)
+
+        self.combo_action = QComboBox(self)
+        self.combo_action.setFixedHeight(INPUT_HEIGHT)
+        self.combo_action.setCursor(Qt.PointingHandCursor)
+        self.combo_action.setFocusPolicy(Qt.NoFocus)
+        for key in VOLUME_ACTION_KEYS:
+            self.combo_action.addItem(t(f"deck.editor.inspector.volume_actions.{key}"), key)
+        self.combo_action.currentIndexChanged.connect(self._emit_params)
+
+        # Группа переключения / выбора устройства
+        self.combo_dev_mode = QComboBox(self)
+        self.combo_dev_mode.setFixedHeight(INPUT_HEIGHT)
+        self.combo_dev_mode.setCursor(Qt.PointingHandCursor)
+        self.combo_dev_mode.setFocusPolicy(Qt.NoFocus)
+        for key in AUDIO_DEVICE_MODE_KEYS:
+            loc_k = "specific" if key == "set" else key
+            self.combo_dev_mode.addItem(t(f"deck.editor.inspector.audio_modes.{loc_k}"), key)
+        self.combo_dev_mode.currentIndexChanged.connect(self._on_dev_mode_changed)
+
+        self.combo_device = QComboBox(self)
+        self.combo_device.setFixedHeight(INPUT_HEIGHT)
+        self.combo_device.setCursor(Qt.PointingHandCursor)
+        self.combo_device.setFocusPolicy(Qt.NoFocus)
+        self.combo_device.currentIndexChanged.connect(self._emit_params)
+
+        layout.addWidget(self.combo_category)
+        layout.addWidget(self.combo_target, 1)
+        layout.addWidget(self.combo_action, 1)
+        layout.addWidget(self.combo_dev_mode, 1)
+        layout.addWidget(self.combo_device, 1)
+
+        self._sync_visibility()
+        self.retranslate_ui()
+
+    def set_audio_devices(self, devices: list[tuple[str, str]]) -> None:
+        """DI-метод передачи списка доступных устройств [(device_id, name)]."""
+        self._audio_devices = list(devices) if devices else []
+        current_id = self.combo_device.currentData()
+        self.combo_device.blockSignals(True)
+        try:
+            self.combo_device.clear()
+            if not self._audio_devices:
+                self.combo_device.addItem(t("deck.editor.inspector.fields.select_device"), "")
+            else:
+                for dev_id, dev_name in self._audio_devices:
+                    self.combo_device.addItem(dev_name, dev_id)
+                if current_id:
+                    idx = self.combo_device.findData(current_id)
+                    if idx >= 0:
+                        self.combo_device.setCurrentIndex(idx)
+        finally:
+            self.combo_device.blockSignals(False)
+
+    def _sync_visibility(self) -> None:
+        cat = self.combo_category.currentData() or "volume"
+        is_vol = cat == "volume"
+        self.combo_target.setVisible(is_vol)
+        self.combo_action.setVisible(is_vol)
+        self.combo_dev_mode.setVisible(not is_vol)
+        dev_mode = self.combo_dev_mode.currentData() or "toggle"
+        self.combo_device.setVisible((not is_vol) and (dev_mode == "set"))
+
+    def _on_category_changed(self, _index: int) -> None:
+        self._sync_visibility()
+        self._emit_params()
+
+    def _on_dev_mode_changed(self, _index: int) -> None:
+        self._sync_visibility()
+        self._emit_params()
+
+    def _emit_params(self) -> None:
+        self.params_changed.emit(self.get_params())
+
+    def get_params(self) -> dict[str, Any]:
+        cat = self.combo_category.currentData() or "volume"
+        if cat == "device":
+            mode = self.combo_dev_mode.currentData() or "toggle"
+            if mode == "set":
+                return {
+                    "target": "device",
+                    "command": "set_device",
+                    "mode": "set",
+                    "target_device_id": self.combo_device.currentData() or None,
+                }
+            return {
+                "target": "device",
+                "command": "toggle_device",
+                "mode": "toggle",
+                "devices": ["Наушники", "Динамики"],
+            }
+        target = self.combo_target.currentData() or "master"
+        cmd = self.combo_action.currentData() or "toggle_mute"
+        return {
+            "target": target,
+            "command": cmd,
+            "step_percent": 5,
+        }
+
+    def set_params(self, params: dict[str, Any]) -> None:
+        raw_target = str(params.get("target") or "master")
+        if raw_target == "microphone":
+            raw_target = "mic"
+        raw_cmd = str(params.get("command") or "toggle_mute")
+        if raw_cmd == "step":
+            step = int(params.get("step_percent", 5))
+            raw_cmd = "volume_up" if step >= 0 else "volume_down"
+
+        is_device = raw_target == "device" or raw_cmd in ("toggle_device", "set_device")
+        cat = "device" if is_device else "volume"
+
+        self.combo_category.blockSignals(True)
+        self.combo_target.blockSignals(True)
+        self.combo_action.blockSignals(True)
+        self.combo_dev_mode.blockSignals(True)
+        self.combo_device.blockSignals(True)
+        try:
+            cat_idx = self.combo_category.findData(cat)
+            self.combo_category.setCurrentIndex(cat_idx if cat_idx >= 0 else 0)
+
+            if is_device:
+                dev_mode = "set" if (params.get("mode") == "set" or raw_cmd == "set_device") else "toggle"
+                m_idx = self.combo_dev_mode.findData(dev_mode)
+                self.combo_dev_mode.setCurrentIndex(m_idx if m_idx >= 0 else 0)
+                dev_id = params.get("target_device_id")
+                if dev_id:
+                    d_idx = self.combo_device.findData(dev_id)
+                    if d_idx >= 0:
+                        self.combo_device.setCurrentIndex(d_idx)
+                    else:
+                        self.combo_device.addItem(str(dev_id), dev_id)
+                        self.combo_device.setCurrentIndex(self.combo_device.count() - 1)
+            else:
+                t_idx = self.combo_target.findData(raw_target)
+                self.combo_target.setCurrentIndex(t_idx if t_idx >= 0 else 1)
+                a_idx = self.combo_action.findData(raw_cmd)
+                self.combo_action.setCurrentIndex(a_idx if a_idx >= 0 else 0)
+
+            self._sync_visibility()
+        finally:
+            self.combo_category.blockSignals(False)
+            self.combo_target.blockSignals(False)
+            self.combo_action.blockSignals(False)
+            self.combo_dev_mode.blockSignals(False)
+            self.combo_device.blockSignals(False)
+
+    def retranslate_ui(self) -> None:
+        self.combo_category.blockSignals(True)
+        self.combo_target.blockSignals(True)
+        self.combo_action.blockSignals(True)
+        self.combo_dev_mode.blockSignals(True)
+        try:
+            for i in range(self.combo_category.count()):
+                k = self.combo_category.itemData(i)
+                if k:
+                    self.combo_category.setItemText(i, t(f"deck.editor.inspector.audio_categories.{k}"))
+            for i in range(self.combo_target.count()):
+                k = self.combo_target.itemData(i)
+                if k:
+                    loc_k = "microphone" if k == "mic" else k
+                    self.combo_target.setItemText(i, t(f"deck.editor.inspector.volume_targets.{loc_k}"))
+            for i in range(self.combo_action.count()):
+                k = self.combo_action.itemData(i)
+                if k:
+                    self.combo_action.setItemText(i, t(f"deck.editor.inspector.volume_actions.{k}"))
+            for i in range(self.combo_dev_mode.count()):
+                k = self.combo_dev_mode.itemData(i)
+                if k:
+                    loc_k = "specific" if k == "set" else k
+                    self.combo_dev_mode.setItemText(i, t(f"deck.editor.inspector.audio_modes.{loc_k}"))
+        finally:
+            self.combo_category.blockSignals(False)
+            self.combo_target.blockSignals(False)
+            self.combo_action.blockSignals(False)
+            self.combo_dev_mode.blockSignals(False)
+
+
+class MediaSubform(QWidget):
+    """Подформа 3: Выбор мультимедийной команды Windows (28 px)."""
 
     params_changed = Signal(dict)
 
@@ -412,6 +706,7 @@ class MultimediaSubform(QWidget):
         self.combo_cmd = QComboBox(self)
         self.combo_cmd.setFixedHeight(INPUT_HEIGHT)
         self.combo_cmd.setCursor(Qt.PointingHandCursor)
+        self.combo_cmd.setFocusPolicy(Qt.NoFocus)
         for key in MEDIA_COMMAND_KEYS:
             self.combo_cmd.addItem(t(f"deck.editor.inspector.media_commands.{key}"), key)
         self.combo_cmd.currentIndexChanged.connect(self._on_cmd_changed)
@@ -423,14 +718,16 @@ class MultimediaSubform(QWidget):
         cmd_key = self.combo_cmd.itemData(index) or MEDIA_COMMAND_KEYS[0]
         self.params_changed.emit({"command": cmd_key})
 
+    def get_params(self) -> dict[str, Any]:
+        return {"command": self.combo_cmd.currentData() or MEDIA_COMMAND_KEYS[0]}
+
     def set_params(self, params: dict[str, Any]) -> None:
         cmd = params.get("command", MEDIA_COMMAND_KEYS[0])
         self.combo_cmd.blockSignals(True)
         try:
-            for i in range(self.combo_cmd.count()):
-                if self.combo_cmd.itemData(i) == cmd:
-                    self.combo_cmd.setCurrentIndex(i)
-                    break
+            idx = self.combo_cmd.findData(cmd)
+            if idx >= 0:
+                self.combo_cmd.setCurrentIndex(idx)
         finally:
             self.combo_cmd.blockSignals(False)
 
@@ -445,8 +742,8 @@ class MultimediaSubform(QWidget):
             self.combo_cmd.blockSignals(False)
 
 
-class TextMacroSubform(QWidget):
-    """Подформа 4: Поле ввода текстового шаблона + чекбокс Enter."""
+class TextSubform(QWidget):
+    """Подформа 4: Поле ввода текстового шаблона + чекбокс Enter (28 px)."""
 
     params_changed = Signal(dict)
 
@@ -465,6 +762,7 @@ class TextMacroSubform(QWidget):
 
         self.chk_enter = QCheckBox(self)
         self.chk_enter.setCursor(Qt.PointingHandCursor)
+        self.chk_enter.setFocusPolicy(Qt.NoFocus)
         self.chk_enter.stateChanged.connect(self._emit_params)
 
         layout.addWidget(self.edit_text, 1)
@@ -473,16 +771,19 @@ class TextMacroSubform(QWidget):
         self.retranslate_ui()
 
     def _emit_params(self) -> None:
-        self.params_changed.emit({
+        self.params_changed.emit(self.get_params())
+
+    def get_params(self) -> dict[str, Any]:
+        return {
             "text": self.edit_text.text(),
             "send_enter": self.chk_enter.isChecked(),
-        })
+        }
 
     def set_params(self, params: dict[str, Any]) -> None:
         self.edit_text.blockSignals(True)
         self.chk_enter.blockSignals(True)
         try:
-            self.edit_text.setText(params.get("text", ""))
+            self.edit_text.setText(str(params.get("text", "")))
             self.chk_enter.setChecked(bool(params.get("send_enter", False)))
         finally:
             self.edit_text.blockSignals(False)
@@ -492,265 +793,8 @@ class TextMacroSubform(QWidget):
         self.chk_enter.setText(t("deck.editor.inspector.fields.send_enter"))
 
 
-class VolumeSubform(QWidget):
-    """Подформа 5: Управление громкостью (Цель + Действие)."""
-
-    params_changed = Signal(dict)
-
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
-        super().__init__(parent)
-        self.setFixedHeight(INPUT_HEIGHT)
-
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(8)
-
-        self.combo_target = QComboBox(self)
-        self.combo_target.setFixedHeight(INPUT_HEIGHT)
-        self.combo_target.setCursor(Qt.PointingHandCursor)
-        for key in VOLUME_TARGET_KEYS:
-            self.combo_target.addItem(t(f"deck.editor.inspector.volume_targets.{key}"), key)
-        self.combo_target.currentIndexChanged.connect(self._emit_params)
-
-        self.combo_action = QComboBox(self)
-        self.combo_action.setFixedHeight(INPUT_HEIGHT)
-        self.combo_action.setCursor(Qt.PointingHandCursor)
-        for key in VOLUME_ACTION_KEYS:
-            self.combo_action.addItem(t(f"deck.editor.inspector.volume_actions.{key}"), key)
-        self.combo_action.currentIndexChanged.connect(self._emit_params)
-
-        layout.addWidget(self.combo_target, 1)
-        layout.addWidget(self.combo_action, 1)
-
-        self.retranslate_ui()
-
-    def _emit_params(self) -> None:
-        t_key = self.combo_target.itemData(self.combo_target.currentIndex()) or VOLUME_TARGET_KEYS[0]
-        a_key = self.combo_action.itemData(self.combo_action.currentIndex()) or VOLUME_ACTION_KEYS[0]
-        self.params_changed.emit({
-            "target": t_key,
-            "command": a_key,
-            "step_percent": 5,
-        })
-
-    def set_params(self, params: dict[str, Any]) -> None:
-        t_key = params.get("target", VOLUME_TARGET_KEYS[0])
-        a_key = params.get("command", VOLUME_ACTION_KEYS[0])
-        self.combo_target.blockSignals(True)
-        self.combo_action.blockSignals(True)
-        try:
-            for i in range(self.combo_target.count()):
-                if self.combo_target.itemData(i) == t_key:
-                    self.combo_target.setCurrentIndex(i)
-                    break
-            for i in range(self.combo_action.count()):
-                if self.combo_action.itemData(i) == a_key:
-                    self.combo_action.setCurrentIndex(i)
-                    break
-        finally:
-            self.combo_target.blockSignals(False)
-            self.combo_action.blockSignals(False)
-
-    def get_params(self) -> dict[str, Any]:
-        return {
-            "target": self.combo_target.currentData() or VOLUME_TARGET_KEYS[0],
-            "command": self.combo_action.currentData() or VOLUME_ACTION_KEYS[0],
-            "step_percent": 5,
-        }
-
-    def retranslate_ui(self) -> None:
-        self.combo_target.blockSignals(True)
-        self.combo_action.blockSignals(True)
-        try:
-            for i in range(self.combo_target.count()):
-                k = self.combo_target.itemData(i)
-                if k:
-                    self.combo_target.setItemText(i, t(f"deck.editor.inspector.volume_targets.{k}"))
-            for i in range(self.combo_action.count()):
-                k = self.combo_action.itemData(i)
-                if k:
-                    self.combo_action.setItemText(i, t(f"deck.editor.inspector.volume_actions.{k}"))
-        finally:
-            self.combo_target.blockSignals(False)
-            self.combo_action.blockSignals(False)
-
-
-class NoParamsSubform(QWidget):
-    """Подформа 6: Информационная плашка для действий без параметров (28 px)."""
-
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
-        super().__init__(parent)
-        self.setFixedHeight(INPUT_HEIGHT)
-
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(6)
-
-        self.banner = QFrame(self)
-        self.banner.setObjectName("inspectorNoParamsBanner")
-        self.banner.setProperty("class", "InspectorNoParamsBanner")
-
-        banner_layout = QHBoxLayout(self.banner)
-        banner_layout.setContentsMargins(8, 2, 8, 2)
-        banner_layout.setSpacing(6)
-
-        self.lbl_icon = QLabel("ℹ️", self.banner)
-        self.lbl_icon.setAlignment(Qt.AlignCenter)
-        banner_layout.addWidget(self.lbl_icon)
-
-        self.lbl_hint = QLabel(self.banner)
-        self.lbl_hint.setObjectName("lblInspectorNoParamsHint")
-        self.lbl_hint.setProperty("class", "InspectorFieldHint")
-        banner_layout.addWidget(self.lbl_hint, 1)
-
-        layout.addWidget(self.banner)
-        self.retranslate_ui()
-
-    @property
-    def lbl_banner(self) -> QLabel:
-        return self.lbl_hint
-
-    def set_params(self, params: dict[str, Any]) -> None:
-        pass
-
-    def retranslate_ui(self) -> None:
-        self.lbl_hint.setText(t("deck.editor.inspector.hints.no_params_required"))
-
-
-class AudioDeviceSubform(QWidget):
-    """Подформа 7: Выбор аудиоустройства / переключение (28 px)."""
-
-    params_changed = Signal(dict)
-
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
-        super().__init__(parent)
-        self.setFixedHeight(INPUT_HEIGHT)
-
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(6)
-
-        self.combo_mode = QComboBox(self)
-        self.combo_mode.setFixedHeight(INPUT_HEIGHT)
-        self.combo_mode.setCursor(Qt.PointingHandCursor)
-        for key in AUDIO_MODE_KEYS:
-            self.combo_mode.addItem(t(f"deck.editor.inspector.audio_modes.{key}"), key)
-        self.combo_mode.currentIndexChanged.connect(self._on_mode_changed)
-
-        layout.addWidget(self.combo_mode, 1)
-        self.retranslate_ui()
-
-    def _on_mode_changed(self, index: int) -> None:
-        mode_key = self.combo_mode.itemData(index) or AUDIO_MODE_KEYS[0]
-        params: dict[str, Any] = {
-            "target": "device",
-            "command": "toggle_device",
-            "mode": mode_key,
-        }
-        if mode_key == "toggle":
-            params["devices"] = ["Наушники", "Динамики"]
-        self.params_changed.emit(params)
-
-    def set_params(self, params: dict[str, Any]) -> None:
-        mode = params.get("mode", AUDIO_MODE_KEYS[0])
-        self.combo_mode.blockSignals(True)
-        try:
-            for i in range(self.combo_mode.count()):
-                if self.combo_mode.itemData(i) == mode:
-                    self.combo_mode.setCurrentIndex(i)
-                    break
-        finally:
-            self.combo_mode.blockSignals(False)
-
-    def get_params(self) -> dict[str, Any]:
-        mode = self.combo_mode.currentData() or AUDIO_MODE_KEYS[0]
-        params: dict[str, Any] = {"mode": mode}
-        if mode == "toggle":
-            params["devices"] = ["Наушники", "Динамики"]
-        return params
-
-    def retranslate_ui(self) -> None:
-        self.combo_mode.blockSignals(True)
-        try:
-            for i in range(self.combo_mode.count()):
-                key = self.combo_mode.itemData(i)
-                if key:
-                    self.combo_mode.setItemText(i, t(f"deck.editor.inspector.audio_modes.{key}"))
-        finally:
-            self.combo_mode.blockSignals(False)
-
-
-class ScreenshotSubform(QWidget):
-    """Подформа 8: Захват скриншота (область + буфер обмена, 28 px)."""
-
-    params_changed = Signal(dict)
-
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
-        super().__init__(parent)
-        self.setFixedHeight(INPUT_HEIGHT)
-
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(8)
-
-        self.combo_target = QComboBox(self)
-        self.combo_target.setFixedHeight(INPUT_HEIGHT)
-        self.combo_target.setCursor(Qt.PointingHandCursor)
-        for key in SCREENSHOT_TARGET_KEYS:
-            self.combo_target.addItem(t(f"deck.editor.inspector.screenshot_targets.{key}"), key)
-        self.combo_target.currentIndexChanged.connect(self._emit_params)
-
-        self.chk_clipboard = QCheckBox(self)
-        self.chk_clipboard.setCursor(Qt.PointingHandCursor)
-        self.chk_clipboard.setChecked(True)
-        self.chk_clipboard.stateChanged.connect(self._emit_params)
-
-        layout.addWidget(self.combo_target, 1)
-        layout.addWidget(self.chk_clipboard)
-        self.retranslate_ui()
-
-    def _emit_params(self) -> None:
-        target = self.combo_target.itemData(self.combo_target.currentIndex()) or SCREENSHOT_TARGET_KEYS[0]
-        self.params_changed.emit({
-            "target": target,
-            "clipboard": self.chk_clipboard.isChecked(),
-        })
-
-    def set_params(self, params: dict[str, Any]) -> None:
-        target = params.get("target", SCREENSHOT_TARGET_KEYS[0])
-        clipboard = bool(params.get("clipboard", True))
-        self.combo_target.blockSignals(True)
-        self.chk_clipboard.blockSignals(True)
-        try:
-            for i in range(self.combo_target.count()):
-                if self.combo_target.itemData(i) == target:
-                    self.combo_target.setCurrentIndex(i)
-                    break
-            self.chk_clipboard.setChecked(clipboard)
-        finally:
-            self.combo_target.blockSignals(False)
-            self.chk_clipboard.blockSignals(False)
-
-    def get_params(self) -> dict[str, Any]:
-        return {
-            "target": self.combo_target.currentData() or SCREENSHOT_TARGET_KEYS[0],
-            "clipboard": self.chk_clipboard.isChecked(),
-        }
-
-    def retranslate_ui(self) -> None:
-        self.combo_target.blockSignals(True)
-        try:
-            for i in range(self.combo_target.count()):
-                key = self.combo_target.itemData(i)
-                if key:
-                    self.combo_target.setItemText(i, t(f"deck.editor.inspector.screenshot_targets.{key}"))
-        finally:
-            self.combo_target.blockSignals(False)
-        self.chk_clipboard.setText(t("deck.editor.inspector.fields.copy_to_clipboard"))
-
-
 class SystemSubform(QWidget):
-    """Подформа 9: Выбор системной команды (28 px)."""
+    """Подформа 5: Все 5 системных команд + опции скриншота при command='screenshot' (28 px)."""
 
     params_changed = Signal(dict)
 
@@ -765,165 +809,109 @@ class SystemSubform(QWidget):
         self.combo_cmd = QComboBox(self)
         self.combo_cmd.setFixedHeight(INPUT_HEIGHT)
         self.combo_cmd.setCursor(Qt.PointingHandCursor)
+        self.combo_cmd.setFocusPolicy(Qt.NoFocus)
         for key in SYSTEM_COMMAND_KEYS:
             self.combo_cmd.addItem(t(f"deck.editor.inspector.system_commands.{key}"), key)
         self.combo_cmd.currentIndexChanged.connect(self._on_cmd_changed)
 
+        self.combo_screenshot_target = QComboBox(self)
+        self.combo_screenshot_target.setFixedHeight(INPUT_HEIGHT)
+        self.combo_screenshot_target.setCursor(Qt.PointingHandCursor)
+        self.combo_screenshot_target.setFocusPolicy(Qt.NoFocus)
+        for key in SCREENSHOT_TARGET_KEYS:
+            loc_k = "primary_screen" if key == "primary" else key
+            self.combo_screenshot_target.addItem(t(f"deck.editor.inspector.screenshot_targets.{loc_k}"), key)
+        self.combo_screenshot_target.currentIndexChanged.connect(self._emit_params)
+
+        self.chk_clipboard = QCheckBox(self)
+        self.chk_clipboard.setCursor(Qt.PointingHandCursor)
+        self.chk_clipboard.setFocusPolicy(Qt.NoFocus)
+        self.chk_clipboard.setChecked(True)
+        self.chk_clipboard.stateChanged.connect(self._emit_params)
+
         layout.addWidget(self.combo_cmd, 1)
+        layout.addWidget(self.combo_screenshot_target, 1)
+        layout.addWidget(self.chk_clipboard)
+
+        self._sync_screenshot_visibility("toggle_dimmer")
         self.retranslate_ui()
+
+    def _sync_screenshot_visibility(self, cmd: str) -> None:
+        is_shot = cmd == "screenshot"
+        self.combo_screenshot_target.setVisible(is_shot)
+        self.chk_clipboard.setVisible(is_shot)
 
     def _on_cmd_changed(self, index: int) -> None:
         cmd_key = self.combo_cmd.itemData(index) or SYSTEM_COMMAND_KEYS[0]
-        self.params_changed.emit({"command": cmd_key})
+        self._sync_screenshot_visibility(cmd_key)
+        self._emit_params()
 
-    def set_params(self, params: dict[str, Any]) -> None:
-        cmd = params.get("command", SYSTEM_COMMAND_KEYS[0])
-        self.combo_cmd.blockSignals(True)
-        try:
-            for i in range(self.combo_cmd.count()):
-                if self.combo_cmd.itemData(i) == cmd:
-                    self.combo_cmd.setCurrentIndex(i)
-                    break
-        finally:
-            self.combo_cmd.blockSignals(False)
+    def _emit_params(self) -> None:
+        self.params_changed.emit(self.get_params())
 
     def get_params(self) -> dict[str, Any]:
-        return {
-            "command": self.combo_cmd.currentData() or SYSTEM_COMMAND_KEYS[0],
+        cmd = self.combo_cmd.currentData() or SYSTEM_COMMAND_KEYS[0]
+        if cmd == "screenshot":
+            return {
+                "command": "screenshot",
+                "screenshot_target": self.combo_screenshot_target.currentData() or "primary",
+                "clipboard": self.chk_clipboard.isChecked(),
+            }
+        return {"command": cmd}
+
+    def set_params(self, params: dict[str, Any]) -> None:
+        cmd = str(params.get("command") or SYSTEM_COMMAND_KEYS[0])
+        cmd_aliases = {
+            "dimmer": "toggle_dimmer",
+            "lock_pc": "lock_workstation",
         }
+        cmd = cmd_aliases.get(cmd, cmd)
+        if cmd not in SYSTEM_COMMAND_KEYS:
+            cmd = SYSTEM_COMMAND_KEYS[0]
+
+        shot_target = str(params.get("screenshot_target") or params.get("target") or "primary")
+        if shot_target == "primary_screen":
+            shot_target = "primary"
+        if shot_target not in SCREENSHOT_TARGET_KEYS:
+            shot_target = "primary"
+        clipboard = bool(params.get("clipboard", True))
+
+        self.combo_cmd.blockSignals(True)
+        self.combo_screenshot_target.blockSignals(True)
+        self.chk_clipboard.blockSignals(True)
+        try:
+            c_idx = self.combo_cmd.findData(cmd)
+            self.combo_cmd.setCurrentIndex(c_idx if c_idx >= 0 else 0)
+            s_idx = self.combo_screenshot_target.findData(shot_target)
+            self.combo_screenshot_target.setCurrentIndex(s_idx if s_idx >= 0 else 0)
+            self.chk_clipboard.setChecked(clipboard)
+            self._sync_screenshot_visibility(cmd)
+        finally:
+            self.combo_cmd.blockSignals(False)
+            self.combo_screenshot_target.blockSignals(False)
+            self.chk_clipboard.blockSignals(False)
 
     def retranslate_ui(self) -> None:
         self.combo_cmd.blockSignals(True)
+        self.combo_screenshot_target.blockSignals(True)
         try:
             for i in range(self.combo_cmd.count()):
                 key = self.combo_cmd.itemData(i)
                 if key:
                     self.combo_cmd.setItemText(i, t(f"deck.editor.inspector.system_commands.{key}"))
+            for i in range(self.combo_screenshot_target.count()):
+                key = self.combo_screenshot_target.itemData(i)
+                if key:
+                    loc_k = "primary_screen" if key == "primary" else key
+                    self.combo_screenshot_target.setItemText(i, t(f"deck.editor.inspector.screenshot_targets.{loc_k}"))
         finally:
             self.combo_cmd.blockSignals(False)
-
-
-class SoundboardSubform(QWidget):
-    """Подформа 10: Воспроизведение звука саундборда (файл + предпрослушка + громкость, 28 px)."""
-
-    params_changed = Signal(dict)
-
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
-        super().__init__(parent)
-        self.setFixedHeight(INPUT_HEIGHT)
-        self._is_previewing: bool = False
-
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(6)
-
-        self.edit_sound_path = QLineEdit(self)
-        self.edit_sound_path.setFixedHeight(INPUT_HEIGHT)
-        self.edit_sound_path.setPlaceholderText("*.wav, *.mp3, *.ogg")
-        self.edit_sound_path.textEdited.connect(self._emit_params)
-
-        self.btn_browse = QPushButton("📁", self)
-        self.btn_browse.setFixedSize(INPUT_HEIGHT, INPUT_HEIGHT)
-        self.btn_browse.setCursor(Qt.PointingHandCursor)
-        self.btn_browse.clicked.connect(self._on_browse_clicked)
-
-        self.btn_preview = QPushButton("▶", self)
-        self.btn_preview.setProperty("class", "InspectorTestButton")
-        self.btn_preview.setFixedSize(INPUT_HEIGHT, INPUT_HEIGHT)
-        self.btn_preview.setCursor(Qt.PointingHandCursor)
-        self.btn_preview.clicked.connect(self._on_preview_clicked)
-
-        self.slider_vol = QSlider(Qt.Horizontal, self)
-        self.slider_vol.setFixedHeight(INPUT_HEIGHT)
-        self.slider_vol.setFixedWidth(75)
-        self.slider_vol.setRange(0, 100)
-        self.slider_vol.setValue(100)
-        self.slider_vol.valueChanged.connect(self._on_vol_changed)
-
-        self.lbl_vol_val = QLabel("100%", self)
-        self.lbl_vol_val.setFixedWidth(36)
-        self.lbl_vol_val.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        self.lbl_vol_val.setStyleSheet("color: #94a3b8; font-size: 11px;")
-
-        layout.addWidget(self.edit_sound_path, 1)
-        layout.addWidget(self.btn_browse)
-        layout.addWidget(self.btn_preview)
-        layout.addWidget(self.slider_vol)
-        layout.addWidget(self.lbl_vol_val)
-
-        self.retranslate_ui()
-
-    def _on_browse_clicked(self) -> None:
-        file_path, _ = QFileDialog.getOpenFileName(
-            self.window(),
-            t("deck.editor.inspector.fields.sound_file"),
-            "",
-            "Audio Files (*.wav *.mp3 *.ogg);;All Files (*.*)",
-        )
-        if file_path:
-            self.edit_sound_path.setText(file_path)
-            self._emit_params()
-
-    def _on_preview_clicked(self) -> None:
-        from modules.deck.sound_engine import DeckSoundEngine
-        eng = DeckSoundEngine()
-        if self._is_previewing:
-            eng.stop_preview()
-            self._is_previewing = False
-            self.btn_preview.setText("▶")
-        else:
-            path = self.edit_sound_path.text().strip()
-            if path:
-                vol = self.slider_vol.value() / 100.0
-                if eng.preview_sound(path, vol):
-                    self._is_previewing = True
-                    self.btn_preview.setText("⏹")
-                else:
-                    self._is_previewing = False
-                    self.btn_preview.setText("▶")
-
-    def _on_vol_changed(self, val: int) -> None:
-        self.lbl_vol_val.setText(f"{val}%")
-        self._emit_params()
-
-    def _emit_params(self) -> None:
-        path = self.edit_sound_path.text().strip()
-        vol = self.slider_vol.value() / 100.0
-        self.params_changed.emit({
-            "file_path": path,
-            "volume": vol,
-            "stop_others": False,
-        })
-
-    def set_params(self, params: dict[str, Any]) -> None:
-        path = params.get("file_path", "") or params.get("sound_path", "")
-        vol = float(params.get("volume", 1.0))
-        vol_pct = max(0, min(100, int(vol * 100)))
-
-        self.edit_sound_path.blockSignals(True)
-        self.slider_vol.blockSignals(True)
-        try:
-            self.edit_sound_path.setText(str(path))
-            self.slider_vol.setValue(vol_pct)
-            self.lbl_vol_val.setText(f"{vol_pct}%")
-        finally:
-            self.edit_sound_path.blockSignals(False)
-            self.slider_vol.blockSignals(False)
-
-    def get_params(self) -> dict[str, Any]:
-        return {
-            "file_path": self.edit_sound_path.text().strip(),
-            "volume": self.slider_vol.value() / 100.0,
-            "stop_others": False,
-        }
-
-    def retranslate_ui(self) -> None:
-        self.btn_preview.setToolTip(t("deck.editor.inspector.tooltips.preview_sound"))
-        self.btn_browse.setToolTip(t("deck.editor.inspector.fields.browse"))
+            self.combo_screenshot_target.blockSignals(False)
+        self.chk_clipboard.setText(t("deck.editor.inspector.fields.copy_to_clipboard"))
 
 
 class DeckNavSubform(QWidget):
-    """Подформа навигации DuckDeck (next_page, prev_page, goto_page, folder_open, folder_back)."""
+    """Подформа 6: Навигация DuckDeck (28 px)."""
 
     params_changed = Signal(dict)
 
@@ -945,19 +933,23 @@ class DeckNavSubform(QWidget):
             ("next_page", "deck.editor.inspector.nav_commands.next_page"),
             ("prev_page", "deck.editor.inspector.nav_commands.prev_page"),
             ("goto_page", "deck.editor.inspector.nav_commands.goto_page"),
-            ("folder_open", "deck.editor.inspector.nav_commands.folder_open"),
             ("folder_back", "deck.editor.inspector.nav_commands.folder_back"),
+            ("switch_profile", "deck.editor.inspector.nav_commands.switch_profile"),
         ]
 
-        for cmd, loc_key in self.NAV_COMMANDS:
+        model = self.combo_target.model()
+        for idx, (cmd, loc_key) in enumerate(self.NAV_COMMANDS):
             self.combo_target.addItem(t(loc_key), cmd)
+            if cmd == "switch_profile" and hasattr(model, "item"):
+                item = model.item(idx)
+                if item is not None:
+                    item.setEnabled(False)
 
         self.combo_target.currentIndexChanged.connect(self._on_cmd_changed)
 
         self.edit_page = QLineEdit(self)
         self.edit_page.setProperty("class", "InspectorLineEdit")
         self.edit_page.setFixedHeight(INPUT_HEIGHT)
-        self.edit_page.setFocusPolicy(Qt.NoFocus)
         self.edit_page.setPlaceholderText(t("deck.editor.inspector.fields.page_id"))
         self.edit_page.textEdited.connect(self._emit_params)
         self.edit_page.setVisible(False)
@@ -971,22 +963,17 @@ class DeckNavSubform(QWidget):
         self._emit_params()
 
     def _emit_params(self) -> None:
-        cmd = self.combo_target.itemData(self.combo_target.currentIndex()) or "next_page"
-        data: dict[str, Any] = {"target": cmd}
-        if cmd == "goto_page":
-            data["page_id"] = self.edit_page.text().strip()
-        self.params_changed.emit(data)
+        self.params_changed.emit(self.get_params())
 
     def set_params(self, params: dict[str, Any]) -> None:
         target = params.get("target", "next_page")
-        page_id = params.get("page_id", "")
+        page_id = params.get("page_id") or ""
         self.combo_target.blockSignals(True)
         self.edit_page.blockSignals(True)
         try:
-            for i in range(self.combo_target.count()):
-                if self.combo_target.itemData(i) == target:
-                    self.combo_target.setCurrentIndex(i)
-                    break
+            idx = self.combo_target.findData(target)
+            if idx >= 0:
+                self.combo_target.setCurrentIndex(idx)
             self.edit_page.setText(str(page_id))
             self.edit_page.setVisible(target == "goto_page")
         finally:
@@ -994,7 +981,7 @@ class DeckNavSubform(QWidget):
             self.edit_page.blockSignals(False)
 
     def get_params(self) -> dict[str, Any]:
-        cmd = self.combo_target.itemData(self.combo_target.currentIndex()) or "next_page"
+        cmd = self.combo_target.currentData() or "next_page"
         res: dict[str, Any] = {"target": cmd}
         if cmd == "goto_page":
             res["page_id"] = self.edit_page.text().strip()
@@ -1003,17 +990,53 @@ class DeckNavSubform(QWidget):
     def retranslate_ui(self) -> None:
         self.combo_target.blockSignals(True)
         try:
-            for i, (cmd, loc_key) in enumerate(self.NAV_COMMANDS):
+            for i, (_cmd, loc_key) in enumerate(self.NAV_COMMANDS):
                 self.combo_target.setItemText(i, t(loc_key))
         finally:
             self.combo_target.blockSignals(False)
         self.edit_page.setPlaceholderText(t("deck.editor.inspector.fields.page_id"))
 
 
-class UnconfiguredSubform(QWidget):
-    """Подформа нейтрального состояния неконфигурированного слота (Unconfigured State)."""
+class MacroSubform(QWidget):
+    """Подформа 7: Заготовка-заглушка будущего редактора макро-цепочек (28 px)."""
 
-    pick_preset_requested = Signal()
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self.setFixedHeight(INPUT_HEIGHT)
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+
+        self.banner = QFrame(self)
+        self.banner.setObjectName("inspectorNoParamsBanner")
+        self.banner.setProperty("class", "InspectorNoParamsBanner")
+
+        banner_layout = QHBoxLayout(self.banner)
+        banner_layout.setContentsMargins(8, 2, 8, 2)
+        banner_layout.setSpacing(6)
+
+        self.lbl_icon = QLabel("🔀", self.banner)
+        self.lbl_icon.setAlignment(Qt.AlignCenter)
+        banner_layout.addWidget(self.lbl_icon)
+
+        self.lbl_hint = QLabel(self.banner)
+        self.lbl_hint.setObjectName("lblInspectorNoParamsHint")
+        self.lbl_hint.setProperty("class", "InspectorFieldHint")
+        banner_layout.addWidget(self.lbl_hint, 1)
+
+        layout.addWidget(self.banner)
+        self.retranslate_ui()
+
+    def set_params(self, _params: dict[str, Any]) -> None:
+        pass
+
+    def retranslate_ui(self) -> None:
+        self.lbl_hint.setText(t("deck.editor.inspector.hints.macro_wip"))
+
+
+class UnconfiguredSubform(QWidget):
+    """Подформа 8: Нейтральное состояние неконфигурированного слота (28 px)."""
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
@@ -1030,39 +1053,29 @@ class UnconfiguredSubform(QWidget):
         self.lbl_hint.setText(t("deck.editor.inspector.unconfigured_hint"))
         self.lbl_hint.setFocusPolicy(Qt.NoFocus)
 
-        self.btn_pick_preset = QPushButton(self)
-        self.btn_pick_preset.setObjectName("btnUnconfiguredPresets")
-        self.btn_pick_preset.setProperty("class", "UnconfiguredPresetButton")
-        self.btn_pick_preset.setFixedHeight(INPUT_HEIGHT)
-        self.btn_pick_preset.setCursor(Qt.PointingHandCursor)
-        self.btn_pick_preset.setFocusPolicy(Qt.NoFocus)
-        self.btn_pick_preset.setText("⚡ " + t("deck.editor.inspector.pick_preset"))
-        self.btn_pick_preset.clicked.connect(self.pick_preset_requested.emit)
-
         layout.addWidget(self.lbl_hint, 1)
-        layout.addWidget(self.btn_pick_preset)
 
     def retranslate_ui(self) -> None:
         self.lbl_hint.setText(t("deck.editor.inspector.unconfigured_hint"))
-        self.btn_pick_preset.setText("⚡ " + t("deck.editor.inspector.pick_preset"))
 
 
-# Shims для обратной совместимости и семантических имен
-LaunchSubform = PathUrlSubform
-AudioSubform = VolumeSubform
-MacroSubform = NoParamsSubform
+# Семантические псевдонимы
+PathUrlSubform = LaunchSubform
+MultimediaSubform = MediaSubform
+TextMacroSubform = TextSubform
+NoParamsSubform = MacroSubform
 
 
 class ButtonPropertyForm(QWidget):
     """
     Форма редактирования свойств кнопки сетки DuckDeck (0..9).
-    Размещается на Index 1 стэка инспектора свойств (KeyPropertyInspector).
-    Строго соблюдает бюджет высоты 220 px и инвариант In-place Retranslate.
+    Содержит 8 чистых подформ под 8 базовых примитивов + UnconfiguredSubform (index 8).
     """
 
     property_changed = Signal(str, object)
     delete_requested = Signal()
     test_action_requested = Signal(int)
+    save_to_library_requested = Signal()
     font_settings_requested = Signal()
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
@@ -1078,16 +1091,13 @@ class ButtonPropertyForm(QWidget):
         self._current_hide_title: bool = False
         self._font_popover: Optional[Any] = None
         self._sound_override_path: Optional[str] = None
-        self._current_audio_params: dict[str, Any] = {}
+        self._is_unconfigured: bool = False
 
-        # Главный вертикальный лэйаут формы
         root_layout = QVBoxLayout(self)
-        root_layout.setContentsMargins(12, 10, 12, 10)
+        root_layout.setContentsMargins(12, 10, 12, 14)
         root_layout.setSpacing(8)
 
-        # ----------------------------------------------------------------------
-        # 1. Шапка формы (Header Row: категория слева, корзина справа)
-        # ----------------------------------------------------------------------
+        # 1. Шапка формы
         header_layout = QHBoxLayout()
         header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.setSpacing(8)
@@ -1096,11 +1106,20 @@ class ButtonPropertyForm(QWidget):
         self.lbl_category.setObjectName("lblInspectorCategory")
         self.lbl_category.setProperty("class", "InspectorCategoryLabel")
 
+        self.btn_save_to_library = QPushButton("⭐", self)
+        self.btn_save_to_library.setObjectName("btnSaveToLibrary")
+        self.btn_save_to_library.setProperty("class", "InspectorSaveToLibraryButton")
+        self.btn_save_to_library.setFixedSize(28, 28)
+        self.btn_save_to_library.setCursor(Qt.PointingHandCursor)
+        self.btn_save_to_library.setFocusPolicy(Qt.NoFocus)
+        self.btn_save_to_library.clicked.connect(self.save_to_library_requested.emit)
+
         self.btn_test = QPushButton("▶", self)
         self.btn_test.setObjectName("btnInspectorTest")
         self.btn_test.setProperty("class", "InspectorTestButton")
         self.btn_test.setFixedSize(28, 28)
         self.btn_test.setCursor(Qt.PointingHandCursor)
+        self.btn_test.setFocusPolicy(Qt.NoFocus)
         self.btn_test.clicked.connect(lambda: self.test_action_requested.emit(self._slot_index))
 
         self.btn_delete = QPushButton("🗑️", self)
@@ -1112,11 +1131,12 @@ class ButtonPropertyForm(QWidget):
 
         header_layout.addWidget(self.lbl_category)
         header_layout.addStretch(1)
+        header_layout.addWidget(self.btn_save_to_library)
         header_layout.addWidget(self.btn_test)
         header_layout.addWidget(self.btn_delete)
         root_layout.addLayout(header_layout)
 
-        # Разделитель HLine (1px BORDER_SURFACE_1)
+        # Разделитель HLine
         separator = QFrame(self)
         separator.setObjectName("formSeparator")
         separator.setProperty("class", "FormSeparator")
@@ -1125,15 +1145,12 @@ class ButtonPropertyForm(QWidget):
         separator.setFixedHeight(1)
         root_layout.addWidget(separator)
 
-        # ----------------------------------------------------------------------
-        # 2. Содержимое формы: Колонка превью (Превью 84x84 + ColorAccentPicker)
-        #    и Сетка параметров (Title, Actions, Dynamic Params Subforms)
-        # ----------------------------------------------------------------------
+        # 2. Содержимое формы
         content_layout = QHBoxLayout()
         content_layout.setContentsMargins(0, 2, 0, 2)
         content_layout.setSpacing(12)
 
-        # Левая колонка: Превью-плитка + Стрип выбора цвета акцента
+        # Левая колонка: Превью-плитка + Стрип цвета акцента
         left_preview_layout = QVBoxLayout()
         left_preview_layout.setContentsMargins(0, 0, 0, 0)
         left_preview_layout.setSpacing(6)
@@ -1159,17 +1176,25 @@ class ButtonPropertyForm(QWidget):
 
         content_layout.addLayout(left_preview_layout)
 
-        # Справа: сетка параметров (Title, Actions, Params Stack)
+        # Вертикальный разделитель между колонкой превью и сеткой параметров
+        self.vertical_separator = QFrame(self)
+        self.vertical_separator.setObjectName("formVerticalSeparator")
+        self.vertical_separator.setFrameShape(QFrame.VLine)
+        self.vertical_separator.setFrameShadow(QFrame.Plain)
+        self.vertical_separator.setFixedWidth(1)
+        content_layout.addWidget(self.vertical_separator)
+
+        # Справа: сетка параметров (Title, Actions, Params Stack, Live Status & Sound)
         fields_grid = QGridLayout()
         fields_grid.setContentsMargins(0, 0, 0, 0)
-        fields_grid.setVerticalSpacing(8)
+        fields_grid.setVerticalSpacing(6)
         fields_grid.setHorizontalSpacing(8)
+        fields_grid.setColumnMinimumWidth(0, FORM_LABEL_WIDTH)
 
         # Строка 0: Title
         self.lbl_title_field = QLabel(self)
         self.lbl_title_field.setObjectName("lblTitleField")
         self.lbl_title_field.setProperty("class", "InspectorFieldLabel")
-        self.lbl_title_field.setFixedWidth(FORM_LABEL_WIDTH)
 
         self.edit_title = QLineEdit(self)
         self.edit_title.setObjectName("editTitle")
@@ -1184,225 +1209,363 @@ class ButtonPropertyForm(QWidget):
         self.btn_font.setProperty("class", "FontSettingButton")
         self.btn_font.setFixedSize(INPUT_HEIGHT, INPUT_HEIGHT)
         self.btn_font.setCursor(Qt.PointingHandCursor)
+        self.btn_font.setFocusPolicy(Qt.NoFocus)
         self.btn_font.clicked.connect(self._show_font_popover)
 
         fields_grid.addWidget(self.lbl_title_field, 0, 0, Qt.AlignVCenter)
         fields_grid.addWidget(self.edit_title, 0, 1)
         fields_grid.addWidget(self.btn_font, 0, 2)
 
-        # Строка 1: Actions (8 базовых примитивов) + Кнопка меню шаблонов ⚡
+        # Строка 1: Actions (ровно 8 чистых примитивов)
         self.lbl_actions_field = QLabel(self)
         self.lbl_actions_field.setObjectName("lblActionsField")
         self.lbl_actions_field.setProperty("class", "InspectorFieldLabel")
-        self.lbl_actions_field.setFixedWidth(FORM_LABEL_WIDTH)
 
-        row1_container = QWidget(self)
-        row1_container.setFixedHeight(INPUT_HEIGHT)
-        row1_layout = QHBoxLayout(row1_container)
-        row1_layout.setContentsMargins(0, 0, 0, 0)
-        row1_layout.setSpacing(6)
-
-        self.combo_actions = QComboBox(row1_container)
+        self.combo_actions = QComboBox(self)
         self.combo_actions.setObjectName("comboActions")
         self.combo_actions.setFixedHeight(INPUT_HEIGHT)
         self.combo_actions.setCursor(Qt.PointingHandCursor)
         self.combo_actions.setFocusPolicy(Qt.NoFocus)
-
         for key in ACTION_PRIMITIVE_KEYS:
-            self.combo_actions.addItem(
-                t(f"deck.editor.primitives.{key}"), key
-            )
-        for key in LEGACY_ACTION_KEYS:
-            self.combo_actions.addItem(
-                t(f"deck.editor.inspector.actions_presets.{key}"), key
-            )
-        view = self.combo_actions.view()
-        if view is not None:
-            for i in range(len(ACTION_PRIMITIVE_KEYS), self.combo_actions.count()):
-                view.setRowHidden(i, True)
+            self.combo_actions.addItem(t(f"deck.editor.primitives.{key}"), key)
         self.combo_actions.currentIndexChanged.connect(self._on_action_type_changed)
 
-        self.btn_presets_menu = QPushButton(row1_container)
-        self.btn_presets_menu.setObjectName("btnPresetsMenu")
-        self.btn_presets_menu.setProperty("class", "InspectorPresetsButton")
-        self.btn_presets_menu.setFixedHeight(INPUT_HEIGHT)
-        self.btn_presets_menu.setCursor(Qt.PointingHandCursor)
-        self.btn_presets_menu.setFocusPolicy(Qt.NoFocus)
-        self.btn_presets_menu.setText("⚡ " + t("deck.editor.inspector.presets_menu"))
-        self.btn_presets_menu.clicked.connect(self._show_presets_menu)
-
-        row1_layout.addWidget(self.combo_actions, 1)
-        row1_layout.addWidget(self.btn_presets_menu)
-
         fields_grid.addWidget(self.lbl_actions_field, 1, 0, Qt.AlignVCenter)
-        fields_grid.addWidget(row1_container, 1, 1, 1, 2)
+        fields_grid.addWidget(self.combo_actions, 1, 1, 1, 2)
 
-        # Строка 2: Params (Динамический стек подформ в одну строку 28 px)
+        # Строка 2: Params (8 подформ 0..7 + UnconfiguredSubform на индексе 8)
         self.lbl_params_field = QLabel(self)
         self.lbl_params_field.setObjectName("lblParamsField")
         self.lbl_params_field.setProperty("class", "InspectorFieldLabel")
-        self.lbl_params_field.setFixedWidth(FORM_LABEL_WIDTH)
-        self.lbl_hotkey_field = self.lbl_params_field  # Backward compatibility shim
+        self.lbl_hotkey_field = self.lbl_params_field
 
         params_container = QWidget(self)
         params_container.setFixedHeight(INPUT_HEIGHT)
         self.params_stack = QStackedLayout(params_container)
         self.params_stack.setContentsMargins(0, 0, 0, 0)
 
-        # Подформы 0..12
         self.subform_hotkey = HotkeySubform(params_container)
-        self.subform_hotkey_switch = HotkeySwitchSubform(params_container)
-        self.subform_path_url = PathUrlSubform(params_container)
-        self.subform_multimedia = MultimediaSubform(params_container)
-        self.subform_text_macro = TextMacroSubform(params_container)
-        self.subform_volume = VolumeSubform(params_container)
-        self.subform_no_params = NoParamsSubform(params_container)
-        self.subform_audio_device = AudioDeviceSubform(params_container)
-        self.subform_screenshot = ScreenshotSubform(params_container)
+        self.subform_launch = LaunchSubform(params_container)
+        self.subform_audio = AudioSubform(params_container)
+        self.subform_media = MediaSubform(params_container)
+        self.subform_text = TextSubform(params_container)
         self.subform_system = SystemSubform(params_container)
-        self.subform_soundboard = SoundboardSubform(params_container)
         self.subform_deck_nav = DeckNavSubform(params_container)
+        self.subform_macro = MacroSubform(params_container)
         self.subform_unconfigured = UnconfiguredSubform(params_container)
 
-        # Подписка на сигналы изменения подформ
         self.subform_hotkey.hotkey_changed.connect(
             lambda hk: self.property_changed.emit("hotkey", hk)
         )
-        self.subform_hotkey_switch.params_changed.connect(
+        self.subform_hotkey.params_changed.connect(
             lambda p: self.property_changed.emit("action_params", p)
         )
-        self.subform_path_url.params_changed.connect(
+        self.subform_launch.params_changed.connect(
             lambda p: self.property_changed.emit("action_params", p)
         )
-        self.subform_multimedia.params_changed.connect(
+        self.subform_audio.params_changed.connect(
             lambda p: self.property_changed.emit("action_params", p)
         )
-        self.subform_text_macro.params_changed.connect(
+        self.subform_media.params_changed.connect(
             lambda p: self.property_changed.emit("action_params", p)
         )
-        self.subform_volume.params_changed.connect(
-            lambda p: self.property_changed.emit("action_params", p)
-        )
-        self.subform_audio_device.params_changed.connect(
-            lambda p: self.property_changed.emit("action_params", p)
-        )
-        self.subform_screenshot.params_changed.connect(
+        self.subform_text.params_changed.connect(
             lambda p: self.property_changed.emit("action_params", p)
         )
         self.subform_system.params_changed.connect(
             lambda p: self.property_changed.emit("action_params", p)
         )
-        self.subform_soundboard.params_changed.connect(
-            lambda p: self.property_changed.emit("action_params", p)
-        )
         self.subform_deck_nav.params_changed.connect(
             lambda p: self.property_changed.emit("action_params", p)
         )
-        self.subform_unconfigured.pick_preset_requested.connect(self._show_presets_menu)
 
-        self.params_stack.addWidget(self.subform_hotkey)         # Index 0
-        self.params_stack.addWidget(self.subform_hotkey_switch)  # Index 1
-        self.params_stack.addWidget(self.subform_path_url)       # Index 2
-        self.params_stack.addWidget(self.subform_multimedia)     # Index 3
-        self.params_stack.addWidget(self.subform_text_macro)     # Index 4
-        self.params_stack.addWidget(self.subform_volume)         # Index 5
-        self.params_stack.addWidget(self.subform_no_params)      # Index 6
-        self.params_stack.addWidget(self.subform_audio_device)   # Index 7
-        self.params_stack.addWidget(self.subform_screenshot)     # Index 8
-        self.params_stack.addWidget(self.subform_system)         # Index 9
-        self.params_stack.addWidget(self.subform_soundboard)     # Index 10
-        self.params_stack.addWidget(self.subform_deck_nav)       # Index 11
-        self.params_stack.addWidget(self.subform_unconfigured)   # Index 12
+        self.params_stack.addWidget(self.subform_hotkey)        # Index 0
+        self.params_stack.addWidget(self.subform_launch)        # Index 1
+        self.params_stack.addWidget(self.subform_audio)         # Index 2
+        self.params_stack.addWidget(self.subform_media)         # Index 3
+        self.params_stack.addWidget(self.subform_text)          # Index 4
+        self.params_stack.addWidget(self.subform_system)        # Index 5
+        self.params_stack.addWidget(self.subform_deck_nav)      # Index 6
+        self.params_stack.addWidget(self.subform_macro)         # Index 7
+        self.params_stack.addWidget(self.subform_unconfigured)  # Index 8
 
         fields_grid.addWidget(self.lbl_params_field, 2, 0, Qt.AlignVCenter)
         fields_grid.addWidget(params_container, 2, 1, 1, 2)
 
-        # Строка 3: Живой статус (Live Status) & Звук клика (sound_override)
+        # Горизонтальный суб-разделитель перед строкой обратной связи
+        self.feedback_separator = QFrame(self)
+        self.feedback_separator.setObjectName("feedbackSeparator")
+        self.feedback_separator.setFrameShape(QFrame.HLine)
+        self.feedback_separator.setFrameShadow(QFrame.Plain)
+        self.feedback_separator.setFixedHeight(1)
+        fields_grid.addWidget(self.feedback_separator, 3, 0, 1, 3)
+
+        # Строка 3 (row=4 в grid): Живой статус (Live Status) & Звук клика (sound_override)
         self.lbl_status_field = QLabel(self)
         self.lbl_status_field.setObjectName("lblStatusField")
         self.lbl_status_field.setProperty("class", "InspectorFieldLabel")
-        self.lbl_status_field.setFixedWidth(FORM_LABEL_WIDTH)
 
         row3_container = QWidget(self)
         row3_container.setFixedHeight(INPUT_HEIGHT)
         row3_layout = QHBoxLayout(row3_container)
         row3_layout.setContentsMargins(0, 0, 0, 0)
-        row3_layout.setSpacing(6)
+        row3_layout.setSpacing(16)
 
-        self.combo_status_source = QComboBox(row3_container)
+        # Левая половина: Живой статус
+        self.status_subgroup = QWidget(row3_container)
+        status_sub_layout = QHBoxLayout(self.status_subgroup)
+        status_sub_layout.setContentsMargins(0, 0, 0, 0)
+        status_sub_layout.setSpacing(6)
+
+        self.combo_status_source = QComboBox(self.status_subgroup)
         self.combo_status_source.setFixedHeight(INPUT_HEIGHT)
         self.combo_status_source.setCursor(Qt.PointingHandCursor)
+        self.combo_status_source.setFocusPolicy(Qt.NoFocus)
         for key in STATUS_SOURCE_KEYS:
             self.combo_status_source.addItem(
                 t(f"deck.editor.inspector.status_sources.{key}"), key
             )
         self.combo_status_source.currentIndexChanged.connect(self._on_status_source_changed)
+        status_sub_layout.addWidget(self.combo_status_source, 1)
 
-        self.lbl_click_sound_field = QLabel(self)
+        # Правая половина: Звук клика + фиксированные кнопки 28x28
+        self.sound_group_container = QWidget(row3_container)
+        sound_sub_layout = QHBoxLayout(self.sound_group_container)
+        sound_sub_layout.setContentsMargins(0, 0, 0, 0)
+        sound_sub_layout.setSpacing(6)
+
+        self.lbl_click_sound_field = QLabel(self.sound_group_container)
         self.lbl_click_sound_field.setObjectName("lblClickSoundField")
         self.lbl_click_sound_field.setProperty("class", "InspectorFieldLabel")
 
-        self.combo_click_sound = QComboBox(row3_container)
+        self.combo_click_sound = QComboBox(self.sound_group_container)
         self.combo_click_sound.setFixedHeight(INPUT_HEIGHT)
         self.combo_click_sound.setCursor(Qt.PointingHandCursor)
+        self.combo_click_sound.setFocusPolicy(Qt.NoFocus)
         for key in CLICK_SOUND_KEYS:
             self.combo_click_sound.addItem(
                 t(f"deck.editor.inspector.fields.click_sound_{key}"), key
             )
         self.combo_click_sound.currentIndexChanged.connect(self._on_click_sound_changed)
 
-        self.btn_click_sound_browse = QPushButton("📁", row3_container)
-        self.btn_click_sound_browse.setFixedSize(INPUT_HEIGHT, INPUT_HEIGHT)
+        self.btn_click_sound_browse = QPushButton("📁", self.sound_group_container)
+        self.btn_click_sound_browse.setFixedSize(28, 28)
         self.btn_click_sound_browse.setCursor(Qt.PointingHandCursor)
+        self.btn_click_sound_browse.setFocusPolicy(Qt.NoFocus)
         self.btn_click_sound_browse.clicked.connect(self._on_click_sound_browse_clicked)
         self.btn_click_sound_browse.setVisible(False)
 
-        self.btn_click_sound_preview = QPushButton("▶", row3_container)
+        self.btn_click_sound_preview = QPushButton("▶", self.sound_group_container)
         self.btn_click_sound_preview.setProperty("class", "InspectorTestButton")
-        self.btn_click_sound_preview.setFixedSize(INPUT_HEIGHT, INPUT_HEIGHT)
+        self.btn_click_sound_preview.setFixedSize(28, 28)
         self.btn_click_sound_preview.setCursor(Qt.PointingHandCursor)
+        self.btn_click_sound_preview.setFocusPolicy(Qt.NoFocus)
         self.btn_click_sound_preview.clicked.connect(self._on_click_sound_preview_clicked)
         self.btn_click_sound_preview.setVisible(False)
 
-        row3_layout.addWidget(self.combo_status_source, 1)
-        row3_layout.addWidget(self.lbl_click_sound_field)
-        row3_layout.addWidget(self.combo_click_sound, 1)
-        row3_layout.addWidget(self.btn_click_sound_browse)
-        row3_layout.addWidget(self.btn_click_sound_preview)
+        sound_sub_layout.addWidget(self.lbl_click_sound_field)
+        sound_sub_layout.addWidget(self.combo_click_sound, 1)
+        sound_sub_layout.addWidget(self.btn_click_sound_browse)
+        sound_sub_layout.addWidget(self.btn_click_sound_preview)
 
-        fields_grid.addWidget(self.lbl_status_field, 3, 0, Qt.AlignVCenter)
-        fields_grid.addWidget(row3_container, 3, 1, 1, 2)
+        row3_layout.addWidget(self.status_subgroup, 1)
+        row3_layout.addWidget(self.sound_group_container, 1)
+
+        fields_grid.addWidget(self.lbl_status_field, 4, 0, Qt.AlignVCenter)
+        fields_grid.addWidget(row3_container, 4, 1, 1, 2)
 
         content_layout.addLayout(fields_grid)
         root_layout.addLayout(content_layout)
-
-        # Эластичный спейсер для плотной фиксации в пределах 220 px
         root_layout.addStretch(1)
 
-        # Обратная совместимость для существующих тестов, читающих btn_hotkey
+        # Совместимость для тестов, обращающихся к btn_hotkey
         self.btn_hotkey = self.subform_hotkey.btn_hotkey
 
-        # Начальная инициализация локализованных строк
         self.retranslate_ui()
 
+    def set_audio_devices(self, devices: list[tuple[str, str]]) -> None:
+        """DI-метод передачи списка доступных аудиоустройств в AudioSubform."""
+        self.subform_audio.set_audio_devices(devices)
+
     def set_category(self, category: str) -> None:
-        """Устанавливает отображаемое имя категории/типа в шапке формы."""
         self._current_category_raw = category
         self.lbl_category.setText(category)
 
     def get_category(self) -> str:
-        """Возвращает текущую строку категории."""
         return self._current_category_raw
 
+    @staticmethod
+    def resolve_subform_route(
+        action_type: str, params: Optional[dict[str, Any]] = None
+    ) -> tuple[int, str, dict[str, Any]]:
+        """
+        Прямая детерминированная маршрутизация подформ инспектора (0..7 для 8 примитивов, 8 для unconfigured).
+        """
+        raw = (action_type or "").strip().lower().replace(" ", "_")
+        p: dict[str, Any] = dict(params) if params else {}
+
+        if raw in ("unconfigured", "none", ""):
+            return 8, "unconfigured", p
+
+        if raw in ("hotkey", "shortcut", "hotkey_switch"):
+            if raw == "hotkey_switch":
+                p.setdefault("mode", "toggle")
+            return 0, "hotkey", p
+
+        if raw in ("launch", "website", "open_website", "web", "url", "open_app", "open_application", "open_path", "http_request"):
+            if raw in ("website", "open_website", "web", "url", "http_request"):
+                p.setdefault("kind", "url")
+                if "url" in p and "target" not in p:
+                    p["target"] = p["url"]
+            elif raw == "open_path":
+                p.setdefault("kind", "file")
+                if "path" in p and "target" not in p:
+                    p["target"] = p["path"]
+            elif raw in ("open_app", "open_application"):
+                p.setdefault("kind", "app")
+                if "executable" in p and "target" not in p:
+                    p["target"] = p["executable"]
+            return 1, "launch", p
+
+        if raw in (
+            "audio",
+            "volume_control",
+            "audio_device",
+            "auto_software_vol",
+            "master_volume_control",
+            "mic_mute_control",
+            "mute_audio",
+            "volume_up",
+            "volume_down",
+            "output_device_toggle",
+            "toggle_device",
+        ):
+            if raw in ("output_device_toggle", "toggle_device", "audio_device"):
+                p.setdefault("target", "device")
+                p.setdefault("command", "toggle_device")
+                p.setdefault("mode", "toggle")
+            elif raw == "auto_software_vol":
+                p.setdefault("target", "focus_app")
+                p.setdefault("command", "toggle_mute")
+            elif raw in ("master_volume_control", "mute_audio"):
+                p.setdefault("target", "master")
+                p.setdefault("command", "toggle_mute")
+            elif raw == "mic_mute_control":
+                p.setdefault("target", "mic")
+                p.setdefault("command", "toggle_mute")
+            elif raw == "volume_up":
+                p.setdefault("target", "master")
+                p.setdefault("command", "volume_up")
+            elif raw == "volume_down":
+                p.setdefault("target", "master")
+                p.setdefault("command", "volume_down")
+            return 2, "audio", p
+
+        if raw in ("media", "multimedia", "media_control"):
+            return 3, "media", p
+
+        if raw in ("text", "text_macro", "macro_text", "paste_text"):
+            return 4, "text", p
+
+        if raw in (
+            "system",
+            "system_command",
+            "screenshot",
+            "close_window",
+            "dimmer",
+            "toggle_dimmer",
+            "lock_pc",
+            "lock_workstation",
+            "sleep_display",
+        ):
+            if raw == "screenshot":
+                p.setdefault("command", "screenshot")
+            elif raw == "close_window":
+                p.setdefault("command", "close_window")
+            elif raw in ("dimmer", "toggle_dimmer"):
+                p.setdefault("command", "toggle_dimmer")
+            elif raw in ("lock_pc", "lock_workstation"):
+                p.setdefault("command", "lock_workstation")
+            elif raw == "sleep_display":
+                p.setdefault("command", "sleep_display")
+            return 5, "system", p
+
+        if raw in ("deck_nav", "navigation", "prev_page", "next_page", "goto_page", "folder_back"):
+            if raw in ("prev_page", "next_page", "goto_page", "folder_back"):
+                p.setdefault("target", raw)
+            return 6, "deck_nav", p
+
+        if raw in ("macro", "multi_action", "multi_action_switch"):
+            return 7, "macro", p
+
+        return 8, "unconfigured", p
+
+    @staticmethod
+    def _default_params_for_type(action_key: Optional[str]) -> dict[str, Any]:
+        """Возвращает эталонные дефолтные параметры для 8 базовых примитивов."""
+        key = (action_key or "").strip().lower()
+        if key == "hotkey":
+            return {"mode": "press", "keys": [], "toggle_keys": []}
+        if key == "launch":
+            return {"kind": "app", "target": ""}
+        if key == "audio":
+            return {"target": "master", "command": "toggle_mute", "step_percent": 5}
+        if key == "media":
+            return {"command": "play_pause"}
+        if key == "text":
+            return {"text": "", "send_enter": False}
+        if key == "system":
+            return {"command": "toggle_dimmer"}
+        if key == "deck_nav":
+            return {"target": "next_page"}
+        if key == "macro":
+            return {"steps": [], "delay_ms": 50}
+        return {}
+
+    def _reset_inactive_subforms(self, active_stack_idx: int) -> None:
+        subforms = (
+            (0, self.subform_hotkey),
+            (1, self.subform_launch),
+            (2, self.subform_audio),
+            (3, self.subform_media),
+            (4, self.subform_text),
+            (5, self.subform_system),
+            (6, self.subform_deck_nav),
+            (7, self.subform_macro),
+        )
+        for idx, subform in subforms:
+            if idx != active_stack_idx:
+                subform.set_params({})
+
+    def _apply_params_to_subform(
+        self, stack_idx: int, params: dict[str, Any], hotkey: str = ""
+    ) -> None:
+        if stack_idx == 0:
+            merged = dict(params)
+            if not merged.get("keys") and hotkey:
+                merged["keys"] = _parse_keys_list(hotkey)
+            self.subform_hotkey.set_params(merged)
+            if hotkey and merged.get("mode", "press") == "press":
+                self.subform_hotkey.set_hotkey(hotkey)
+        elif stack_idx == 1:
+            self.subform_launch.set_params(params)
+        elif stack_idx == 2:
+            self.subform_audio.set_params(params)
+        elif stack_idx == 3:
+            self.subform_media.set_params(params)
+        elif stack_idx == 4:
+            self.subform_text.set_params(params)
+        elif stack_idx == 5:
+            self.subform_system.set_params(params)
+        elif stack_idx == 6:
+            self.subform_deck_nav.set_params(params)
+        elif stack_idx == 7:
+            self.subform_macro.set_params(params)
+
     def get_slot_index(self) -> int:
-        """Возвращает индекс текущего редактируемого слота кнопки."""
         return self._slot_index
 
     def load_slot_data(self, dto: ButtonSlotDTO) -> None:
-        """
-        Заполняет поля формы данными из DTO кнопки с защитой blockSignals(True)
-        для предотвращения сигнального эха и ложных событий изменения.
-        """
         self._slot_index = dto.slot_index
 
         self.edit_title.blockSignals(True)
@@ -1420,48 +1583,36 @@ class ButtonPropertyForm(QWidget):
                 self.edit_title.setText("")
                 self.edit_title.setPlaceholderText(t("deck.editor.inspector.unconfigured_placeholder"))
                 self.preview_tile.set_icon("➕")
-                if hasattr(self, "btn_test"):
-                    self.btn_test.setEnabled(False)
-                if hasattr(self, "btn_delete"):
-                    self.btn_delete.setEnabled(False)
+                self.btn_save_to_library.setEnabled(False)
+                self.btn_test.setEnabled(False)
+                self.btn_delete.setEnabled(False)
                 self._update_subform_visibility("unconfigured")
                 return
 
-            if hasattr(self, "btn_test"):
-                self.btn_test.setEnabled(True)
-            if hasattr(self, "btn_delete"):
-                self.btn_delete.setEnabled(True)
+            self.btn_save_to_library.setEnabled(True)
+            self.btn_test.setEnabled(True)
+            self.btn_delete.setEnabled(True)
 
             category_text = dto.category if dto.category else "System: Hotkey"
             self.set_category(category_text)
             self.edit_title.setText(dto.title)
 
-            # Сохранение и загрузка параметров типографики
             self._current_font_size = dto.font_size if hasattr(dto, "font_size") else 11
             self._current_font_color = dto.font_color if hasattr(dto, "font_color") else "#d4d4d8"
             self._current_text_alignment = dto.text_alignment if hasattr(dto, "text_alignment") else "bottom"
             self._current_hide_title = bool(dto.hide_title) if hasattr(dto, "hide_title") else False
 
-            # Выбор цвета акцента
             accent_col = dto.color_accent or ACCENT_COLORS[0]
             self.accent_picker.set_color(accent_col)
 
-            # Загрузка живого статуса (Live Status)
             src_val = dto.status_source or "none"
             self.combo_status_source.blockSignals(True)
             try:
-                found_s = False
-                for i in range(self.combo_status_source.count()):
-                    if self.combo_status_source.itemData(i) == src_val:
-                        self.combo_status_source.setCurrentIndex(i)
-                        found_s = True
-                        break
-                if not found_s:
-                    self.combo_status_source.setCurrentIndex(0)
+                idx_s = self.combo_status_source.findData(src_val)
+                self.combo_status_source.setCurrentIndex(idx_s if idx_s >= 0 else 0)
             finally:
                 self.combo_status_source.blockSignals(False)
 
-            # Загрузка индивидуального звука клика (sound_override)
             snd_val = dto.sound_override
             self.combo_click_sound.blockSignals(True)
             try:
@@ -1481,86 +1632,26 @@ class ButtonPropertyForm(QWidget):
                     self.btn_click_sound_browse.setVisible(False)
                     self.btn_click_sound_preview.setVisible(False)
 
-                for i in range(self.combo_click_sound.count()):
-                    if self.combo_click_sound.itemData(i) == target_mode:
-                        self.combo_click_sound.setCurrentIndex(i)
-                        break
+                idx_snd = self.combo_click_sound.findData(target_mode)
+                if idx_snd >= 0:
+                    self.combo_click_sound.setCurrentIndex(idx_snd)
             finally:
                 self.combo_click_sound.blockSignals(False)
 
-            # Сопоставление типа действия с элементом комбобокса
-            raw_action = dto.action_type.strip().lower().replace(" ", "_")
-            mapped_params = dict(dto.action_params) if dto.action_params else {}
-            self._current_audio_params = mapped_params
+            stack_idx, prim_type, mapped_params = self.resolve_subform_route(
+                dto.action_type, dto.action_params
+            )
 
-            # Авто-мапинг регуляторов громкости и действий каталога
-            if raw_action == "auto_software_vol":
-                raw_action = "volume_control"
-                mapped_params.setdefault("target", "focus_app")
-                mapped_params.setdefault("command", "toggle_mute")
-            elif raw_action in ("master_volume_control", "mute_audio"):
-                raw_action = "volume_control"
-                mapped_params.setdefault("target", "master")
-                mapped_params.setdefault("command", "toggle_mute")
-            elif raw_action == "mic_mute_control":
-                raw_action = "volume_control"
-                mapped_params.setdefault("target", "microphone")
-                mapped_params.setdefault("command", "toggle_mute")
-            elif raw_action == "volume_up":
-                raw_action = "volume_control"
-                mapped_params.setdefault("target", "master")
-                mapped_params.setdefault("command", "volume_up")
-            elif raw_action == "volume_down":
-                raw_action = "volume_control"
-                mapped_params.setdefault("target", "master")
-                mapped_params.setdefault("command", "volume_down")
-            elif raw_action in ("output_device_toggle", "toggle_device"):
-                raw_action = "audio_device"
-                mapped_params.setdefault("mode", "toggle")
-            elif raw_action == "audio":
-                raw_action = "audio"
-            elif raw_action in ("play_audio", "soundboard", "stop_audio", "soundboard_stop"):
-                raw_action = "audio"
-            elif raw_action in ("open_application", "launch"):
-                raw_action = "launch"
-            elif raw_action in ("media_control", "media"):
-                raw_action = "media"
-            elif raw_action in ("open_website", "web"):
-                raw_action = "launch"
-                mapped_params.setdefault("target", mapped_params.get("url", ""))
-            elif raw_action in ("play_audio", "soundboard"):
-                raw_action = "play_audio"
-            elif raw_action in ("stop_audio", "soundboard_stop"):
-                raw_action = "stop_audio"
-            elif raw_action in ("deck_nav", "navigation"):
-                raw_action = "deck_nav"
-            elif raw_action in ("macro", "multi_action"):
-                raw_action = "macro"
+            target_idx = self.combo_actions.findData(prim_type)
+            self.combo_actions.setCurrentIndex(target_idx if target_idx >= 0 else 0)
+            self.params_stack.setCurrentIndex(stack_idx)
+            if stack_idx == 0:
+                self.lbl_params_field.setText(t("deck.editor.inspector.fields.hotkey"))
+            else:
+                self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
 
-            target_idx = 0
-            for i in range(self.combo_actions.count()):
-                val = str(self.combo_actions.itemData(i)).lower()
-                if raw_action == val:
-                    target_idx = i
-                    break
-
-            self.combo_actions.setCurrentIndex(target_idx)
-            self._update_subform_visibility(self.combo_actions.itemData(target_idx))
-
-            # Загрузка параметров в подформы
-            self.subform_hotkey.set_hotkey(dto.hotkey)
-            self.subform_hotkey_switch.set_params(mapped_params)
-            self.subform_path_url.set_params(mapped_params)
-            self.subform_multimedia.set_params(mapped_params)
-            self.subform_text_macro.set_params(mapped_params)
-            self.subform_volume.set_params(mapped_params)
-            self.subform_no_params.set_params(mapped_params)
-            self.subform_audio_device.set_params(mapped_params)
-            self.subform_screenshot.set_params(mapped_params)
-            self.subform_system.set_params(mapped_params)
-            self.subform_soundboard.set_params(mapped_params)
-            self.subform_deck_nav.set_params(mapped_params)
-
+            self._reset_inactive_subforms(stack_idx)
+            self._apply_params_to_subform(stack_idx, mapped_params, hotkey=dto.hotkey)
             self.preview_tile.set_icon(dto.icon)
         finally:
             self.edit_title.blockSignals(False)
@@ -1568,16 +1659,10 @@ class ButtonPropertyForm(QWidget):
             self.btn_hotkey.blockSignals(False)
 
     def retranslate_ui(self) -> None:
-        """
-        Обновляет локализованные подписи полей, тултипы и элементы пресетов действий.
-        Строго сохраняет введенный пользователем текст в edit_title и параметры подформ.
-        (In-place Retranslate Invariant).
-        """
+        self.btn_save_to_library.setToolTip(t("deck.editor.inspector.save_to_library_tooltip"))
         self.btn_delete.setToolTip(t("deck.editor.inspector.tooltips.delete_action"))
-        if hasattr(self, "btn_test"):
-            self.btn_test.setToolTip(t("deck.editor.inspector.tooltips.test_action"))
+        self.btn_test.setToolTip(t("deck.editor.inspector.tooltips.test_action"))
 
-        # Подписи полей формы
         self.lbl_title_field.setText(t("deck.editor.inspector.fields.title"))
         self.lbl_actions_field.setText(t("deck.editor.inspector.fields.actions"))
         self.lbl_status_field.setText(t("deck.editor.inspector.fields.status_source"))
@@ -1586,11 +1671,7 @@ class ButtonPropertyForm(QWidget):
         self.btn_click_sound_browse.setToolTip(t("deck.editor.inspector.fields.sound_file"))
         self.btn_click_sound_preview.setToolTip(t("deck.editor.inspector.tooltips.test_action"))
 
-        if hasattr(self, "btn_presets_menu"):
-            self.btn_presets_menu.setText("⚡ " + t("deck.editor.inspector.presets_menu"))
-            self.btn_presets_menu.setToolTip(t("deck.editor.inspector.presets_menu"))
-
-        curr_action = self.combo_actions.itemData(self.combo_actions.currentIndex())
+        curr_action = self.combo_actions.currentData()
         if curr_action == "hotkey":
             self.lbl_params_field.setText(t("deck.editor.inspector.fields.hotkey"))
         else:
@@ -1600,255 +1681,70 @@ class ButtonPropertyForm(QWidget):
             self.lbl_category.setText(t("deck.editor.inspector.unconfigured_title"))
             self.edit_title.setPlaceholderText(t("deck.editor.inspector.unconfigured_placeholder"))
 
-        # Пресеты в комбобоксе: обновление текстов по сохраненному userData ключу
         self.combo_actions.blockSignals(True)
         try:
             for i in range(self.combo_actions.count()):
-                preset_key = self.combo_actions.itemData(i)
-                if preset_key in ACTION_PRIMITIVE_KEYS:
-                    self.combo_actions.setItemText(
-                        i, t(f"deck.editor.primitives.{preset_key}")
-                    )
-                elif preset_key:
-                    self.combo_actions.setItemText(
-                        i, t(f"deck.editor.inspector.actions_presets.{preset_key}")
-                    )
+                key = self.combo_actions.itemData(i)
+                if key:
+                    self.combo_actions.setItemText(i, t(f"deck.editor.primitives.{key}"))
         finally:
             self.combo_actions.blockSignals(False)
 
-        # Источники статуса в комбобоксе
         self.combo_status_source.blockSignals(True)
         try:
             for i in range(self.combo_status_source.count()):
                 key = self.combo_status_source.itemData(i)
                 if key:
-                    self.combo_status_source.setItemText(
-                        i, t(f"deck.editor.inspector.status_sources.{key}")
-                    )
+                    self.combo_status_source.setItemText(i, t(f"deck.editor.inspector.status_sources.{key}"))
         finally:
             self.combo_status_source.blockSignals(False)
 
-        # Варианты звука клика в комбобоксе
         self.combo_click_sound.blockSignals(True)
         try:
             for i in range(self.combo_click_sound.count()):
                 key = self.combo_click_sound.itemData(i)
                 if key:
-                    self.combo_click_sound.setItemText(
-                        i, t(f"deck.editor.inspector.fields.click_sound_{key}")
-                    )
+                    self.combo_click_sound.setItemText(i, t(f"deck.editor.inspector.fields.click_sound_{key}"))
         finally:
             self.combo_click_sound.blockSignals(False)
 
-        # Каскадный вызов локализации подформ и дочерних компонентов
         self.preview_tile.retranslate_ui()
         self.subform_hotkey.retranslate_ui()
-        self.subform_hotkey_switch.retranslate_ui()
-        self.subform_path_url.retranslate_ui()
-        self.subform_multimedia.retranslate_ui()
-        self.subform_text_macro.retranslate_ui()
-        self.subform_volume.retranslate_ui()
-        self.subform_no_params.retranslate_ui()
-        self.subform_audio_device.retranslate_ui()
-        self.subform_screenshot.retranslate_ui()
+        self.subform_launch.retranslate_ui()
+        self.subform_audio.retranslate_ui()
+        self.subform_media.retranslate_ui()
+        self.subform_text.retranslate_ui()
         self.subform_system.retranslate_ui()
-        self.subform_soundboard.retranslate_ui()
         self.subform_deck_nav.retranslate_ui()
+        self.subform_macro.retranslate_ui()
         self.subform_unconfigured.retranslate_ui()
         if self._font_popover is not None:
             self._font_popover.retranslate_ui()
 
     def _update_subform_visibility(self, action_key: Optional[str]) -> None:
-        """Переключает активную страницу стэка подформ в зависимости от выбранного действия."""
-        if action_key == "hotkey":
-            self.params_stack.setCurrentIndex(0)
+        stack_idx, _prim, _p = self.resolve_subform_route(action_key or "unconfigured")
+        self.params_stack.setCurrentIndex(stack_idx)
+        if stack_idx == 0:
             self.lbl_params_field.setText(t("deck.editor.inspector.fields.hotkey"))
-        elif action_key == "hotkey_switch":
-            self.params_stack.setCurrentIndex(1)
-            self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
-        elif action_key in ("launch", "website", "open_app", "open_path"):
-            self.params_stack.setCurrentIndex(2)
-            if action_key in ("website", "open_app", "open_path"):
-                self.subform_path_url.set_mode(action_key)
-            else:
-                self.subform_path_url.set_mode("open_app")
-            self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
-        elif action_key in ("media", "multimedia"):
-            self.params_stack.setCurrentIndex(3)
-            self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
-        elif action_key in ("text", "text_macro"):
-            self.params_stack.setCurrentIndex(4)
-            self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
-        elif action_key in ("audio", "volume_control"):
-            audio_p = getattr(self, "_current_audio_params", {})
-            if audio_p.get("target") == "device" or "devices" in audio_p or audio_p.get("command") == "toggle_device":
-                self.params_stack.setCurrentIndex(7)
-            elif audio_p.get("target") == "soundboard":
-                self.params_stack.setCurrentIndex(10)
-            else:
-                self.params_stack.setCurrentIndex(5)
-            self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
-        elif action_key in ("close_window", "stop_audio", "macro", "multi_action"):
-            self.params_stack.setCurrentIndex(6)
-            hint = (
-                t("deck.editor.inspector.hints.stop_audio_hint")
-                if action_key == "stop_audio"
-                else t("deck.editor.inspector.hints.no_params_required")
-            )
-            self.subform_no_params.lbl_hint.setText(hint)
-            self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
-        elif action_key == "audio_device":
-            self.params_stack.setCurrentIndex(7)
-            self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
-        elif action_key == "screenshot":
-            self.params_stack.setCurrentIndex(8)
-            self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
-        elif action_key == "system":
-            self.params_stack.setCurrentIndex(9)
-            self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
-        elif action_key == "play_audio":
-            self.params_stack.setCurrentIndex(10)
-            self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
-        elif action_key in ("deck_nav", "navigation"):
-            self.params_stack.setCurrentIndex(11)
-            self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
-        elif action_key in ("unconfigured", "none", ""):
-            self.params_stack.setCurrentIndex(12)
-            self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
         else:
-            self.params_stack.setCurrentIndex(12)
             self.lbl_params_field.setText(t("deck.editor.inspector.fields.params"))
 
     def is_unconfigured(self) -> bool:
-        """Возвращает True, если текущий слот не настроен."""
         return getattr(self, "_is_unconfigured", False)
 
     def _on_delete_clicked(self) -> None:
-        """Очищает текущий слот кнопки до неконфигурированного состояния."""
         self._is_unconfigured = True
         self.set_category(t("deck.editor.inspector.unconfigured_title"))
         self.edit_title.setText("")
         self.edit_title.setPlaceholderText(t("deck.editor.inspector.unconfigured_placeholder"))
         self.preview_tile.set_icon("➕")
-        if hasattr(self, "btn_test"):
-            self.btn_test.setEnabled(False)
+        self.btn_save_to_library.setEnabled(False)
+        self.btn_test.setEnabled(False)
         self.btn_delete.setEnabled(False)
         self._update_subform_visibility("unconfigured")
         self.delete_requested.emit()
 
-    def _show_presets_menu(self) -> None:
-        """Открывает контекстное QMenu готовых шаблонов, сгруппированных по 6 категориям."""
-        from modules.deck.presets import ActionPresetsRegistry
-
-        menu = QMenu(self)
-        menu.setFocusPolicy(Qt.NoFocus)
-
-        # 6 основных структурированных категорий таксономии
-        category_groups = [
-            ("audio_comm", "🎛️", "deck.editor.categories.audio_comm", ["audio_comm"]),
-            ("media_stream", "🎮", "deck.editor.categories.media_stream", ["media_stream", "soundboard"]),
-            ("launchers", "🚀", "deck.editor.categories.launchers", ["launchers"]),
-            ("system_control", "⚙️", "deck.editor.categories.system_control", ["system_control"]),
-            ("input_macros", "⌨️", "deck.editor.categories.input_macros", ["input_macros", "multi_action"]),
-            ("navigation", "🧭", "deck.editor.categories.navigation", ["navigation"]),
-        ]
-
-        for cat_id, icon, title_key, source_cats in category_groups:
-            sub_menu = menu.addMenu(f"{icon}  {t(title_key)}")
-            sub_menu.setFocusPolicy(Qt.NoFocus)
-            presets = []
-            for sc in source_cats:
-                presets.extend(ActionPresetsRegistry.get_presets_by_category(sc))
-            for p in presets:
-                action = sub_menu.addAction(f"{p.icon}  {t(p.title_key)}")
-                action.triggered.connect(lambda checked=False, pid=p.id: self.apply_preset(pid))
-
-        menu.addSeparator()
-        act_open_drawer = menu.addAction("📖  " + t("deck.editor.inspector.open_library"))
-        act_open_drawer.triggered.connect(lambda: self.property_changed.emit("open_library", None))
-
-        menu.exec(self.btn_presets_menu.mapToGlobal(QPoint(0, self.btn_presets_menu.height())))
-
-    def apply_preset(self, preset_id: str) -> None:
-        """Применяет выбранный шаблон пресета к форме инспектора."""
-        from modules.deck.presets import ActionPresetsRegistry
-
-        preset = ActionPresetsRegistry.get_preset_by_id(preset_id)
-        if not preset:
-            return
-
-        self._is_unconfigured = False
-        if hasattr(self, "btn_test"):
-            self.btn_test.setEnabled(True)
-        self.btn_delete.setEnabled(True)
-
-        # Обновление иконки
-        self.preview_tile.set_icon(preset.icon)
-        self.property_changed.emit("icon", preset.icon)
-
-        # Обновление заголовка
-        title = t(preset.title_key)
-        self.edit_title.setText(title)
-        self.property_changed.emit("title", title)
-
-        # Обновление категории
-        cat_title = t(f"deck.editor.categories.{preset.category}")
-        self.set_category(cat_title)
-
-        # Обновление акцентного цвета
-        if preset.color_accent:
-            self.accent_picker.set_color(preset.color_accent)
-            self.property_changed.emit("color_accent", preset.color_accent)
-
-        # Источник живого статуса
-        src = preset.status_source or "none"
-        for i in range(self.combo_status_source.count()):
-            if self.combo_status_source.itemData(i) == src:
-                self.combo_status_source.setCurrentIndex(i)
-                break
-        self.property_changed.emit("status_source", src)
-
-        # Тип действия и подформа
-        prim_type = preset.base_action.action_type
-        target_idx = self.combo_actions.findData(prim_type)
-        if target_idx >= 0:
-            self.combo_actions.setCurrentIndex(target_idx)
-        self._update_subform_visibility(prim_type)
-
-        # Параметры базового действия
-        params = dict(preset.base_action.params)
-        self._current_audio_params = params
-        if prim_type == "hotkey":
-            keys = params.get("keys", [])
-            hk_str = "+".join(keys) if isinstance(keys, list) else str(keys)
-            self.subform_hotkey.set_hotkey(hk_str)
-            self.property_changed.emit("hotkey", hk_str)
-        elif prim_type == "launch":
-            self.subform_path_url.set_params(params)
-        elif prim_type == "audio":
-            if params.get("target") == "device" or "devices" in params or params.get("command") == "toggle_device":
-                self.subform_audio_device.set_params(params)
-                self.params_stack.setCurrentIndex(7)
-            elif params.get("target") == "soundboard":
-                self.subform_soundboard.set_params(params)
-                self.params_stack.setCurrentIndex(10)
-            else:
-                self.subform_volume.set_params(params)
-                self.params_stack.setCurrentIndex(5)
-        elif prim_type == "media":
-            self.subform_multimedia.set_params(params)
-        elif prim_type == "text":
-            self.subform_text_macro.set_params(params)
-        elif prim_type == "system":
-            self.subform_system.set_params(params)
-        elif prim_type == "deck_nav":
-            self.subform_deck_nav.set_params(params)
-
-        self.property_changed.emit("action_type", prim_type)
-        self.property_changed.emit("action_params", params)
-
     def _show_font_popover(self) -> None:
-        """Открывает всплывающее меню кастомизации типографики (FontCustomizationPopover)."""
         if self._font_popover is None:
             self._font_popover = FontCustomizationPopover(parent=self.window())
             self._font_popover.font_changed.connect(self._on_font_changed)
@@ -1862,7 +1758,6 @@ class ButtonPropertyForm(QWidget):
         self._font_popover.show_at_widget(self.btn_font)
 
     def _on_font_changed(self, data: dict) -> None:
-        """Обрабатывает изменение настроек шрифта из поповера и эмитит свойства."""
         if "font_size" in data:
             self._current_font_size = int(data["font_size"])
             self.property_changed.emit("font_size", self._current_font_size)
@@ -1877,12 +1772,10 @@ class ButtonPropertyForm(QWidget):
             self.property_changed.emit("hide_title", self._current_hide_title)
 
     def _on_status_source_changed(self, index: int) -> None:
-        """Обрабатывает выбор источника динамического статуса."""
         source_key = self.combo_status_source.itemData(index) or "none"
         self.property_changed.emit("status_source", source_key)
 
     def _on_click_sound_changed(self, index: int) -> None:
-        """Обрабатывает переключение режима звука клика (sound_override)."""
         mode = self.combo_click_sound.itemData(index)
         if mode == "muted":
             self.btn_click_sound_browse.setVisible(False)
@@ -1899,7 +1792,6 @@ class ButtonPropertyForm(QWidget):
             self.property_changed.emit("sound_override", None)
 
     def _on_click_sound_browse_clicked(self) -> None:
-        """Открывает диалог выбора кастомного аудиофайла для клика кнопки."""
         file_path, _ = QFileDialog.getOpenFileName(
             self.window(),
             t("deck.editor.inspector.fields.sound_file"),
@@ -1911,7 +1803,6 @@ class ButtonPropertyForm(QWidget):
             self.property_changed.emit("sound_override", file_path)
 
     def _on_click_sound_preview_clicked(self) -> None:
-        """Воспроизводит предварительный щелчок звука кнопки."""
         from modules.deck.sound_engine import DeckSoundEngine
 
         target = self._sound_override_path
@@ -1921,18 +1812,24 @@ class ButtonPropertyForm(QWidget):
             DeckSoundEngine.play_tap()
 
     def _on_action_type_changed(self, index: int) -> None:
-        """Обработчик пользовательского выбора типа действия в комбобоксе."""
-        preset_key = self.combo_actions.itemData(index)
-        value_to_emit = preset_key if preset_key is not None else self.combo_actions.currentText()
-        self._update_subform_visibility(preset_key)
-        self.property_changed.emit("action_type", value_to_emit)
+        prim_key = str(self.combo_actions.itemData(index) or ACTION_PRIMITIVE_KEYS[0])
+        default_params = self._default_params_for_type(prim_key)
+
+        self._update_subform_visibility(prim_key)
+        stack_idx = self.params_stack.currentIndex()
+        self._reset_inactive_subforms(stack_idx)
+        self._apply_params_to_subform(stack_idx, default_params)
+
+        if prim_key != "hotkey":
+            self.subform_hotkey.set_hotkey("")
+            self.property_changed.emit("hotkey", "")
+        self.property_changed.emit("action_type", prim_key)
+        self.property_changed.emit("action_params", default_params)
 
     def _on_color_accent_changed(self, hex_color: str) -> None:
-        """Обрабатывает выбор цвета в палитре и эмитит сигнал изменения."""
         self.property_changed.emit("color_accent", hex_color)
 
     def _open_icon_library_dialog(self) -> None:
-        """Открывает модальный диалог IconLibraryDialog для выбора иконки из каталога."""
         from modules.deck.editor.widgets.icon_library_dialog import IconLibraryDialog
 
         dialog = IconLibraryDialog(parent=self.window(), current_icon=self.preview_tile.get_icon())
@@ -1943,7 +1840,6 @@ class ButtonPropertyForm(QWidget):
                 self.property_changed.emit("icon", selected_icon)
 
     def _on_icon_selected_directly(self, icon_str_or_path: str) -> None:
-        """Обрабатывает прямой выбор иконки из файла или сброс из контекстного меню."""
         self.preview_tile.set_icon(icon_str_or_path)
         self.property_changed.emit("icon", icon_str_or_path)
 
@@ -1951,31 +1847,30 @@ class ButtonPropertyForm(QWidget):
 __all__ = [
     "ACCENT_COLORS",
     "ACTION_PRIMITIVE_KEYS",
-    "ACTION_PRESET_KEYS",
     "STATUS_SOURCE_KEYS",
     "CLICK_SOUND_KEYS",
+    "HOTKEY_MODE_KEYS",
+    "LAUNCH_KIND_KEYS",
+    "AUDIO_CATEGORY_KEYS",
     "MEDIA_COMMAND_KEYS",
     "VOLUME_TARGET_KEYS",
     "VOLUME_ACTION_KEYS",
-    "AUDIO_MODE_KEYS",
+    "AUDIO_DEVICE_MODE_KEYS",
     "SCREENSHOT_TARGET_KEYS",
     "SYSTEM_COMMAND_KEYS",
     "ColorAccentPicker",
     "HotkeySubform",
-    "HotkeySwitchSubform",
-    "PathUrlSubform",
     "LaunchSubform",
-    "MultimediaSubform",
-    "TextMacroSubform",
-    "VolumeSubform",
+    "PathUrlSubform",
     "AudioSubform",
-    "NoParamsSubform",
-    "MacroSubform",
-    "AudioDeviceSubform",
-    "ScreenshotSubform",
+    "MediaSubform",
+    "MultimediaSubform",
+    "TextSubform",
+    "TextMacroSubform",
     "SystemSubform",
-    "SoundboardSubform",
     "DeckNavSubform",
+    "MacroSubform",
+    "NoParamsSubform",
     "UnconfiguredSubform",
     "ButtonPropertyForm",
 ]

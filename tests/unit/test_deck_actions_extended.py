@@ -10,97 +10,102 @@ import pytest
 
 from modules.deck.action_dispatcher import ActionRunnable, WorkerSignals
 from modules.deck.models import (
-    CloseWindowParams,
+    AudioActionParams,
     DeckActionConfig,
-    HotkeySwitchParams,
-    HotkeySwitchState,
-    MultimediaParams,
-    OpenAppParams,
-    OpenPathParams,
-    TextMacroParams,
-    VolumeControlParams,
-    WebsiteParams,
+    HotkeyActionParams,
+    LaunchActionParams,
+    MediaActionParams,
+    SystemActionParams,
+    TextActionParams,
 )
 
 
 def test_extended_actions_pydantic_validation() -> None:
-    """Проверка строгой валидации Pydantic v2 моделей для новых типов действий."""
-    # 1. WebsiteParams
-    w = WebsiteParams(url="https://github.com")
-    assert w.url == "https://github.com"
+    """Проверка строгой валидации Pydantic v2 моделей для базовых примитивов."""
+    # 1. LaunchActionParams (url)
+    w = LaunchActionParams(target="https://github.com", kind="url")
+    assert w.target == "https://github.com"
+    assert w.kind == "url"
 
-    # 2. HotkeySwitchParams
-    hs = HotkeySwitchParams(
-        state_1=HotkeySwitchState(title="Mute", keys=["ctrl", "m"]),
-        state_2=HotkeySwitchState(title="Unmute", keys=["ctrl", "u"]),
-        current_state=1,
+    # 2. HotkeyActionParams (toggle)
+    hs = HotkeyActionParams(
+        mode="toggle",
+        keys=["ctrl", "m"],
+        toggle_keys=["ctrl", "u"],
     )
-    assert hs.state_1.title == "Mute"
-    assert hs.state_2.keys == ["ctrl", "u"]
-    assert hs.current_state == 1
+    assert hs.mode == "toggle"
+    assert hs.keys == ["ctrl", "m"]
+    assert hs.toggle_keys == ["ctrl", "u"]
 
-    # 3. OpenPathParams
-    op = OpenPathParams(path="C:\\Docs\\Report.pdf")
-    assert op.path == "C:\\Docs\\Report.pdf"
+    # 3. LaunchActionParams (file)
+    op = LaunchActionParams(target="C:\\Docs\\Report.pdf", kind="file")
+    assert op.target == "C:\\Docs\\Report.pdf"
 
-    # 4. OpenAppParams
-    oa = OpenAppParams(executable="calc.exe", args=["/test"], working_dir="C:\\")
-    assert oa.executable == "calc.exe"
+    # 4. LaunchActionParams (app)
+    oa = LaunchActionParams(target="calc.exe", args=["/test"], working_dir="C:\\", kind="app")
+    assert oa.target == "calc.exe"
     assert oa.args == ["/test"]
     assert oa.working_dir == "C:\\"
 
-    # 5. CloseWindowParams
-    cw = CloseWindowParams(target="active_window")
-    assert cw.target == "active_window"
+    # 5. SystemActionParams (close_window)
+    cw = SystemActionParams(command="close_window")
+    assert cw.command == "close_window"
 
-    # 6. TextMacroParams
-    tm = TextMacroParams(text="Hello World", send_enter=True)
+    # 6. TextActionParams
+    tm = TextActionParams(text="Hello World", send_enter=True)
     assert tm.text == "Hello World"
     assert tm.send_enter is True
 
-    # 7. MultimediaParams
-    mm = MultimediaParams(command="play_pause")
+    # 7. MediaActionParams
+    mm = MediaActionParams(command="play_pause")
     assert mm.command == "play_pause"
 
-    # 8. VolumeControlParams
-    vc = VolumeControlParams(target="focus_app", command="volume_up", step_percent=10)
+    # 8. AudioActionParams
+    vc = AudioActionParams(target="focus_app", command="volume_up", step_percent=10)
     assert vc.target == "focus_app"
     assert vc.command == "volume_up"
     assert vc.step_percent == 10
 
 
 def test_deck_action_config_typed_params_factory() -> None:
-    """Проверка фабричного метода get_typed_params() для всех расширенных действий."""
+    """Проверка фабричного метода get_typed_params() и нормализации устаревших действий."""
     cfg_web = DeckActionConfig(action_type="website", params={"url": "https://example.com"})
-    assert isinstance(cfg_web.get_typed_params(), WebsiteParams)
+    assert isinstance(cfg_web.get_typed_params(), LaunchActionParams)
+    assert cfg_web.get_typed_params().kind == "url"
 
     cfg_switch = DeckActionConfig(
         action_type="hotkey_switch",
         params={
             "state_1": {"title": "S1", "keys": ["f1"]},
             "state_2": {"title": "S2", "keys": ["f2"]},
-            "current_state": 1,
         },
     )
-    assert isinstance(cfg_switch.get_typed_params(), HotkeySwitchParams)
+    tp_sw = cfg_switch.get_typed_params()
+    assert isinstance(tp_sw, HotkeyActionParams)
+    assert tp_sw.mode == "toggle"
+    assert tp_sw.keys == ["f1"]
+    assert tp_sw.toggle_keys == ["f2"]
 
     cfg_path = DeckActionConfig(action_type="open_path", params={"path": "C:\\Folder"})
-    assert isinstance(cfg_path.get_typed_params(), OpenPathParams)
+    assert isinstance(cfg_path.get_typed_params(), LaunchActionParams)
+    assert cfg_path.get_typed_params().kind == "file"
 
     cfg_app = DeckActionConfig(action_type="open_app", params={"executable": "app.exe"})
-    assert isinstance(cfg_app.get_typed_params(), OpenAppParams)
+    assert isinstance(cfg_app.get_typed_params(), LaunchActionParams)
+    assert cfg_app.get_typed_params().kind == "app"
 
     cfg_close = DeckActionConfig(action_type="close_window", params={"target": "active_window"})
-    assert isinstance(cfg_close.get_typed_params(), CloseWindowParams)
+    assert isinstance(cfg_close.get_typed_params(), SystemActionParams)
+    assert cfg_close.get_typed_params().command == "close_window"
 
     cfg_macro = DeckActionConfig(action_type="text_macro", params={"text": "test", "send_enter": False})
-    assert isinstance(cfg_macro.get_typed_params(), TextMacroParams)
+    assert isinstance(cfg_macro.get_typed_params(), TextActionParams)
 
     cfg_media = DeckActionConfig(action_type="multimedia", params={"command": "next_track"})
-    assert isinstance(cfg_media.get_typed_params(), MultimediaParams)
+    assert isinstance(cfg_media.get_typed_params(), MediaActionParams)
 
     cfg_vol = DeckActionConfig(action_type="volume_control", params={"target": "master", "command": "toggle_mute"})
-    assert isinstance(cfg_vol.get_typed_params(), VolumeControlParams)
+    assert isinstance(cfg_vol.get_typed_params(), AudioActionParams)
 
 
 def test_action_runnable_website_execution() -> None:
@@ -324,14 +329,14 @@ def test_actions_pydantic_validation_safety() -> None:
     from pydantic import ValidationError
 
     with pytest.raises(ValidationError):
-        WebsiteParams.model_validate({"url": 12345})
+        LaunchActionParams.model_validate({"target": 12345})
 
     with pytest.raises(ValidationError):
-        HotkeySwitchParams.model_validate({"current_state": 5})
+        HotkeyActionParams.model_validate({"mode": "invalid_mode"})
 
     with pytest.raises(ValidationError):
-        MultimediaParams.model_validate({"command": "invalid_command"})
+        MediaActionParams.model_validate({"command": "invalid_command"})
 
     with pytest.raises(ValidationError):
-        VolumeControlParams.model_validate({"target": "unknown_target", "command": "set_level"})
+        AudioActionParams.model_validate({"target": "unknown_target", "command": "volume_up"})
 

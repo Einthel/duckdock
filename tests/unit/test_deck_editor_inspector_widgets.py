@@ -103,7 +103,7 @@ def test_styles_inspector_constants() -> None:
     assert INSPECTOR_HEIGHT == 260
     assert PREVIEW_TILE_SIZE == 84
     assert INPUT_HEIGHT == 30
-    assert FORM_LABEL_WIDTH == 60
+    assert FORM_LABEL_WIDTH == 96
     assert ICON_BTN_SIZE == 20
 
     assert BG_INSPECTOR == SURFACE_1_PANEL
@@ -126,6 +126,10 @@ def test_styles_qss_rules_presence() -> None:
     assert "FontSettingButton" in EDITOR_MAIN_QSS
     assert "HotkeyCaptureButton" in EDITOR_MAIN_QSS
     assert 'capturing="true"' in EDITOR_MAIN_QSS
+    assert "formVerticalSeparator" in EDITOR_MAIN_QSS
+    assert "feedbackSeparator" in EDITOR_MAIN_QSS
+    assert "btnSaveToLibrary" in EDITOR_MAIN_QSS
+    assert "btnAddCustomTab" in EDITOR_MAIN_QSS
 
 
 # ==============================================================================
@@ -438,8 +442,8 @@ def test_button_property_form_load_slot_data(qapp: QApplication) -> None:
     assert form.lbl_category.text() == "Media: Mute"
     assert form.edit_title.text() == "Mute Audio"
     assert form.preview_tile.get_icon() == "🔇"
-    assert form.btn_hotkey.get_hotkey() == "Ctrl+Shift+M"
-    assert form.combo_actions.currentData() in ("multimedia", "media_control")
+    assert form.params_stack.currentIndex() == 3
+    assert form.combo_actions.currentData() in ("media", "multimedia", "media_control")
 
 
 def test_button_property_form_signals(qapp: QApplication) -> None:

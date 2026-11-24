@@ -190,7 +190,6 @@
       "volume_updated": "Volume: {percent}%",
       "switch_state": "Switched to: {state}",
       "sound_played": "Playing: {sound}",
-      "soundboard_stopped": "Soundboard stopped",
       "display_sleep": "Display put to sleep",
       "macro_empty": "Macro sequence is empty",
       "macro_finished": "Completed macro steps: {success} of {total}"
@@ -240,7 +239,8 @@
           "copy": "Copy",
           "paste": "Paste",
           "cut": "Cut",
-          "duplicate": "Duplicate"
+          "duplicate": "Duplicate",
+          "save_to_library": "Save to Library..."
         },
         "pagination": {
           "home_tooltip": "Home Page",
@@ -271,18 +271,19 @@
         "pick_preset": "Select Preset...",
         "unconfigured_title": "Unconfigured Slot",
         "unconfigured_placeholder": "Untitled",
-        "unconfigured_hint": "Slot is empty. Select a primitive above or apply a preset",
+        "unconfigured_hint": "Slot is empty. Drag a preset from the right panel or choose an action above",
         "select_action_type": "— Select Action —",
         "nav_commands": {
           "next_page": "Next Page",
           "prev_page": "Previous Page",
           "goto_page": "Go to Page...",
-          "folder_open": "Open Folder",
-          "folder_back": "Back from Folder"
+          "folder_back": "Back from Folder",
+          "switch_profile": "Switch Profile (Soon)"
         },
         "hints": {
           "no_params_required": "Action requires no additional parameters",
-          "stop_audio_hint": "Instantly mutes all active soundboard effects"
+          "stop_audio_hint": "Instantly mutes all active soundboard effects",
+          "macro_wip": "Macro sequence editor coming soon"
         },
         "tooltips": {
           "delete_action": "Clear button action",
@@ -320,30 +321,12 @@
           "click_sound_default": "Default",
           "click_sound_muted": "Muted",
           "click_sound_custom": "Custom File...",
-          "status_source": "Live Status:"
+          "status_source": "Live Status:",
+          "select_device": "Select device..."
         },
         "hotkey": {
           "click_to_assign": "Click to assign",
           "press_shortcut": "Press shortcut..."
-        },
-        "actions_presets": {
-          "preset_actions": "Preset Actions",
-          "hotkey": "Hotkey",
-          "hotkey_switch": "Hotkey Switch",
-          "website": "Website",
-          "open_app": "Launch Application",
-          "open_path": "Open Folder / File",
-          "close_window": "Close Window",
-          "text_macro": "Text Macro",
-          "multimedia": "Multimedia Control",
-          "volume_control": "Volume Control",
-          "audio_device": "Audio Device",
-          "screenshot": "Screenshot",
-          "system": "System Command",
-          "play_audio": "Play Sound",
-          "stop_audio": "Stop Audio",
-          "open_application": "Open Application",
-          "media_control": "Media Control"
         },
         "audio_modes": {
           "toggle": "Toggle",
@@ -356,7 +339,9 @@
         "system_commands": {
           "toggle_dimmer": "Toggle Dimmer",
           "lock_workstation": "Lock Workstation",
-          "sleep_display": "Sleep Display"
+          "sleep_display": "Sleep Display",
+          "screenshot": "Screenshot",
+          "close_window": "Close Window"
         },
         "media_commands": {
           "play_pause": "⏯️ Play / Pause",
@@ -402,6 +387,30 @@
           "refresh_2s": "2 sec",
           "refresh_5s": "5 sec",
           "overheat_alerts": "Overheat alert notifications"
+        },
+        "hotkey_modes": {
+          "press": "Single",
+          "toggle": "Toggle"
+        },
+        "launch_kinds": {
+          "app": "Application",
+          "file": "File / Folder",
+          "url": "Website URL"
+        },
+        "audio_categories": {
+          "volume": "Volume / Mute",
+          "device": "Audio Device"
+        },
+        "save_to_library_tooltip": "Save button to library",
+        "hotkey_builder": {
+          "title": "Hotkey Builder",
+          "modifiers": "Modifiers:",
+          "key": "Key:",
+          "key_none": "Custom...",
+          "custom_key_placeholder": "Letter / digit",
+          "presets": "System:",
+          "clear": "Clear",
+          "apply": "Apply"
         }
       },
       "drawer": {
@@ -411,7 +420,6 @@
         "categories": {
           "multi_action": "Multi Action",
           "navigation": "Navigation",
-          "soundboard": "Soundboard",
           "stream_deck": "Stream Deck",
           "system": "System",
           "volume_controller": "Volume Controller"
@@ -419,15 +427,12 @@
         "actions": {
           "multi_action": "Multi Action",
           "multi_action_switch": "Multi Action Switch",
-          "create_folder": "Create Folder",
           "switch_profile": "Switch Profile",
           "prev_page": "Previous Page",
           "next_page": "Next Page",
           "goto_page": "Go to Page",
-          "page_indicator": "Page Indicator",
           "play_audio": "Play Audio",
           "stop_audio": "Stop Audio",
-          "brightness": "Brightness",
           "sleep_display": "Sleep Display",
           "hotkey": "Hotkey",
           "hotkey_switch": "Hotkey Switch",
@@ -446,6 +451,28 @@
           "volume_up": "Volume Up",
           "volume_down": "Volume Down",
           "toggle_device": "Toggle Device"
+        },
+        "custom": {
+          "add_tab": "+ Tab",
+          "add_tab_tooltip": "Create custom tab",
+          "create_tab_title": "New Tab",
+          "tab_name_label": "Tab Name:",
+          "tab_name_placeholder": "e.g. Streaming, Editing...",
+          "tab_icon_label": "Icon:",
+          "rename_tab": "Rename Tab",
+          "rename_tab_prompt": "New tab name:",
+          "delete_tab": "Delete Tab",
+          "delete_tab_confirm": "Delete tab \"{title}\" and all its saved buttons?",
+          "rename_item": "Rename",
+          "rename_item_prompt": "New button title:",
+          "delete_item": "Delete from Library",
+          "default_tab_name": "My Buttons",
+          "save_dialog_title": "Save to Library",
+          "button_title_label": "Button Title:",
+          "target_tab_label": "Target Tab:",
+          "new_tab_inline": "+ New Tab",
+          "save_btn": "Save",
+          "cancel_btn": "Cancel"
         }
       },
       "menu": {
@@ -491,7 +518,6 @@
         "system_control": "System & Display",
         "input_macros": "Input & Macros",
         "navigation": "Deck Navigation",
-        "soundboard": "Soundboard",
         "multi_action": "Multi-Actions & Macros"
       },
       "primitives": {
@@ -621,22 +647,15 @@
           "title": "Previous Page",
           "desc": "Navigate to previous page of macro panel"
         },
-        "create_folder": {
-          "title": "Open Folder",
-          "desc": "Open nested subgrid folder"
-        },
-        "soundboard_play": {
-          "title": "Play Sound Effect",
-          "desc": "Play audio file via soundboard"
-        },
-        "soundboard_stop": {
-          "title": "Stop Soundboard",
-          "desc": "Instantly stop all soundboard playback"
-        },
         "macro_sequence": {
           "title": "Macro Sequence",
           "desc": "Execute multiple actions sequentially with delay"
-        }
+        },
+        "switch_profile_wip_badge": " (Soon)",
+        "macro_wip_badge": " (In Development)"
+      },
+      "tooltips": {
+        "wip_feature": "Feature is under development"
       }
     }
   },

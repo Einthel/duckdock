@@ -6,6 +6,7 @@ from modules.deck.sound_engine import DeckSoundEngine
 from modules.deck.models import (
     ActionCategory,
     ActionType,
+    AudioActionParams,
     AudioDeviceInfo,
     AudioDeviceParams,
     DeckActionConfig,
@@ -14,11 +15,11 @@ from modules.deck.models import (
     DeckPageConfig,
     DeckRootConfig,
     HotkeyParams,
-    HttpRequestParams,
+    LaunchActionParams,
     LaunchParams,
     NavigationParams,
-    ScreenshotParams,
     SoundSettings,
+    SystemActionParams,
     SystemParams,
 )
 from modules.deck.view import DECK_QSS, DeckButtonWidget, DeckGrid, DeckView, HeaderBar
@@ -43,10 +44,11 @@ __all__ = [
     "ActionCategory",
     "AudioDeviceInfo",
     "HotkeyParams",
+    "AudioActionParams",
     "AudioDeviceParams",
+    "LaunchActionParams",
     "LaunchParams",
-    "HttpRequestParams",
-    "ScreenshotParams",
+    "SystemActionParams",
     "SystemParams",
     "NavigationParams",
 ]

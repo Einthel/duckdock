@@ -1,6 +1,6 @@
 # DuckDock / TouchWM: Архитектурная спецификация модулей
 
-> **Статус:** v0.5.8 (Контекстное меню ячеек EditorGridCell, сигнал slot_clear_requested холста, интеграция с ClearSlotCommand и UndoStack, 543 теста 100% PASS)  
+> **Статус:** v0.6.0 (Редизайн инспектора `ButtonPropertyForm` с 8 ортогональными подформами, `CustomLibraryStorage`, пользовательские вкладки и сохранение кнопок `⭐`, Dark Obsidian v2, 552 теста 100% PASS)  
 > **Целевая среда:** Windows 10/11 x64, 27" Primary (dGPU) + 7" 1024×600 JRP7813S Touchscreen (iGPU AMD Radeon Graphics).
 
 ---
@@ -207,19 +207,20 @@ flowchart TD
 - `widgets.mini_media_bar.MiniMediaBar`: Сенсорный виджет управления медиа в сайдбаре (64×54px) с бегущей строкой `MarqueeLabel` и кнопками ⏮ ⏯ ⏭.
 - `view.YouTubeView(TouchModuleView)`: Полноэкранный плеер с двунаправленной синхронизацией состояния через `EventBus`.
 
-### `modules.deck` — Сенсорная макро-панель DuckDeck v0.6.3
+### `modules.deck` — Сенсорная макро-панель DuckDeck v0.6.4
 
-- `models.py`: Pydantic V2 модели конфигурации DuckDeck (`DeckRootConfig`, `DeckPageConfig`, `DeckButtonConfig`, `DeckActionConfig`, `SoundSettings`, `SoundboardParams`). Пространство действий сведено к 8 ортогональным примитивам (`hotkey`, `launch`, `audio`, `media`, `text`, `system`, `deck_nav`, `macro`). Прозрачный нормализатор `DeckActionNormalizer` автоматически мигрирует 18+ устаревших типов конфигураций при загрузке. Чистый первый запуск (Factory Default): ровно 1 пустая страница без демо-данных.
-- `presets.py`: Реестр эталонных пресетов `ActionPresetsRegistry` (Единый источник правды — SSOT): 8 категорий таксономии и 26+ преднастроенных действий с типизированными `base_action`, цветами акцента и `status_source`. Устаревший `actions_registry.py` переведен на фасад над `ActionPresetsRegistry.get_categories_dto()`.
-- `action_dispatcher.DeckActionDispatcher`: Асинхронный диспетчер задач в пуле `QThreadPool` на базе чистого `match-case` по 8 базовым примитивам с антидребезгом (250 мс), сторожевым таймером (5000 мс), режимом заглушек `simulation_mode`, изоляцией COM-аудио и безопасной потоковой маршрутизацией звуков саундборда через сигналы `play_sound_requested` / `stop_sound_requested`. Маршрутизация навигации `next_page` / `prev_page` / `folder_back` через `DeckNavExecutor` с безопасным фолбэком.
-- `sound_engine.DeckSoundEngine`: Звуковой движок интерфейса (Zero-Latency Audio) на базе `PySide6.QtMultimedia.QSoundEffect` с предзагрузкой семплов в RAM (tap, page_switch, offline/error, online/success), регулировкой громкости, поддержкой индивидуального `sound_override`, неблокирующим саундбордом (`play_soundboard`, пул до 8 одновременных звуков, `stop_soundboard`) и предпрослушкой `preview_sound`.
+- `models.py`: Pydantic V2 модели конфигурации DuckDeck (`DeckRootConfig`, `DeckPageConfig`, `DeckButtonConfig`, `DeckActionConfig`, `SoundSettings`, `AudioActionParams`, `LaunchActionParams`, `SystemActionParams`, `HotkeyActionParams`). Пространство действий сведено к 8 ортогональным примитивам (`hotkey`, `launch`, `audio`, `media`, `text`, `system`, `deck_nav`, `macro`). Прозрачный нормализатор `DeckActionNormalizer` автоматически мигрирует 18+ устаревших типов конфигураций при загрузке. Чистый первый запуск (Factory Default): ровно 1 пустая страница без демо-данных.
+- `presets.py`: Реестр эталонных пресетов `ActionPresetsRegistry` (Единый источник правды — SSOT): 7 системных категорий таксономии (саундборд удалён, `macro_sequence` сохранён с `is_wip=True`) с типизированными `base_action`, сериализацией `params` с `exclude_none=True`, цветами акцента и `status_source`. Устаревший `actions_registry.py` переведен на фасад над `ActionPresetsRegistry.get_categories_dto()`.
+- `custom_library.py` (`CustomLibraryStorage`): Хранилище пользовательской библиотеки (`CustomTabConfig`, `CustomButtonPreset`, `CustomLibraryData`) с атомарным чтением/записью (`.tmp` + `os.replace`) в `config/deck_custom_library.json` изолированно от системных пресетов.
+- `action_dispatcher.DeckActionDispatcher`: Асинхронный диспетчер задач в пуле `QThreadPool` на базе чистого `match-case` по 8 базовым примитивам с антидребезгом (250 мс), сторожевым таймером (5000 мс), режимом заглушек `simulation_mode` и изоляцией COM-аудио. Маршрутизация навигации `next_page` / `prev_page` / `folder_back` через `DeckNavExecutor` с безопасным фолбэком.
+- `sound_engine.DeckSoundEngine`: Звуковой движок интерфейса (Zero-Latency Audio) на базе `PySide6.QtMultimedia.QSoundEffect` с предзагрузкой семплов в RAM (tap, page_switch, offline/error, online/success), регулировкой громкости, поддержкой индивидуального `sound_override` и предпрослушкой `preview_sound`.
 - `actions/`:
   - `hotkey_sender.py`: Аппаратные скан-коды `SendInput` (`KEYEVENTF_SCANCODE`) с восстановлением фокуса целевого окна.
   - `process_launcher.py`: Detached-запуск процессов и URL-схем (`CREATE_NO_WINDOW`, `DETACHED_PROCESS`).
   - `http_client.py`: Неблокирующие REST-запросы к локальным сервисам (Home Assistant, OpenRGB, OBS).
   - `screen_capture.py`: Захват экрана 1 (2560×1440) через `QScreen` / `BitBlt` в буфер обмена.
 - `widgets/`:
-  - `deck_button.py` (`DeckButtonWidget`): Сенсорный тайл 174×168 px с тактильной анимацией вдавливания (+2 px), защитой от дребезга, шейком ошибки, авто-сбросом при горизонтальном сдвиге $|dx| \ge 20$ px и подавлением ложных кликов.
+  - `deck_button.py` (`DeckButtonWidget`): Сенсорный тайл 174×168 px с полиморфным рендерингом `_render_icon()` (`QPixmap` для кастомных PNG/SVG иконок и фолбэк на Unicode/эмодзи), тактильной анимацией вдавливания (+2 px), защитой от дребезга, шейком ошибки, авто-сбросом при горизонтальном сдвиге $|dx| \ge 20$ px и подавлением ложных кликов.
   - `deck_grid.py` (`DeckGrid`): Сетка 944×372 px (2 строки × 5 колонок = 10 кнопок), плавная Fade-In анимация (160 мс) при смене страниц.
   - `interactive_panel.py` (`DeckInteractivePanel`): Нижняя панель 920×216 px из 3 секций:
     - Левая (280 px): медиа-пульт (обложка, `MarqueeLabel`, кнопки ⏮ ⏯ ⏭).
@@ -261,13 +262,12 @@ flowchart TD
   - `grid_cell.py` (`EditorGridCell`): Интерактивная ячейка сетки с поддержкой состояний `empty` (`+`), иконки, заголовка, категории, цвета акцента и бейджа статуса.
   - `touchbar_section.py` (`TouchbarSectionWidget`): Интерактивный блок тачбара (Media, Clock, Telemetry).
   - `pagination_bar.py` (`PageNavigationBar`): Нижняя панель пагинации 36 px со стрелками и точечными индикаторами (`● ○ ○`).
-  - `property_inspector.py` (`KeyPropertyInspector`): Инспектор свойств на базе `QStackedWidget` с бюджетом высоты 220 px.
+  - `property_inspector.py` (`KeyPropertyInspector`): Инспектор свойств на базе `QStackedWidget` в карточном стиле Dark Obsidian v2 (`border: 1px solid BORDER_SURFACE_1`, `border-radius: 10px`) с бюджетом высоты `INSPECTOR_HEIGHT = 260 px`.
   - `button_property_form.py`:
-    - `ButtonPropertyForm`: Комбобокс выбора 8 базовых примитивов, выпадающее меню пресетов «⚡ Шаблоны...», компактные подформы параметров высотой $\le 28$ px (`DeckNavSubform`, `UnconfiguredSubform`, `AudioDeviceSubform`, `VolumeSubform`, `ScreenshotSubform`, `SystemSubform`, `PathUrlSubform`, `SoundboardSubform` и др.).
-    - `resolve_subform_route`: Детерминированная матрица маршрутизации пресетов в соответствующие подформы параметров.
-    - Изоляция `action_params`: Селективная загрузка параметров только в активную подформу без взаимного загрязнения словарей.
-    - `ColorAccentPicker`: Компактный горизонтальный стрип свотчей выбора цвета акцента кнопки (`#38bdf8`, `#10b981`, `#f59e0b`, `#f43f5e`, `#a855f7` и кастомные).
-  - `action_drawer.py` (`ActionLibraryDrawer`): Панель каталога пресетов со строкой поиска `ActionSearchBar` и аккордеоном категорий `ActionPresetsRegistry.get_categories_dto()`.
+    - `ButtonPropertyForm`: Комбобокс выбора 8 чистых примитивов (`hotkey`, `launch`, `audio`, `media`, `text`, `system`, `deck_nav`, `macro`), кнопка сохранения в библиотеку `⭐` (`btnSaveToLibrary`, `Qt.NoFocus`), компактные подформы параметров высотой `INPUT_HEIGHT = 28 px` (`HotkeySubform`, `LaunchSubform`, `AudioSubform` с DI-списком аудиоустройств через `set_audio_devices()`, `MediaSubform`, `TextSubform`, `SystemSubform`, `DeckNavSubform`, `MacroSubform`, `UnconfiguredSubform`).
+    - Прямая маршрутизация `stack_idx` строго по `action_type` (`0..7`) и `unconfigured` (`8`) без legacy-эвристик; `FORM_LABEL_WIDTH = 96` (отсутствие обрезки «Живой статус:» / «Параметры:»), симметричная строка 3 без layout-сдвигов, `formVerticalSeparator` и `feedbackSeparator`.
+    - `ColorAccentPicker`: Компактный стрип свотчей шириной `82 px` (свотчи `14 px`, шаг `3 px`) под плитку превью `84 px`.
+  - `action_drawer.py` (`ActionLibraryDrawer`) & `action_item.py` (`ActionItemWidget`): Панель каталога пресетов с кнопкой `+ Вкладка` (`btnAddTab`), строкой поиска `ActionSearchBar` и аккордеоном системных категорий (`ActionPresetsRegistry`) + пользовательских вкладок (`CustomLibraryStorage`). Поддержка контекстного меню переименования/удаления вкладок и карточек, WIP-маркировки (`macro_sequence`) и полного Drag-and-Drop пользовательских кнопок на холст.
   - `Pure DND Invariant`: Назначение пресетов на кнопки холста производится строго через Drag & Drop. Клик по карточке в шторке нейтрализован (No-Op), исключая случайную перезапись выделенного или свободного слота. При Drop карточки на ячейку холста выполняется автоматическое выделение слота в `KeyPropertyInspector`.
   - Дорожные карты и архивация: Исторические планы `edit_action.md` и `edit_deckv2.md` перемещены в архив `.md/.archive/deck/`. Актуальные дорожные карты разработки: `.md/deck/edit_atrib1.md` (стабилизация ядра и типов) и `.md/deck/edit_atrib2.md` (спецификация и редизайн инспектора).
 

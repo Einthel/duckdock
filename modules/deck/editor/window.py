@@ -15,6 +15,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QCloseEvent, QGuiApplication, QKeySequence, QShortcut, QUndoStack
 from PySide6.QtWidgets import (
     QApplication,
+    QDialog,
     QFrame,
     QInputDialog,
     QMainWindow,
@@ -26,6 +27,8 @@ from PySide6.QtWidgets import (
 
 from core.event_bus import bus
 from core.i18n import t
+from modules.deck.custom_library import CustomButtonPreset, CustomLibraryStorage
+from modules.deck.models import DeckActionConfig
 from modules.deck.presets import ActionPresetsRegistry
 from modules.deck.editor.commands import (
     AssignActionCommand,
@@ -76,6 +79,9 @@ class DeckEditorWindow(QMainWindow):
         self,
         parent: Optional[QWidget] = None,
         config_path: Optional[str] = None,
+        audio_manager: Optional[Any] = None,
+        audio_devices: Optional[list[tuple[str, str]]] = None,
+        custom_library_path: Optional[str] = None,
     ) -> None:
         super().__init__(parent)
 
@@ -84,6 +90,20 @@ class DeckEditorWindow(QMainWindow):
 
         # Презентационная модель данных окна редактора
         self.config_path: str = config_path if config_path else "config/deck_config.json"
+        self.custom_library: CustomLibraryStorage = CustomLibraryStorage(custom_library_path)
+        self._audio_manager: Optional[Any] = audio_manager
+        if audio_devices is not None:
+            self._audio_devices: list[tuple[str, str]] = list(audio_devices)
+        elif audio_manager is not None and hasattr(audio_manager, "list_playback_devices"):
+            try:
+                self._audio_devices = [
+                    (getattr(d, "id", ""), getattr(d, "name", ""))
+                    for d in audio_manager.list_playback_devices()
+                ]
+            except Exception:
+                self._audio_devices = []
+        else:
+            self._audio_devices = []
         self.active_page_id: str | int = "default"
         self._button_slots: dict[int, ButtonSlotDTO] = {
             i: ButtonSlotDTO(slot_index=i) for i in range(10)
@@ -111,8 +131,7 @@ class DeckEditorWindow(QMainWindow):
         self.set_canvas_widget(DeckCanvasWidget(self))
         self.set_pagination_bar(PageNavigationBar(self))
         self.set_inspector_widget(KeyPropertyInspector(self))
-        drawer = ActionLibraryDrawer(self)
-        drawer.populate_actions(ActionPresetsRegistry.get_categories_dto())
+        drawer = ActionLibraryDrawer(self, custom_storage=self.custom_library)
         self.set_action_drawer(drawer)
         self._center_on_primary_screen()
         apply_editor_theme(self)
@@ -377,15 +396,56 @@ class DeckEditorWindow(QMainWindow):
             widget.action_dropped.connect(self._on_canvas_action_dropped)
             widget.slot_dropped.connect(self._on_canvas_slot_dropped)
             widget.slot_clear_requested.connect(self._on_inspector_slot_cleared)
+            widget.slot_save_to_library_requested.connect(self._on_save_slot_to_library_requested)
 
     def _on_canvas_action_dropped(self, slot_idx: int, action_data: dict) -> None:
         """Обработка сброса действия или пресета из библиотеки на ячейку холста."""
         old_dto = self.get_slot_dto(slot_idx)
         action_id = action_data.get("id", "")
-        from modules.deck.presets import ActionPresetsRegistry
+        new_dto = old_dto.model_copy(deep=True)
+
+        if action_data.get("is_custom"):
+            stored = self.custom_library.get_item(action_id) if action_id else None
+            if stored is not None:
+                new_dto.title = stored.title
+                new_dto.icon = stored.icon or "🖲️"
+                new_dto.color_accent = stored.color_accent or "#38bdf8"
+                new_dto.status_source = stored.status_source
+                new_dto.sound_override = stored.sound_override
+                new_dto.action_type = stored.action.action_type
+                new_dto.action_params = dict(stored.action.params or {})
+            else:
+                cfg = dict(action_data.get("default_config") or {})
+                act_cfg = dict(cfg.get("action") or {})
+                new_dto.title = str(cfg.get("title") or action_data.get("title") or "")
+                new_dto.icon = str(cfg.get("icon") or action_data.get("icon") or "🖲️")
+                new_dto.color_accent = str(
+                    cfg.get("color_accent") or action_data.get("color_accent") or "#38bdf8"
+                )
+                new_dto.status_source = cfg.get("status_source", action_data.get("status_source"))
+                new_dto.sound_override = cfg.get("sound_override", action_data.get("sound_override"))
+                new_dto.action_type = str(act_cfg.get("action_type") or "hotkey")
+                new_dto.action_params = dict(act_cfg.get("params") or {})
+
+            new_dto.category = t(f"deck.editor.primitives.{new_dto.action_type}")
+            if new_dto.action_type == "hotkey":
+                keys = new_dto.action_params.get("keys", [])
+                new_dto.hotkey = "+".join(keys) if isinstance(keys, list) else str(keys)
+            else:
+                new_dto.hotkey = ""
+
+            cmd = AssignActionCommand(self, slot_idx, new_dto, old_dto)
+            self._undo_stack.push(cmd)
+            if isinstance(self.canvas_widget, DeckCanvasWidget):
+                self.canvas_widget.select_button(slot_idx)
+            return
+
         preset = ActionPresetsRegistry.get_preset_by_id(action_id)
 
-        new_dto = old_dto.model_copy(deep=True)
+        if preset is not None and (getattr(preset, "is_wip", False) or not getattr(preset, "is_enabled", True)):
+            logger.debug("Ignored drop of WIP/disabled preset: %s", action_id)
+            return
+
         if preset is not None:
             new_dto.title = t(preset.title_key)
             new_dto.icon = preset.icon
@@ -397,6 +457,8 @@ class DeckEditorWindow(QMainWindow):
             if preset.base_action.action_type == "hotkey":
                 keys = preset.base_action.params.get("keys", [])
                 new_dto.hotkey = "+".join(keys) if isinstance(keys, list) else str(keys)
+            else:
+                new_dto.hotkey = ""
         else:
             title_text = action_data.get("title", "")
             category_key = action_data.get("category", "")
@@ -473,6 +535,8 @@ class DeckEditorWindow(QMainWindow):
                     dto.title = str(val) if val is not None else ""
                 elif prop_name == "hotkey":
                     dto.hotkey = str(val) if val is not None else ""
+                    if dto.hotkey and dto.hotkey.strip():
+                        dto.action_type = "hotkey"
                 elif prop_name == "action_type":
                     dto.action_type = str(val) if val is not None else ""
                     if dto.action_type not in ("hotkey", "hotkey_switch"):
@@ -909,6 +973,52 @@ class DeckEditorWindow(QMainWindow):
             widget.touchbar_updated.connect(self._on_inspector_touchbar_updated)
             widget.slot_cleared.connect(self._on_inspector_slot_cleared)
             widget.test_action_requested.connect(self._on_test_action_requested)
+            widget.save_to_library_requested.connect(self._on_save_slot_to_library_requested)
+            if self._audio_devices:
+                widget.set_audio_devices(self._audio_devices)
+
+    def _on_save_slot_to_library_requested(self, slot_idx: int) -> None:
+        """Открывает диалог сохранения настроенной кнопки в пользовательскую библиотеку."""
+        from modules.deck.editor.widgets.button_property_form import ButtonPropertyForm
+        from modules.deck.editor.widgets.custom_library_dialogs import SaveToLibraryDialog
+
+        dto = self.get_slot_dto(slot_idx)
+        dlg = SaveToLibraryDialog(
+            storage=self.custom_library,
+            default_title=dto.title or dto.hotkey or t("deck.editor.drawer.custom.default_tab_name"),
+            parent=self,
+        )
+        if dlg.exec() == QDialog.Accepted:
+            title = dlg.get_button_title()
+            tab_id = dlg.get_selected_tab_id()
+            if not title or not tab_id:
+                return
+            _stack_idx, prim_type, mapped_params = ButtonPropertyForm.resolve_subform_route(
+                dto.action_type, dto.action_params
+            )
+            action_type = prim_type if prim_type in (
+                "hotkey", "launch", "audio", "media", "text", "system", "deck_nav", "macro"
+            ) else "hotkey"
+            params = dict(mapped_params or {})
+            if action_type == "hotkey" and not params.get("keys") and dto.hotkey:
+                params["keys"] = [k.strip().lower() for k in dto.hotkey.split("+") if k.strip()]
+            preset = CustomButtonPreset(
+                id="",
+                tab_id=tab_id,
+                title=title,
+                icon=dto.icon or "🖲️",
+                color_accent=dto.color_accent or "#38bdf8",
+                status_source=dto.status_source if dto.status_source != "none" else None,
+                sound_override=dto.sound_override,
+                action=DeckActionConfig(
+                    action_type=action_type,  # type: ignore[arg-type]
+                    params=params,
+                ),
+                keywords=[title],
+            )
+            self.custom_library.add_item(tab_id, preset)
+            if hasattr(self.action_drawer, "reload_library") and callable(self.action_drawer.reload_library):
+                self.action_drawer.reload_library()
 
     def set_action_drawer(self, widget: QWidget) -> None:
         """Монтирует панель библиотеки действий в правую колонку сплиттера."""
@@ -951,7 +1061,7 @@ class DeckEditorWindow(QMainWindow):
         btn_config = DeckConfigAdapter.dto_to_slot(dto)
         if btn_config and btn_config.action:
             logger.info("Executing test action for slot %d: %s", slot_idx, btn_config.action.action_type)
-            DeckActionDispatcher.execute_action(btn_config.action)
+            DeckActionDispatcher.execute_action(btn_config.action, audio_manager=self._audio_manager)
 
     # ==========================================================================
     # I/O и сохранение конфигурации (DeckConfigAdapter & EventBus)

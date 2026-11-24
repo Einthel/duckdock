@@ -7,16 +7,18 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QMouseEvent
+from PySide6.QtCore import QPoint, Qt, Signal
+from PySide6.QtGui import QContextMenuEvent, QMouseEvent
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
+    QMenu,
     QVBoxLayout,
     QWidget,
 )
 
+from core.i18n import t
 from modules.deck.editor.dto import ActionCategoryDTO
 from modules.deck.editor.styles import CATEGORY_HEADER_HEIGHT
 from modules.deck.editor.widgets.action_item import ActionItemWidget
@@ -29,6 +31,8 @@ class ActionCategoryHeader(QFrame):
     """
 
     clicked = Signal()
+    rename_requested = Signal(str)
+    delete_requested = Signal(str)
 
     def __init__(
         self,
@@ -38,6 +42,7 @@ class ActionCategoryHeader(QFrame):
     ) -> None:
         super().__init__(parent)
         self.category_dto = category_dto
+        self._context_menu: Optional[QMenu] = None
 
         self.setObjectName(f"categoryHeader_{category_dto.id}")
         self.setProperty("class", "ActionCategoryHeader")
@@ -61,12 +66,19 @@ class ActionCategoryHeader(QFrame):
         layout.addWidget(self.lbl_chevron, 0, Qt.AlignVCenter)
 
         # Заголовок категории
-        self.lbl_title = QLabel(self.category_dto.get_title(), self)
+        self.lbl_title = QLabel(self._format_title(), self)
         self.lbl_title.setObjectName("categoryTitle")
         self.lbl_title.setProperty("class", "CategoryTitle")
         self.lbl_title.setTextFormat(Qt.PlainText)
         self.lbl_title.setAttribute(Qt.WA_TransparentForMouseEvents)
         layout.addWidget(self.lbl_title, 1, Qt.AlignVCenter)
+
+    def _format_title(self) -> str:
+        """Форматирует заголовок категории (с иконкой для пользовательских вкладок)."""
+        title = self.category_dto.get_title()
+        if getattr(self.category_dto, "is_custom", False) and self.category_dto.icon:
+            return f"{self.category_dto.icon} {title}"
+        return title
 
     def set_chevron(self, is_expanded: bool) -> None:
         """Обновляет глиф шеврона в соответствии со статусом раскрытия."""
@@ -80,7 +92,7 @@ class ActionCategoryHeader(QFrame):
 
     def retranslate_ui(self) -> None:
         """Обновляет локализованный заголовок категории."""
-        self.lbl_title.setText(self.category_dto.get_title())
+        self.lbl_title.setText(self._format_title())
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         """Клик левой кнопкой мыши по шапке переключает состояние аккордеона."""
@@ -89,6 +101,30 @@ class ActionCategoryHeader(QFrame):
             event.accept()
             return
         super().mousePressEvent(event)
+
+    def contextMenuEvent(self, event: QContextMenuEvent) -> None:
+        """Контекстное меню (ПКМ) для пользовательской вкладки."""
+        if not getattr(self.category_dto, "is_custom", False):
+            event.ignore()
+            return
+        self.show_context_menu(event.globalPos())
+        event.accept()
+
+    def show_context_menu(self, global_pos: Optional[QPoint] = None) -> QMenu:
+        """Создаёт и показывает контекстное меню управления пользовательской вкладкой."""
+        menu = QMenu(self)
+        menu.setObjectName("customCategoryContextMenu")
+
+        act_rename = menu.addAction(f"✏️ {t('deck.editor.drawer.custom.rename_tab')}")
+        act_rename.triggered.connect(lambda: self.rename_requested.emit(self.category_dto.id))
+
+        act_delete = menu.addAction(f"🗑️ {t('deck.editor.drawer.custom.delete_tab')}")
+        act_delete.triggered.connect(lambda: self.delete_requested.emit(self.category_dto.id))
+
+        self._context_menu = menu
+        if global_pos is not None:
+            menu.exec(global_pos)
+        return menu
 
 
 class ActionCategorySection(QFrame):
@@ -100,6 +136,10 @@ class ActionCategorySection(QFrame):
 
     action_selected = Signal(object)
     expanded_changed = Signal(str, bool)
+    rename_tab_requested = Signal(str)
+    delete_tab_requested = Signal(str)
+    rename_item_requested = Signal(str)
+    delete_item_requested = Signal(str)
 
     def __init__(
         self,
@@ -125,6 +165,8 @@ class ActionCategorySection(QFrame):
             parent=self,
         )
         self.header.clicked.connect(self.toggle_expanded)
+        self.header.rename_requested.connect(self.rename_tab_requested.emit)
+        self.header.delete_requested.connect(self.delete_tab_requested.emit)
         layout.addWidget(self.header)
 
         # 2. Сворачиваемое тело со списком действий
@@ -139,6 +181,8 @@ class ActionCategorySection(QFrame):
         for item_dto in category_dto.items:
             item_w = ActionItemWidget(item_dto=item_dto, parent=self.body_widget)
             item_w.item_clicked.connect(self.action_selected.emit)
+            item_w.rename_requested.connect(self.rename_item_requested.emit)
+            item_w.delete_requested.connect(self.delete_item_requested.emit)
             self.body_layout.addWidget(item_w)
             self.item_widgets.append(item_w)
 

@@ -65,26 +65,27 @@ def test_action_item_and_category_dto():
 
 
 def test_default_action_catalog_structure():
-    """Проверка структуры и наполнения реестра get_default_action_catalog()."""
+    """Проверка структуры и наполнения реестра get_default_action_catalog() (SSOT ActionPresetsRegistry)."""
     catalog = get_default_action_catalog()
-    assert len(catalog) == 6
+    assert len(catalog) == 7
 
     category_ids = [cat.id for cat in catalog]
     expected_categories = [
-        "multi_action",
+        "audio_comm",
+        "media_stream",
+        "launchers",
+        "system_control",
+        "input_macros",
         "navigation",
-        "soundboard",
-        "stream_deck",
-        "system",
-        "volume_controller",
+        "multi_action",
     ]
     assert category_ids == expected_categories
 
     for cat in catalog:
-        assert cat.title_key.startswith("deck.editor.drawer.categories.")
+        assert cat.title_key.startswith("deck.editor.categories.")
         assert len(cat.items) > 0
         for item in cat.items:
-            assert item.title_key.startswith("deck.editor.drawer.actions.")
+            assert item.title_key.startswith("deck.editor.presets.")
             assert item.category_key == cat.title_key
             assert bool(item.icon)
             # Двуязычные ключевые слова: проверяем наличие латиницы и кириллицы

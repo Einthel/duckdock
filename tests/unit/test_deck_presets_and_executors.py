@@ -34,10 +34,10 @@ from modules.deck.presets import ActionPresetsRegistry
 def test_action_presets_registry_structure_and_coverage():
     """Проверка наполнения реестра пресетов, категорий и DTO представления."""
     presets = ActionPresetsRegistry.get_all_presets()
-    assert len(presets) >= 26
+    assert len(presets) >= 24
 
-    # 8 базовых категорий
-    assert len(ActionPresetsRegistry.CATEGORIES) == 8
+    # 7 базовых категорий (без soundboard)
+    assert len(ActionPresetsRegistry.CATEGORIES) == 7
     cat_ids = {c["id"] for c in ActionPresetsRegistry.CATEGORIES}
     expected_cats = {
         "audio_comm",
@@ -46,17 +46,21 @@ def test_action_presets_registry_structure_and_coverage():
         "system_control",
         "input_macros",
         "navigation",
-        "soundboard",
         "multi_action",
     }
     assert cat_ids == expected_cats
 
-    # Проверка получения пресета по ID
+    # Проверка получения пресета по ID и что devices есть только у output_device_toggle
     p_dev = ActionPresetsRegistry.get_preset_by_id("output_device_toggle")
     assert p_dev is not None
     assert p_dev.category == "audio_comm"
     assert p_dev.base_action.action_type == "audio"
     assert p_dev.status_source == "audio_device"
+    assert "devices" in p_dev.base_action.params
+
+    for p in presets:
+        if p.base_action.action_type == "audio" and p.id != "output_device_toggle":
+            assert "devices" not in p.base_action.params
 
     # Проверка фильтрации по категории
     media_presets = ActionPresetsRegistry.get_presets_by_category("media_stream")
@@ -64,7 +68,7 @@ def test_action_presets_registry_structure_and_coverage():
 
     # Проверка DTO категорий
     categories_dto = ActionPresetsRegistry.get_categories_dto()
-    assert len(categories_dto) == 8
+    assert len(categories_dto) == 7
     for cat_dto in categories_dto:
         assert cat_dto.id in cat_ids
         assert len(cat_dto.items) > 0
@@ -130,7 +134,7 @@ def test_launch_executor():
 
 
 def test_audio_executor():
-    """Тест изолированного AudioExecutor (mic, master, device, soundboard)."""
+    """Тест изолированного AudioExecutor (mic, master, device, focus_app)."""
     # Mic
     p_mic = AudioActionParams(target="mic", command="toggle_mute")
     mock_audio_mgr = MagicMock()
@@ -146,16 +150,24 @@ def test_audio_executor():
     assert ok is True
     mock_audio_mgr.toggle_master_mute.assert_called_once()
 
-    # Soundboard
-    play_called = []
-    p_sb = AudioActionParams(target="soundboard", command="play_sound", file_path="click.wav")
-    ok, msg = AudioExecutor.execute(
-        p_sb,
-        play_sound_emitter=lambda p, v, s: play_called.append((p, v, s)),
-    )
+    # Master volume_up / volume_down
+    mock_audio_mgr.step_master_volume.return_value = 0.65
+    p_up = AudioActionParams(target="master", command="volume_up", step_percent=5)
+    ok, msg = AudioExecutor.execute(p_up, audio_manager=mock_audio_mgr)
     assert ok is True
-    assert len(play_called) == 1
-    assert play_called[0][0] == "click.wav"
+    mock_audio_mgr.step_master_volume.assert_called_with(5)
+
+    p_down = AudioActionParams(target="master", command="volume_down", step_percent=5)
+    ok, msg = AudioExecutor.execute(p_down, audio_manager=mock_audio_mgr)
+    assert ok is True
+    mock_audio_mgr.step_master_volume.assert_called_with(-5)
+
+    # Device set_device
+    mock_audio_mgr.set_default_playback_device.return_value = True
+    p_set = AudioActionParams(target="device", command="set_device", mode="set", target_device_id="dev_1")
+    ok, msg = AudioExecutor.execute(p_set, audio_manager=mock_audio_mgr)
+    assert ok is True
+    mock_audio_mgr.set_default_playback_device.assert_called_once_with("dev_1")
 
 
 def test_media_executor():
@@ -180,7 +192,7 @@ def test_text_executor():
 def test_system_executor():
     """Тест изолированного SystemExecutor."""
     # Dimmer
-    p_dim = SystemActionParams(command="dimmer")
+    p_dim = SystemActionParams(command="toggle_dimmer")
     received = []
     from core.event_bus import bus
     bus.dimmer_toggle_requested.connect(lambda: received.append(True))
@@ -189,7 +201,7 @@ def test_system_executor():
     assert len(received) == 1
 
     # Lock PC
-    p_lock = SystemActionParams(command="lock_pc")
+    p_lock = SystemActionParams(command="lock_workstation")
     with patch("ctypes.windll.user32.LockWorkStation", return_value=1) as mock_lock:
         ok, msg = SystemExecutor.execute(p_lock)
         assert ok is True
@@ -221,3 +233,29 @@ def test_macro_executor():
     ok, msg = MacroExecutor.execute(p_macro, single_action_runner=runner)
     assert ok is True
     assert len(executed) == 2
+
+
+def test_presets_import_without_circular_error():
+    """Тест отсутствия циклического импорта ActionPresetsRegistry при чистом импорте."""
+    from modules.deck.presets import ActionPresetsRegistry
+    assert ActionPresetsRegistry is not None
+    categories_dto = ActionPresetsRegistry.get_categories_dto()
+    assert len(categories_dto) == 7
+
+
+def test_phase2_ssot_and_phantom_cleanup():
+    """Проверка единого каталога SSOT, удаления create_folder и WIP-маркировки macro_sequence."""
+    from modules.deck.editor.actions_registry import get_default_action_catalog
+    from modules.deck.presets import ActionPresetsRegistry
+
+    ssot = ActionPresetsRegistry.get_categories_dto()
+    facade = get_default_action_catalog()
+    assert facade == ssot
+
+    assert ActionPresetsRegistry.get_preset_by_id("create_folder") is None
+    nav_ids = [p.id for p in ActionPresetsRegistry.get_presets_by_category("navigation")]
+    assert nav_ids == ["nav_next_page", "nav_prev_page"]
+
+    macro_preset = ActionPresetsRegistry.get_preset_by_id("macro_sequence")
+    assert macro_preset is not None
+    assert macro_preset.is_wip is True

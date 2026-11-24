@@ -74,33 +74,28 @@ def action_catalog() -> list[ActionCategoryDTO]:
 
 def test_action_catalog_registry(action_catalog):
     """
-    Проверка статического реестра действий get_default_action_catalog():
-    - Ровно 6 обязательных категорий (multi_action, navigation, soundboard,
-      stream_deck, system, volume_controller).
+    Проверка единого реестра действий get_default_action_catalog() (SSOT из ActionPresetsRegistry):
+    - Ровно 8 обязательных категорий таксономии.
     - Каждая категория содержит валидные id, title_key, иконку и непустой список items.
-    - Проверка наличия ключевых действий в категориях:
-      * multi_action: multi_action, multi_action_switch
-      * navigation: create_folder, switch_profile, prev_page, next_page, goto_page, page_indicator
-      * soundboard: play_audio, stop_audio
-      * stream_deck: brightness, sleep_display
-      * system: hotkey, open_app, open_website, text_macro
-      * volume_controller: mute_audio, volume_up, volume_down, toggle_device
+    - Отсутствуют удаленные фантомные действия (create_folder, brightness, page_indicator).
+    - macro_sequence помечен флагом is_wip=True.
     - Проверка наличия двуязычных ключевых слов (RU и EN) у действий.
     """
     expected_categories = [
-        "multi_action",
+        "audio_comm",
+        "media_stream",
+        "launchers",
+        "system_control",
+        "input_macros",
         "navigation",
-        "soundboard",
-        "stream_deck",
-        "system",
-        "volume_controller",
+        "multi_action",
     ]
     catalog_category_ids = [cat.id for cat in action_catalog]
     assert catalog_category_ids == expected_categories
 
     for cat in action_catalog:
         assert cat.id, "Category ID must not be empty"
-        assert cat.title_key.startswith("deck.editor.drawer.categories."), (
+        assert cat.title_key.startswith("deck.editor.categories."), (
             f"Invalid title_key: {cat.title_key}"
         )
         assert cat.get_title(), f"Localized title missing for category {cat.id}"
@@ -108,7 +103,7 @@ def test_action_catalog_registry(action_catalog):
 
         for item in cat.items:
             assert item.id, f"Item ID must not be empty in category {cat.id}"
-            assert item.title_key.startswith("deck.editor.drawer.actions."), (
+            assert item.title_key.startswith("deck.editor.presets."), (
                 f"Invalid title_key: {item.title_key}"
             )
             assert item.category_key == cat.title_key
@@ -124,26 +119,23 @@ def test_action_catalog_registry(action_catalog):
             assert has_latin, f"Action {item.id} must have English keywords"
             assert has_cyrillic, f"Action {item.id} must have Russian keywords"
 
-    # Точечная проверка обязательных идентификаторов действий
+    # Точечная проверка обязательных идентификаторов и отсутствия фантомных действий
     actions_map = {cat.id: [it.id for it in cat.items] for cat in action_catalog}
-    assert "multi_action" in actions_map["multi_action"]
-    assert "multi_action_switch" in actions_map["multi_action"]
-    assert "create_folder" in actions_map["navigation"]
-    assert "switch_profile" in actions_map["navigation"]
-    assert "prev_page" in actions_map["navigation"]
-    assert "next_page" in actions_map["navigation"]
-    assert "play_audio" in actions_map["soundboard"]
-    assert "stop_audio" in actions_map["soundboard"]
-    assert "brightness" in actions_map["stream_deck"]
-    assert "sleep_display" in actions_map["stream_deck"]
-    assert "hotkey" in actions_map["system"]
-    assert "open_app" in actions_map["system"]
-    assert "open_website" in actions_map["system"]
-    assert "text_macro" in actions_map["system"]
-    assert "mute_audio" in actions_map["volume_controller"]
-    assert "volume_up" in actions_map["volume_controller"]
-    assert "volume_down" in actions_map["volume_controller"]
-    assert "toggle_device" in actions_map["volume_controller"]
+    all_ids = {it_id for ids in actions_map.values() for it_id in ids}
+    assert "create_folder" not in all_ids
+    assert "brightness" not in all_ids
+    assert "page_indicator" not in all_ids
+
+    assert actions_map["navigation"] == ["nav_next_page", "nav_prev_page"]
+    assert "soundboard_play" not in all_ids
+    assert "soundboard_stop" not in all_ids
+    assert "custom_hotkey" in actions_map["input_macros"]
+    assert "macro_sequence" in actions_map["multi_action"]
+
+    macro_item = next(
+        it for cat in action_catalog if cat.id == "multi_action" for it in cat.items if it.id == "macro_sequence"
+    )
+    assert macro_item.is_wip is True
 
 
 # ==============================================================================
@@ -205,7 +197,7 @@ def test_action_accordion_collapse_expand(qapp, qtbot, action_catalog):
     qtbot.addWidget(accordion)
 
     accordion.load_categories(action_catalog)
-    assert len(accordion.sections) == 6
+    assert len(accordion.sections) == 7
 
     # Проверка начального состояния всех секций
     for sec in accordion.sections:
@@ -259,39 +251,39 @@ def test_action_search_bilingual(qapp, qtbot, action_catalog):
 
     # 1. Поиск по-английски "hotkey"
     drawer.search_bar.search_input.setText("hotkey")
-    system_sec = next(s for s in drawer.accordion.sections if s.category_dto.id == "system")
-    assert system_sec.isVisible()
-    assert system_sec.is_expanded
-    assert system_sec.body_widget.isVisible()
+    input_sec = next(s for s in drawer.accordion.sections if s.category_dto.id == "input_macros")
+    assert input_sec.isVisible()
+    assert input_sec.is_expanded
+    assert input_sec.body_widget.isVisible()
 
-    hotkey_w = next(w for w in system_sec.item_widgets if w.item_dto.id == "hotkey")
+    hotkey_w = next(w for w in input_sec.item_widgets if w.item_dto.id == "custom_hotkey")
     assert hotkey_w.isVisible()
     # Другие категории скрыты
-    other_sections = [s for s in drawer.accordion.sections if s.category_dto.id != "system"]
+    other_sections = [s for s in drawer.accordion.sections if s.category_dto.id != "input_macros"]
     assert all(not s.isVisible() for s in other_sections)
     assert not drawer.accordion.lbl_empty.isVisible()
 
     # 2. Поиск по-русски "хоткей"
     drawer.search_bar.search_input.setText("хоткей")
-    assert system_sec.isVisible()
-    assert system_sec.is_expanded
+    assert input_sec.isVisible()
+    assert input_sec.is_expanded
     assert hotkey_w.isVisible()
     assert all(not s.isVisible() for s in other_sections)
     assert not drawer.accordion.lbl_empty.isVisible()
 
-    # 3. Поиск по слову "папка"
-    drawer.search_bar.search_input.setText("папка")
+    # 3. Поиск по слову "страница"
+    drawer.search_bar.search_input.setText("страница")
     nav_sec = next(s for s in drawer.accordion.sections if s.category_dto.id == "navigation")
     assert nav_sec.isVisible()
     assert nav_sec.is_expanded
-    folder_w = next(w for w in nav_sec.item_widgets if w.item_dto.id == "create_folder")
-    assert folder_w.isVisible()
+    next_page_w = next(w for w in nav_sec.item_widgets if w.item_dto.id == "nav_next_page")
+    assert next_page_w.isVisible()
 
-    # Поиск по слову "folder"
-    drawer.search_bar.search_input.setText("folder")
+    # Поиск по слову "page"
+    drawer.search_bar.search_input.setText("page")
     assert nav_sec.isVisible()
     assert nav_sec.is_expanded
-    assert folder_w.isVisible()
+    assert next_page_w.isVisible()
 
     # 4. Поиск несуществующего слова "abracadabra"
     drawer.search_bar.search_input.setText("abracadabra")
@@ -332,9 +324,9 @@ def test_action_drawer_retranslate_ui(qapp, qtbot, action_catalog):
     drawer.show()
     qtbot.addWidget(drawer)
 
-    system_sec = next(s for s in drawer.accordion.sections if s.category_dto.id == "system")
-    system_sec.set_expanded(True)
-    assert system_sec.is_expanded
+    input_sec = next(s for s in drawer.accordion.sections if s.category_dto.id == "input_macros")
+    input_sec.set_expanded(True)
+    assert input_sec.is_expanded
 
     # 1. Переключение на RU
     I18nManager().set_language("ru", emit_signal=False)
@@ -346,10 +338,10 @@ def test_action_drawer_retranslate_ui(qapp, qtbot, action_catalog):
     assert drawer.search_bar.btn_view_options.toolTip() == t(
         "deck.editor.drawer.view_options_tooltip"
     )
-    assert system_sec.header.lbl_title.text() == t("deck.editor.drawer.categories.system")
-    hotkey_w = next(w for w in system_sec.item_widgets if w.item_dto.id == "hotkey")
-    assert hotkey_w.lbl_title.text() == t("deck.editor.drawer.actions.hotkey")
-    assert system_sec.is_expanded, "Expanded state must be preserved after retranslate_ui"
+    assert input_sec.header.lbl_title.text() == t("deck.editor.categories.input_macros")
+    hotkey_w = next(w for w in input_sec.item_widgets if w.item_dto.id == "custom_hotkey")
+    assert hotkey_w.lbl_title.text() == t("deck.editor.presets.custom_hotkey.title")
+    assert input_sec.is_expanded, "Expanded state must be preserved after retranslate_ui"
 
     # 2. Переключение на EN
     I18nManager().set_language("en", emit_signal=False)
@@ -361,9 +353,9 @@ def test_action_drawer_retranslate_ui(qapp, qtbot, action_catalog):
     assert drawer.search_bar.btn_view_options.toolTip() == t(
         "deck.editor.drawer.view_options_tooltip"
     )
-    assert system_sec.header.lbl_title.text() == t("deck.editor.drawer.categories.system")
-    assert hotkey_w.lbl_title.text() == t("deck.editor.drawer.actions.hotkey")
-    assert system_sec.is_expanded, "Expanded state must be preserved after retranslate_ui"
+    assert input_sec.header.lbl_title.text() == t("deck.editor.categories.input_macros")
+    assert hotkey_w.lbl_title.text() == t("deck.editor.presets.custom_hotkey.title")
+    assert input_sec.is_expanded, "Expanded state must be preserved after retranslate_ui"
 
     # 3. Проверка перевода плейсхолдера пустого поиска
     drawer.search_bar.search_input.setText("xyz_empty_query")
@@ -396,18 +388,44 @@ def test_action_item_selection(qapp, qtbot, action_catalog):
     drawer.show()
     qtbot.addWidget(drawer)
 
-    system_sec = next(s for s in drawer.accordion.sections if s.category_dto.id == "system")
-    system_sec.set_expanded(True)
-    hotkey_item = next(w for w in system_sec.item_widgets if w.item_dto.id == "hotkey")
+    input_sec = next(s for s in drawer.accordion.sections if s.category_dto.id == "input_macros")
+    input_sec.set_expanded(True)
+    hotkey_item = next(w for w in input_sec.item_widgets if w.item_dto.id == "custom_hotkey")
 
     with qtbot.waitSignal(drawer.action_picked, timeout=1000) as blocker:
         qtbot.mouseClick(hotkey_item, Qt.LeftButton)
 
     picked_dto = blocker.args[0]
     assert isinstance(picked_dto, ActionItemDTO)
-    assert picked_dto.id == "hotkey"
+    assert picked_dto.id == "custom_hotkey"
     assert picked_dto.icon == "⌨️"
-    assert picked_dto.category_key == "deck.editor.drawer.categories.system"
+    assert picked_dto.category_key == "deck.editor.categories.input_macros"
+
+
+def test_macro_sequence_wip_blocked_in_drawer(qapp, qtbot, action_catalog):
+    """
+    Проверка блокировки и визуальной маркировки WIP-действия macro_sequence в шторке:
+    - Карточка macro_sequence имеет opacity 0.5 и суффикс (В разработке) / (In Development).
+    - Клик по WIP-карточке не эмитирует action_picked.
+    """
+    drawer = ActionLibraryDrawer(categories=action_catalog)
+    drawer.show()
+    qtbot.addWidget(drawer)
+
+    multi_sec = next(s for s in drawer.accordion.sections if s.category_dto.id == "multi_action")
+    multi_sec.set_expanded(True)
+    macro_w = next(w for w in multi_sec.item_widgets if w.item_dto.id == "macro_sequence")
+
+    assert macro_w.item_dto.is_wip is True
+    assert macro_w.graphicsEffect() is not None
+    assert macro_w.graphicsEffect().opacity() == pytest.approx(0.5)
+    assert t("deck.editor.presets.macro_wip_badge").strip() in macro_w.lbl_title.text()
+    assert macro_w.toolTip() == t("deck.editor.tooltips.wip_feature")
+
+    picked = []
+    drawer.action_picked.connect(picked.append)
+    qtbot.mouseClick(macro_w, Qt.LeftButton)
+    assert picked == []
 
 
 # ==============================================================================
@@ -501,17 +519,20 @@ def test_action_drawer_window_integration(qapp, qtbot, tmp_path):
 # ==============================================================================
 
 
-def test_action_drawer_presets_registry_loading_and_bilingual_search(qapp, qtbot):
+def test_action_drawer_presets_registry_loading_and_bilingual_search(qapp, qtbot, tmp_path):
     """
     Проверка загрузки пресетов из ActionPresetsRegistry в ActionLibraryDrawer
     и двуязычного поиска (русский и английский) по тегам ключевых слов.
     """
-    drawer = ActionLibraryDrawer()
+    from modules.deck.custom_library import CustomLibraryStorage
+
+    isolated_storage = CustomLibraryStorage(file_path=str(tmp_path / "custom_lib.json"))
+    drawer = ActionLibraryDrawer(custom_storage=isolated_storage)
     drawer.load_presets_registry()
     drawer.show()
     qtbot.addWidget(drawer)
 
-    assert len(drawer.accordion.sections) == 8
+    assert len(drawer.accordion.sections) == 7
     expected_categories = [
         "audio_comm",
         "media_stream",
@@ -519,7 +540,6 @@ def test_action_drawer_presets_registry_loading_and_bilingual_search(qapp, qtbot
         "system_control",
         "input_macros",
         "navigation",
-        "soundboard",
         "multi_action",
     ]
     loaded_cat_ids = [s.category_dto.id for s in drawer.accordion.sections]

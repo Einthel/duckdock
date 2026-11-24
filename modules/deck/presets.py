@@ -5,9 +5,10 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
-from modules.deck.editor.dto import ActionCategoryDTO, ActionItemDTO
+if TYPE_CHECKING:
+    from modules.deck.editor.dto import ActionCategoryDTO, ActionItemDTO
 from modules.deck.models import (
     ActionPresetDefinition,
     AudioActionParams,
@@ -63,11 +64,6 @@ class ActionPresetsRegistry:
             "icon": "🧭",
         },
         {
-            "id": "soundboard",
-            "title_key": "deck.editor.categories.soundboard",
-            "icon": "🎵",
-        },
-        {
             "id": "multi_action",
             "title_key": "deck.editor.categories.multi_action",
             "icon": "🔀",
@@ -93,7 +89,7 @@ class ActionPresetsRegistry:
                     command="toggle_device",
                     mode="toggle",
                     devices=["Наушники", "Динамики"],
-                ).model_dump(),
+                ).model_dump(exclude_none=True),
             ),
             keywords=["audio", "headphones", "speakers", "output", "device", "toggle", "звук", "наушники", "динамики", "вывод", "переключить"],
         ),
@@ -110,7 +106,7 @@ class ActionPresetsRegistry:
                 params=AudioActionParams(
                     target="mic",
                     command="toggle_mute",
-                ).model_dump(),
+                ).model_dump(exclude_none=True),
             ),
             keywords=["mic", "microphone", "mute", "unmute", "voice", "микрофон", "мьют", "голос", "заглушить"],
         ),
@@ -127,7 +123,7 @@ class ActionPresetsRegistry:
                 params=AudioActionParams(
                     target="master",
                     command="toggle_mute",
-                ).model_dump(),
+                ).model_dump(exclude_none=True),
             ),
             keywords=["master", "mute", "sound", "volume", "silent", "мастер", "звук", "тишина", "заглушить"],
         ),
@@ -143,9 +139,9 @@ class ActionPresetsRegistry:
                 action_type="audio",
                 params=AudioActionParams(
                     target="focus_app",
-                    command="step",
+                    command="volume_up",
                     step_percent=5,
-                ).model_dump(),
+                ).model_dump(exclude_none=True),
             ),
             keywords=["volume", "up", "focus", "app", "louder", "громкость", "громче", "плюс", "фокус", "приложение"],
         ),
@@ -161,9 +157,9 @@ class ActionPresetsRegistry:
                 action_type="audio",
                 params=AudioActionParams(
                     target="focus_app",
-                    command="step",
-                    step_percent=-5,
-                ).model_dump(),
+                    command="volume_down",
+                    step_percent=5,
+                ).model_dump(exclude_none=True),
             ),
             keywords=["volume", "down", "focus", "app", "quieter", "громкость", "тише", "минус", "фокус", "приложение"],
         ),
@@ -180,7 +176,7 @@ class ActionPresetsRegistry:
                 params=HotkeyActionParams(
                     keys=["ctrl", "shift", "m"],
                     mode="press",
-                ).model_dump(),
+                ).model_dump(exclude_none=True),
             ),
             keywords=["discord", "mute", "mic", "дискорд", "мьют", "микрофон"],
         ),
@@ -197,7 +193,7 @@ class ActionPresetsRegistry:
                 params=HotkeyActionParams(
                     keys=["ctrl", "shift", "d"],
                     mode="press",
-                ).model_dump(),
+                ).model_dump(exclude_none=True),
             ),
             keywords=["discord", "deafen", "sound", "дискорд", "заглушить", "наушники"],
         ),
@@ -215,7 +211,7 @@ class ActionPresetsRegistry:
             status_source=None,
             base_action=DeckActionConfig(
                 action_type="media",
-                params=MediaActionParams(command="play_pause").model_dump(),
+                params=MediaActionParams(command="play_pause").model_dump(exclude_none=True),
             ),
             keywords=["media", "play", "pause", "music", "track", "медиа", "плей", "пауза", "музыка", "трек"],
         ),
@@ -229,7 +225,7 @@ class ActionPresetsRegistry:
             status_source=None,
             base_action=DeckActionConfig(
                 action_type="media",
-                params=MediaActionParams(command="next_track").model_dump(),
+                params=MediaActionParams(command="next_track").model_dump(exclude_none=True),
             ),
             keywords=["media", "next", "track", "forward", "медиа", "следующий", "трек", "вперед"],
         ),
@@ -243,7 +239,7 @@ class ActionPresetsRegistry:
             status_source=None,
             base_action=DeckActionConfig(
                 action_type="media",
-                params=MediaActionParams(command="prev_track").model_dump(),
+                params=MediaActionParams(command="prev_track").model_dump(exclude_none=True),
             ),
             keywords=["media", "prev", "previous", "track", "back", "медиа", "предыдущий", "трек", "назад"],
         ),
@@ -257,7 +253,7 @@ class ActionPresetsRegistry:
             status_source=None,
             base_action=DeckActionConfig(
                 action_type="hotkey",
-                params=HotkeyActionParams(keys=["ctrl", "f9"]).model_dump(),
+                params=HotkeyActionParams(keys=["ctrl", "f9"]).model_dump(exclude_none=True),
             ),
             keywords=["obs", "record", "stream", "video", "обзор", "запись", "стрим", "видео"],
         ),
@@ -271,7 +267,7 @@ class ActionPresetsRegistry:
             status_source=None,
             base_action=DeckActionConfig(
                 action_type="hotkey",
-                params=HotkeyActionParams(keys=["ctrl", "f10"]).model_dump(),
+                params=HotkeyActionParams(keys=["ctrl", "f10"]).model_dump(exclude_none=True),
             ),
             keywords=["obs", "stream", "live", "broadcast", "стрим", "эфир", "трансляция"],
         ),
@@ -289,7 +285,7 @@ class ActionPresetsRegistry:
             status_source=None,
             base_action=DeckActionConfig(
                 action_type="launch",
-                params=LaunchActionParams(target="wt.exe", kind="app").model_dump(),
+                params=LaunchActionParams(target="wt.exe", kind="app").model_dump(exclude_none=True),
             ),
             keywords=["terminal", "cmd", "powershell", "wt", "bash", "терминал", "консоль", "командная строка"],
         ),
@@ -303,7 +299,7 @@ class ActionPresetsRegistry:
             status_source=None,
             base_action=DeckActionConfig(
                 action_type="launch",
-                params=LaunchActionParams(target="https://google.com", kind="url").model_dump(),
+                params=LaunchActionParams(target="https://google.com", kind="url").model_dump(exclude_none=True),
             ),
             keywords=["browser", "web", "internet", "chrome", "edge", "браузер", "интернет", "сайт"],
         ),
@@ -317,7 +313,7 @@ class ActionPresetsRegistry:
             status_source=None,
             base_action=DeckActionConfig(
                 action_type="launch",
-                params=LaunchActionParams(target="https://", kind="url").model_dump(),
+                params=LaunchActionParams(target="https://", kind="url").model_dump(exclude_none=True),
             ),
             keywords=["url", "link", "web", "site", "сайт", "ссылка", "веб", "страница"],
         ),
@@ -331,7 +327,7 @@ class ActionPresetsRegistry:
             status_source=None,
             base_action=DeckActionConfig(
                 action_type="launch",
-                params=LaunchActionParams(target="", kind="app").model_dump(),
+                params=LaunchActionParams(target="", kind="app").model_dump(exclude_none=True),
             ),
             keywords=["app", "exe", "application", "launch", "run", "приложение", "программа", "запуск"],
         ),
@@ -345,7 +341,7 @@ class ActionPresetsRegistry:
             status_source=None,
             base_action=DeckActionConfig(
                 action_type="launch",
-                params=LaunchActionParams(target="%USERPROFILE%\\Downloads", kind="file").model_dump(),
+                params=LaunchActionParams(target="%USERPROFILE%\\Downloads", kind="file").model_dump(exclude_none=True),
             ),
             keywords=["downloads", "folder", "files", "загрузки", "папка", "файлы"],
         ),
@@ -359,7 +355,7 @@ class ActionPresetsRegistry:
             status_source=None,
             base_action=DeckActionConfig(
                 action_type="launch",
-                params=LaunchActionParams(target="calc.exe", kind="app").model_dump(),
+                params=LaunchActionParams(target="calc.exe", kind="app").model_dump(exclude_none=True),
             ),
             keywords=["calculator", "calc", "math", "калькулятор", "расчет"],
         ),
@@ -377,7 +373,7 @@ class ActionPresetsRegistry:
             status_source="dimmer",
             base_action=DeckActionConfig(
                 action_type="system",
-                params=SystemActionParams(command="dimmer").model_dump(),
+                params=SystemActionParams(command="toggle_dimmer").model_dump(exclude_none=True),
             ),
             keywords=["dimmer", "screen", "night", "dark", "brightness", "диммер", "экран", "ночь", "темнота", "яркость"],
         ),
@@ -391,7 +387,7 @@ class ActionPresetsRegistry:
             status_source=None,
             base_action=DeckActionConfig(
                 action_type="system",
-                params=SystemActionParams(command="screenshot", screenshot_target="primary").model_dump(),
+                params=SystemActionParams(command="screenshot", screenshot_target="primary").model_dump(exclude_none=True),
             ),
             keywords=["screenshot", "capture", "screen", "image", "скриншот", "снимок", "экран"],
         ),
@@ -405,7 +401,7 @@ class ActionPresetsRegistry:
             status_source=None,
             base_action=DeckActionConfig(
                 action_type="system",
-                params=SystemActionParams(command="lock_pc").model_dump(),
+                params=SystemActionParams(command="lock_workstation").model_dump(exclude_none=True),
             ),
             keywords=["lock", "pc", "windows", "security", "блокировка", "компьютер", "безопасность"],
         ),
@@ -419,7 +415,7 @@ class ActionPresetsRegistry:
             status_source=None,
             base_action=DeckActionConfig(
                 action_type="hotkey",
-                params=HotkeyActionParams(keys=["win", "d"]).model_dump(),
+                params=HotkeyActionParams(keys=["win", "d"]).model_dump(exclude_none=True),
             ),
             keywords=["desktop", "minimize", "windows", "рабочий стол", "свернуть", "окна"],
         ),
@@ -433,7 +429,7 @@ class ActionPresetsRegistry:
             status_source=None,
             base_action=DeckActionConfig(
                 action_type="hotkey",
-                params=HotkeyActionParams(keys=["ctrl", "shift", "esc"]).model_dump(),
+                params=HotkeyActionParams(keys=["ctrl", "shift", "esc"]).model_dump(exclude_none=True),
             ),
             keywords=["task manager", "performance", "processes", "диспетчер задач", "процессы"],
         ),
@@ -447,7 +443,7 @@ class ActionPresetsRegistry:
             status_source=None,
             base_action=DeckActionConfig(
                 action_type="system",
-                params=SystemActionParams(command="close_window").model_dump(),
+                params=SystemActionParams(command="close_window").model_dump(exclude_none=True),
             ),
             keywords=["close", "window", "kill", "exit", "закрыть", "окно", "выход"],
         ),
@@ -465,7 +461,7 @@ class ActionPresetsRegistry:
             status_source=None,
             base_action=DeckActionConfig(
                 action_type="hotkey",
-                params=HotkeyActionParams(keys=["ctrl", "c"]).model_dump(),
+                params=HotkeyActionParams(keys=["ctrl", "c"]).model_dump(exclude_none=True),
             ),
             keywords=["hotkey", "shortcut", "key", "press", "хоткей", "сочетание", "клавиши"],
         ),
@@ -479,7 +475,7 @@ class ActionPresetsRegistry:
             status_source=None,
             base_action=DeckActionConfig(
                 action_type="hotkey",
-                params=HotkeyActionParams(keys=["f1"], mode="toggle", toggle_keys=["f2"]).model_dump(),
+                params=HotkeyActionParams(keys=["f1"], mode="toggle", toggle_keys=["f2"]).model_dump(exclude_none=True),
             ),
             keywords=["toggle", "switch", "state", "триггер", "свитч", "тумблер", "переключатель"],
         ),
@@ -493,7 +489,7 @@ class ActionPresetsRegistry:
             status_source=None,
             base_action=DeckActionConfig(
                 action_type="text",
-                params=TextActionParams(text="", send_enter=False).model_dump(),
+                params=TextActionParams(text="", send_enter=False).model_dump(exclude_none=True),
             ),
             keywords=["text", "paste", "clipboard", "snippet", "текст", "вставка", "сниппет", "буфер"],
         ),
@@ -511,7 +507,7 @@ class ActionPresetsRegistry:
             status_source=None,
             base_action=DeckActionConfig(
                 action_type="deck_nav",
-                params=DeckNavActionParams(target="next_page").model_dump(),
+                params=DeckNavActionParams(target="next_page").model_dump(exclude_none=True),
             ),
             keywords=["next", "page", "forward", "следующая", "страница", "вперед"],
         ),
@@ -525,67 +521,16 @@ class ActionPresetsRegistry:
             status_source=None,
             base_action=DeckActionConfig(
                 action_type="deck_nav",
-                params=DeckNavActionParams(target="prev_page").model_dump(),
+                params=DeckNavActionParams(target="prev_page").model_dump(exclude_none=True),
             ),
             keywords=["prev", "previous", "page", "back", "предыдущая", "страница", "назад"],
         ),
-        ActionPresetDefinition(
-            id="create_folder",
-            category="navigation",
-            title_key="deck.editor.presets.create_folder.title",
-            desc_key="deck.editor.presets.create_folder.desc",
-            icon="📁",
-            color_accent="#f59e0b",
-            status_source=None,
-            base_action=DeckActionConfig(
-                action_type="deck_nav",
-                params=DeckNavActionParams(target="folder_open").model_dump(),
-            ),
-            keywords=["folder", "group", "open", "directory", "папка", "группа", "открыть"],
-        ),
+        # FUTURE ARCHITECTURE:
+        # 'switch_profile' зарезервирован для автоматического переключения профилей DuckDeck
+        # по событиям фокуса Windows (EVENT_SYSTEM_FOREGROUND / WinEventProc).
 
         # =========================================================
-        # 7. 🎵 soundboard (Саундборд)
-        # =========================================================
-        ActionPresetDefinition(
-            id="soundboard_play",
-            category="soundboard",
-            title_key="deck.editor.presets.soundboard_play.title",
-            desc_key="deck.editor.presets.soundboard_play.desc",
-            icon="🎵",
-            color_accent="#a855f7",
-            status_source=None,
-            base_action=DeckActionConfig(
-                action_type="audio",
-                params=AudioActionParams(
-                    target="soundboard",
-                    command="play_sound",
-                    file_path="",
-                    volume=1.0,
-                ).model_dump(),
-            ),
-            keywords=["soundboard", "sound", "play", "audio", "wav", "mp3", "саундборд", "звук", "проиграть", "эффект"],
-        ),
-        ActionPresetDefinition(
-            id="soundboard_stop",
-            category="soundboard",
-            title_key="deck.editor.presets.soundboard_stop.title",
-            desc_key="deck.editor.presets.soundboard_stop.desc",
-            icon="⏹️",
-            color_accent="#a855f7",
-            status_source=None,
-            base_action=DeckActionConfig(
-                action_type="audio",
-                params=AudioActionParams(
-                    target="soundboard",
-                    command="stop_sound",
-                ).model_dump(),
-            ),
-            keywords=["soundboard", "stop", "halt", "audio", "саундборд", "стоп", "остановить", "звук"],
-        ),
-
-        # =========================================================
-        # 8. 🔀 multi_action (Мульти-действия и Макросы)
+        # 7. 🔀 multi_action (Мульти-действия и Макросы)
         # =========================================================
         ActionPresetDefinition(
             id="macro_sequence",
@@ -597,9 +542,10 @@ class ActionPresetsRegistry:
             status_source=None,
             base_action=DeckActionConfig(
                 action_type="macro",
-                params=MacroActionParams(steps=[], delay_ms=50).model_dump(),
+                params=MacroActionParams(steps=[], delay_ms=50).model_dump(exclude_none=True),
             ),
             keywords=["macro", "multi", "sequence", "chain", "batch", "макрос", "мульти", "цепочка", "последовательность"],
+            is_wip=True,
         ),
     ]
 
@@ -626,6 +572,8 @@ class ActionPresetsRegistry:
         """
         Преобразует категории и их пресеты в список DTO для отображения в шторке ActionLibraryDrawer.
         """
+        from modules.deck.editor.dto import ActionCategoryDTO, ActionItemDTO
+
         result: List[ActionCategoryDTO] = []
         for cat in cls.CATEGORIES:
             cat_id = cat["id"]
@@ -638,7 +586,11 @@ class ActionPresetsRegistry:
                         title_key=p.title_key,
                         category_key=cat["title_key"],
                         icon=p.icon,
+                        description_key=p.desc_key,
                         keywords=p.keywords,
+                        default_config=p.base_action.model_dump(exclude_none=True),
+                        is_wip=p.is_wip,
+                        is_enabled=p.is_enabled,
                     )
                 )
             result.append(

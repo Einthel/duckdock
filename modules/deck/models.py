@@ -32,7 +32,6 @@ ActionCategory = Literal[
     "program",        # Запуск внешних программ и скриптов
     "api",            # REST API запросы к сторонним сервисам
     "navigation",     # Навигация (страницы, профили, папки)
-    "soundboard",     # Саундборд (воспроизведение и остановка аудио)
     "stream_deck",    # Управление стримдеком и экраном
     "multi_action",   # Мульти-действия и макро-цепочки
 ]
@@ -43,8 +42,8 @@ ActionCategory = Literal[
 # -------------------------------------------------------------
 class HotkeyActionParams(BaseModel):
     """Параметры симуляции горячих клавиш и двухпозиционных тумблеров."""
-    keys: List[str] = Field(default_factory=list, description="Список клавиш (например ['ctrl', 'shift', 'd'])")
     mode: Literal["press", "toggle"] = Field(default="press", description="Режим: press (одиночный) или toggle (тумблер)")
+    keys: List[str] = Field(default_factory=list, description="Список клавиш (например ['ctrl', 'shift', 'd'])")
     toggle_keys: List[str] = Field(default_factory=list, description="Вторая комбинация клавиш для тумблера")
 
 
@@ -53,7 +52,7 @@ class LaunchActionParams(BaseModel):
     target: str = Field(default="", description="Путь к .exe, файлу, папке или URL")
     args: List[str] = Field(default_factory=list, description="Аргументы командной строки")
     working_dir: Optional[str] = Field(default=None, description="Рабочая директория")
-    kind: Literal["auto", "app", "file", "url"] = Field(default="auto", description="Тип запускаемой цели")
+    kind: Literal["app", "file", "url"] = Field(default="app", description="Тип запускаемой цели")
     detached: bool = Field(default=True, description="Запуск в фоновом изолированном процессе")
 
     @property
@@ -66,22 +65,19 @@ class LaunchActionParams(BaseModel):
 
 
 class AudioActionParams(BaseModel):
-    """Параметры аудиоподсистемы (микшер, устройства, микрофон, саундборд)."""
-    target: Literal["master", "focus_app", "mic", "device", "soundboard"] = Field(
+    """Параметры аудиоподсистемы (микшер, устройства, микрофон)."""
+    target: Literal["master", "mic", "focus_app", "device"] = Field(
         default="master", description="Цель управления звуком"
     )
-    command: Literal["toggle_mute", "step", "set_level", "toggle_device", "play_sound", "stop_sound"] = Field(
+    command: Literal["toggle_mute", "volume_up", "volume_down", "toggle_device", "set_device"] = Field(
         default="toggle_mute", description="Команда аудиоподсистемы"
     )
     step_percent: int = Field(default=5, description="Шаг изменения громкости в процентах")
-    devices: List[str] = Field(
-        default_factory=lambda: ["Наушники", "Динамики"],
+    devices: Optional[List[str]] = Field(
+        default=None,
         description="Ключевые слова или имена устройств для переключения",
     )
-    file_path: str = Field(default="", description="Путь к аудиофайлу для саундборда")
-    volume: float = Field(default=1.0, ge=0.0, le=1.0, description="Громкость воспроизведения звука (0.0..1.0)")
-    stop_others: bool = Field(default=False, description="Останавливать ли другие звуки саундборда")
-    mode: Literal["toggle", "set", "cycle"] = Field(default="toggle", description="Режим переключения устройств")
+    mode: Literal["toggle", "set"] = Field(default="toggle", description="Режим переключения устройств")
     target_device_id: Optional[str] = Field(default=None, description="Точный ID устройства для режима 'set'")
 
 
@@ -106,17 +102,12 @@ class TextActionParams(BaseModel):
 class SystemActionParams(BaseModel):
     """Параметры системного контроля (Windows и DuckDock)."""
     command: Literal[
-        "dimmer",
+        "toggle_dimmer",
         "screenshot",
-        "lock_pc",
+        "lock_workstation",
         "sleep_display",
         "close_window",
-        "toggle_dimmer",
-        "lock_workstation",
-        "toggle_mic_mute",
-        "toggle_master_mute",
-        "toggle_playback_device",
-    ] = Field(default="dimmer", description="Системная команда")
+    ] = Field(default="toggle_dimmer", description="Системная команда")
     screenshot_target: Literal["primary", "active_window"] = Field(
         default="primary", description="Цель скриншота"
     )
@@ -157,10 +148,12 @@ class ActionPresetDefinition(BaseModel):
     status_source: Optional[str] = Field(default=None, description="Источник Live-статуса ('mic_mute', 'audio_device', 'dimmer')")
     base_action: "DeckActionConfig" = Field(description="Сконфигурированный базовый примитив")
     keywords: List[str] = Field(default_factory=list, description="Двуязычные поисковые теги (RU/EN)")
+    is_wip: bool = Field(default=False, description="Флаг незавершенного функционала (В разработке)")
+    is_enabled: bool = Field(default=True, description="Флаг доступности пресета для выбора")
 
 
 # -------------------------------------------------------------
-# Устаревшие модели параметров (Backward Compatibility Shims)
+# Псевдонимы для обратной совместимости имён (Type Aliases)
 # -------------------------------------------------------------
 HotkeyParams = HotkeyActionParams
 LaunchParams = LaunchActionParams
@@ -171,168 +164,13 @@ SystemParams = SystemActionParams
 NavigationParams = DeckNavActionParams
 
 
-class HotkeySwitchState(BaseModel):
-    title: str = Field(default="", description="Название состояния")
-    keys: List[str] = Field(default_factory=list, description="Список клавиш")
-    icon: Optional[str] = Field(default=None, description="Иконка состояния")
-
-
-class HotkeySwitchParams(HotkeyActionParams):
-    state_1: HotkeySwitchState = Field(default_factory=HotkeySwitchState, description="Состояние 1")
-    state_2: HotkeySwitchState = Field(default_factory=HotkeySwitchState, description="Состояние 2")
-    current_state: int = Field(default=1, ge=1, le=2, description="Текущее активное состояние")
-    mode: Literal["press", "toggle"] = "toggle"
-
-    @model_validator(mode="before")
-    @classmethod
-    def _sync_switch(cls, data: Any) -> Any:
-        if isinstance(data, dict):
-            s1 = data.get("state_1")
-            s2 = data.get("state_2")
-            if isinstance(s1, dict):
-                data.setdefault("keys", s1.get("keys", []))
-            if isinstance(s2, dict):
-                data.setdefault("toggle_keys", s2.get("keys", []))
-            if "keys" in data and not s1:
-                data["state_1"] = HotkeySwitchState(title="S1", keys=data["keys"])
-            if "toggle_keys" in data and not s2:
-                data["state_2"] = HotkeySwitchState(title="S2", keys=data["toggle_keys"])
-            data["mode"] = "toggle"
-        return data
-
-
-class WebsiteParams(LaunchActionParams):
-    url: str = Field(default="", description="URL адрес сайта")
-    kind: Literal["auto", "app", "file", "url"] = "url"
-
-    @model_validator(mode="before")
-    @classmethod
-    def _sync_url(cls, data: Any) -> Any:
-        if isinstance(data, dict):
-            url_val = data.get("url") or data.get("target", "")
-            data["target"] = url_val
-            data["url"] = url_val
-            data["kind"] = "url"
-        return data
-
-
-class OpenPathParams(LaunchActionParams):
-    kind: Literal["auto", "app", "file", "url"] = "file"
-
-    @model_validator(mode="before")
-    @classmethod
-    def _sync_path(cls, data: Any) -> Any:
-        if isinstance(data, dict):
-            path_val = data.get("path") or data.get("target", "")
-            data["target"] = path_val
-            data["kind"] = "file"
-        return data
-
-
-class OpenAppParams(LaunchActionParams):
-    executable: str = Field(default="", description="Путь к исполняемому файлу")
-    kind: Literal["auto", "app", "file", "url"] = "app"
-
-    @model_validator(mode="before")
-    @classmethod
-    def _sync_exe(cls, data: Any) -> Any:
-        if isinstance(data, dict):
-            exe_val = data.get("executable") or data.get("path") or data.get("target", "")
-            data["target"] = exe_val
-            data["executable"] = exe_val
-            data["kind"] = "app"
-        return data
-
-
-class CloseWindowParams(SystemActionParams):
-    command: Literal[
-        "dimmer",
-        "screenshot",
-        "lock_pc",
-        "sleep_display",
-        "close_window",
-        "toggle_dimmer",
-        "lock_workstation",
-        "toggle_mic_mute",
-        "toggle_master_mute",
-        "toggle_playback_device",
-    ] = "close_window"
-    target: Literal["active_window", "by_process"] = Field(default="active_window", description="Цель закрытия")
-    process_name: Optional[str] = Field(default=None, description="Имя процесса")
-
-
-class VolumeControlParams(AudioActionParams):
-    command: Literal[
-        "toggle_mute",
-        "step",
-        "set_level",
-        "toggle_device",
-        "play_sound",
-        "stop_sound",
-        "volume_up",
-        "volume_down",
-    ] = "toggle_mute"
-
-
-class HttpRequestParams(LaunchActionParams):
-    url: str = Field(default="", description="URL запроса")
-    method: Literal["GET", "POST", "PUT"] = Field(default="POST", description="HTTP метод")
-    headers: Dict[str, str] = Field(default_factory=dict, description="HTTP заголовки")
-    json_body: Optional[Dict[str, Any]] = Field(default=None, description="Тело запроса")
-    timeout_sec: float = Field(default=1.5, ge=0.1, le=30.0, description="Таймаут в секундах")
-    kind: Literal["auto", "app", "file", "url"] = "url"
-
-    @model_validator(mode="before")
-    @classmethod
-    def _sync_http(cls, data: Any) -> Any:
-        if isinstance(data, dict):
-            u = data.get("url") or data.get("target", "")
-            data["target"] = u
-            data["url"] = u
-            data["kind"] = "url"
-        return data
-
-
-class ScreenshotParams(SystemActionParams):
-    command: Literal[
-        "dimmer",
-        "screenshot",
-        "lock_pc",
-        "sleep_display",
-        "close_window",
-        "toggle_dimmer",
-        "lock_workstation",
-        "toggle_mic_mute",
-        "toggle_master_mute",
-        "toggle_playback_device",
-    ] = "screenshot"
-    target: Literal["primary_screen", "active_window"] = Field(default="primary_screen", description="Цель")
-
-    @model_validator(mode="before")
-    @classmethod
-    def _sync_shot(cls, data: Any) -> Any:
-        if isinstance(data, dict):
-            data["command"] = "screenshot"
-            t = data.get("target") or data.get("screenshot_target", "primary")
-            data["target"] = "primary_screen" if t in ("primary", "primary_screen") else "active_window"
-            data["screenshot_target"] = "primary" if t in ("primary", "primary_screen") else "active_window"
-        return data
-
-
-class SoundboardParams(AudioActionParams):
-    target: Literal["master", "focus_app", "mic", "device", "soundboard"] = "soundboard"
-    command: Literal["toggle_mute", "step", "set_level", "toggle_device", "play_sound", "stop_sound"] = "play_sound"
-    volume: float = Field(default=1.0, ge=0.0, le=1.0, description="Громкость")
-    stop_others: bool = Field(default=False, description="Остановить другие")
-
-
 # -------------------------------------------------------------
 # Нормализатор действий DeckActionNormalizer (Zero-Downtime)
 # -------------------------------------------------------------
 class DeckActionNormalizer:
     """
     Нормализатор устаревших конфигураций действий DuckDeck (Zero-Downtime Migration).
-    Прозрачно преобразует 26 устаревших типов действий и их специфические параметры
+    Прозрачно преобразует устаревшие типы действий и их специфические параметры
     в 8 ортогональных базовых примитивов Pydantic v2.
     """
 
@@ -365,17 +203,14 @@ class DeckActionNormalizer:
             return {
                 "action_type": "hotkey",
                 "params": {
-                    "keys": s1.get("keys", []),
+                    "keys": params.get("keys") or s1.get("keys", []),
                     "mode": "toggle",
-                    "toggle_keys": s2.get("keys", []),
-                    "state_1": s1,
-                    "state_2": s2,
-                    "current_state": params.get("current_state", 1),
+                    "toggle_keys": params.get("toggle_keys") or s2.get("keys", []),
                 },
             }
 
         # 2. launch / website / open_path / open_app / http_request
-        if raw_type in ("website", "open_website", "web", "url", "browser"):
+        if raw_type in ("website", "open_website", "web", "url", "browser", "http_request", "api", "rest"):
             target_url = params.get("url") or params.get("target", "")
             return {
                 "action_type": "launch",
@@ -412,51 +247,37 @@ class DeckActionNormalizer:
                 },
             }
         if raw_type == "launch":
-            target = params.get("target") or params.get("path") or params.get("executable", "")
-            kind = params.get("kind", "auto")
+            target = params.get("target") or params.get("path") or params.get("executable") or params.get("url", "")
+            raw_kind = params.get("kind", "app")
+            if raw_kind not in ("app", "file", "url"):
+                raw_kind = "url" if str(target).startswith(("http://", "https://")) else "app"
             return {
                 "action_type": "launch",
                 "params": {
                     "target": target,
                     "args": params.get("args", []),
                     "working_dir": params.get("working_dir"),
-                    "kind": kind,
+                    "kind": raw_kind,
                     "detached": params.get("detached", True),
                 },
             }
-        if raw_type in ("http_request", "api", "rest"):
-            url = params.get("url") or params.get("target", "")
-            return {
-                "action_type": "launch",
-                "params": {
-                    "target": url,
-                    "url": url,
-                    "args": params.get("args", []),
-                    "working_dir": params.get("working_dir"),
-                    "kind": "url",
-                    "is_http": True,
-                    "method": params.get("method", "POST"),
-                    "headers": params.get("headers", {}),
-                    "json_body": params.get("json_body"),
-                    "timeout_sec": params.get("timeout_sec", 1.5),
-                    "detached": True,
-                },
-            }
 
-        # 3. audio / volume_control / audio_device / play_audio / stop_audio
+        # 3. audio / volume_control / audio_device
         if raw_type in ("audio_device", "toggle_device"):
-            return {
-                "action_type": "audio",
-                "params": {
-                    "target": "device",
-                    "command": "toggle_device",
-                    "step_percent": 5,
-                    "devices": params.get("devices", ["Наушники", "Динамики"]),
-                    "file_path": "",
-                    "mode": params.get("mode", "toggle"),
-                    "target_device_id": params.get("target_device_id"),
-                },
+            raw_mode = params.get("mode", "toggle")
+            mode = "set" if raw_mode == "set" else "toggle"
+            cmd = "set_device" if mode == "set" else "toggle_device"
+            norm_params: Dict[str, Any] = {
+                "target": "device",
+                "command": cmd,
+                "mode": mode,
             }
+            if params.get("devices") is not None:
+                norm_params["devices"] = params["devices"]
+            if params.get("target_device_id") is not None:
+                norm_params["target_device_id"] = params["target_device_id"]
+            return {"action_type": "audio", "params": norm_params}
+
         if raw_type in ("volume_control", "volume", "auto_software_vol", "master_volume_control", "mic_mute_control"):
             tgt = params.get("target", "master")
             if tgt in ("microphone", "mic"):
@@ -467,16 +288,16 @@ class DeckActionNormalizer:
                 mapped_target = "master"
 
             cmd = params.get("command", "toggle_mute")
-            step = params.get("step_percent", 5)
-            if cmd == "volume_up":
-                mapped_cmd = "step"
+            step = int(params.get("step_percent", 5))
+            if cmd == "volume_up" or (cmd == "step" and step >= 0):
+                mapped_cmd = "volume_up"
+                step_val = abs(step) if step != 0 else 5
+            elif cmd == "volume_down" or (cmd == "step" and step < 0):
+                mapped_cmd = "volume_down"
                 step_val = abs(step)
-            elif cmd == "volume_down":
-                mapped_cmd = "step"
-                step_val = -abs(step)
-            elif cmd in ("step", "toggle_mute", "set_level", "toggle_device"):
+            elif cmd in ("toggle_mute", "toggle_device", "set_device"):
                 mapped_cmd = cmd
-                step_val = step
+                step_val = abs(step) if step != 0 else 5
             else:
                 mapped_cmd = "toggle_mute"
                 step_val = 5
@@ -487,54 +308,40 @@ class DeckActionNormalizer:
                     "target": mapped_target,
                     "command": mapped_cmd,
                     "step_percent": step_val,
-                    "devices": params.get("devices", ["Наушники", "Динамики"]),
-                    "file_path": "",
-                    "mode": "toggle",
                 },
             }
-        if raw_type in ("play_audio", "soundboard"):
-            return {
-                "action_type": "audio",
-                "params": {
-                    "target": "soundboard",
-                    "command": "play_sound",
-                    "step_percent": 5,
-                    "devices": [],
-                    "file_path": params.get("file_path", ""),
-                    "volume": float(params.get("volume", 1.0)),
-                    "stop_others": bool(params.get("stop_others", False)),
-                    "mode": "toggle",
-                },
-            }
-        if raw_type in ("stop_audio", "soundboard_stop"):
-            return {
-                "action_type": "audio",
-                "params": {
-                    "target": "soundboard",
-                    "command": "stop_sound",
-                    "step_percent": 5,
-                    "devices": [],
-                    "file_path": "",
-                    "volume": 1.0,
-                    "stop_others": False,
-                    "mode": "toggle",
-                },
-            }
+
         if raw_type == "audio":
-            return {
-                "action_type": "audio",
-                "params": {
-                    "target": params.get("target", "master"),
-                    "command": params.get("command", "toggle_mute"),
-                    "step_percent": params.get("step_percent", 5),
-                    "devices": params.get("devices", ["Наушники", "Динамики"]),
-                    "file_path": params.get("file_path", ""),
-                    "volume": float(params.get("volume", 1.0)),
-                    "stop_others": bool(params.get("stop_others", False)),
-                    "mode": params.get("mode", "toggle"),
-                    "target_device_id": params.get("target_device_id"),
-                },
+            tgt = params.get("target", "master")
+            if tgt == "microphone":
+                tgt = "mic"
+            elif tgt not in ("master", "mic", "focus_app", "device"):
+                tgt = "master"
+
+            cmd = params.get("command", "toggle_mute")
+            step = int(params.get("step_percent", 5))
+            if cmd == "step":
+                cmd = "volume_up" if step >= 0 else "volume_down"
+                step = abs(step) if step != 0 else 5
+            elif cmd not in ("toggle_mute", "volume_up", "volume_down", "toggle_device", "set_device"):
+                cmd = "set_device" if (tgt == "device" and params.get("mode") == "set") else (
+                    "toggle_device" if tgt == "device" else "toggle_mute"
+                )
+
+            raw_mode = params.get("mode", "toggle")
+            mode = "set" if raw_mode == "set" else "toggle"
+
+            norm_audio: Dict[str, Any] = {
+                "target": tgt,
+                "command": cmd,
+                "step_percent": abs(step) if step != 0 else 5,
+                "mode": mode,
             }
+            if params.get("devices") is not None:
+                norm_audio["devices"] = params["devices"]
+            if params.get("target_device_id") is not None:
+                norm_audio["target_device_id"] = params["target_device_id"]
+            return {"action_type": "audio", "params": norm_audio}
 
         # 4. media / multimedia
         if raw_type in ("multimedia", "media", "media_control"):
@@ -545,10 +352,6 @@ class DeckActionNormalizer:
                     "params": {
                         "target": "master",
                         "command": "toggle_mute",
-                        "step_percent": 5,
-                        "devices": ["Наушники", "Динамики"],
-                        "file_path": "",
-                        "mode": "toggle",
                     },
                 }
             elif cmd in ("play_pause", "next_track", "prev_track", "stop", "volume_up", "volume_down"):
@@ -596,7 +399,7 @@ class DeckActionNormalizer:
             return {
                 "action_type": "system",
                 "params": {
-                    "command": "dimmer",
+                    "command": "toggle_dimmer",
                     "screenshot_target": "primary",
                 },
             }
@@ -609,16 +412,16 @@ class DeckActionNormalizer:
                 },
             }
         if raw_type in ("system", "system_command"):
-            cmd = params.get("command", "dimmer")
+            cmd = params.get("command", "toggle_dimmer")
             if cmd in ("toggle_dimmer", "dimmer"):
                 return {
                     "action_type": "system",
-                    "params": {"command": "dimmer", "screenshot_target": "primary"},
+                    "params": {"command": "toggle_dimmer", "screenshot_target": "primary"},
                 }
             if cmd in ("lock_workstation", "lock_pc"):
                 return {
                     "action_type": "system",
-                    "params": {"command": "lock_pc", "screenshot_target": "primary"},
+                    "params": {"command": "lock_workstation", "screenshot_target": "primary"},
                 }
             if cmd == "sleep_display":
                 return {
@@ -631,7 +434,8 @@ class DeckActionNormalizer:
                     "params": {"command": "close_window", "screenshot_target": "primary"},
                 }
             if cmd == "screenshot":
-                mapped_tgt = "primary" if params.get("screenshot_target") in ("primary", "primary_screen") else "active_window"
+                raw_shot = params.get("screenshot_target") or params.get("target", "primary")
+                mapped_tgt = "primary" if raw_shot in ("primary", "primary_screen") else "active_window"
                 return {
                     "action_type": "system",
                     "params": {
@@ -641,15 +445,25 @@ class DeckActionNormalizer:
                         "save_path": params.get("save_path"),
                     },
                 }
-            if cmd in ("toggle_mic_mute", "toggle_master_mute", "toggle_playback_device"):
+            if cmd == "toggle_mic_mute":
                 return {
-                    "action_type": "system",
-                    "params": {"command": cmd, "screenshot_target": "primary"},
+                    "action_type": "audio",
+                    "params": {"target": "mic", "command": "toggle_mute"},
+                }
+            if cmd == "toggle_master_mute":
+                return {
+                    "action_type": "audio",
+                    "params": {"target": "master", "command": "toggle_mute"},
+                }
+            if cmd == "toggle_playback_device":
+                return {
+                    "action_type": "audio",
+                    "params": {"target": "device", "command": "toggle_device", "mode": "toggle"},
                 }
             return {
                 "action_type": "system",
                 "params": {
-                    "command": cmd if cmd in ("dimmer", "screenshot", "lock_pc", "sleep_display", "close_window") else "dimmer",
+                    "command": "toggle_dimmer",
                     "screenshot_target": params.get("screenshot_target", "primary"),
                 },
             }
@@ -734,41 +548,21 @@ class DeckActionConfig(BaseModel):
         DeckNavActionParams,
         MacroActionParams,
     ]:
-        """Фабрика типизированных параметров базовых примитивов."""
+        """Фабрика типизированных параметров 8 базовых примитивов."""
         if self.action_type == "hotkey":
-            if self.params.get("mode") == "toggle":
-                return HotkeySwitchParams(**self.params)
             return HotkeyActionParams(**self.params)
         elif self.action_type == "launch":
-            kind = self.params.get("kind", "auto")
-            if "timeout_sec" in self.params or "method" in self.params or self.params.get("is_http"):
-                return HttpRequestParams(**self.params)
-            if kind == "url":
-                return WebsiteParams(**self.params)
-            if kind == "file":
-                return OpenPathParams(**self.params)
-            if kind == "app":
-                return OpenAppParams(**self.params)
             return LaunchActionParams(**self.params)
         elif self.action_type == "audio":
-            if self.params.get("target") == "soundboard":
-                return SoundboardParams(**self.params)
-            if self.params.get("command") == "toggle_device" or self.params.get("target") == "device":
-                return AudioDeviceParams(**self.params)
-            return VolumeControlParams(**self.params)
+            return AudioActionParams(**self.params)
         elif self.action_type == "media":
             return MediaActionParams(**self.params)
         elif self.action_type == "text":
             return TextActionParams(**self.params)
         elif self.action_type == "system":
-            cmd = self.params.get("command", "dimmer")
-            if cmd == "screenshot":
-                return ScreenshotParams(**self.params)
-            if cmd == "close_window":
-                return CloseWindowParams(**self.params)
             return SystemActionParams(**self.params)
         elif self.action_type == "deck_nav":
-            return NavigationParams(**self.params)
+            return DeckNavActionParams(**self.params)
         elif self.action_type == "macro":
             return MacroActionParams(**self.params)
         return self.params
@@ -931,22 +725,12 @@ __all__ = [
     "ActionPresetDefinition",
     "DeckActionNormalizer",
     "HotkeyParams",
-    "HotkeySwitchState",
-    "HotkeySwitchParams",
-    "WebsiteParams",
-    "OpenPathParams",
-    "OpenAppParams",
-    "CloseWindowParams",
-    "TextMacroParams",
-    "MultimediaParams",
-    "VolumeControlParams",
-    "AudioDeviceParams",
     "LaunchParams",
-    "HttpRequestParams",
-    "ScreenshotParams",
+    "AudioDeviceParams",
+    "MultimediaParams",
+    "TextMacroParams",
     "SystemParams",
     "NavigationParams",
-    "SoundboardParams",
     "AudioDeviceInfo",
     "DeckActionConfig",
     "DeckButtonConfig",

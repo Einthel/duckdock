@@ -197,22 +197,19 @@ class LaunchExecutor:
 
 
 class AudioExecutor:
-    """Исполнитель аудиоподсистемы (микшер, микрофон, устройства, саундборд)."""
+    """Исполнитель аудиоподсистемы (микшер, микрофон, устройства вывода)."""
 
     @staticmethod
     def execute(
         params: AudioActionParams,
         audio_manager: Optional[Any] = None,
-        sound_engine: Optional[Any] = None,
-        play_sound_emitter: Optional[Callable[[str, float, bool], None]] = None,
-        stop_sound_emitter: Optional[Callable[[], None]] = None,
         action_config: Optional[DeckActionConfig] = None,
     ) -> Tuple[bool, str]:
         target = params.target
         command = params.command
 
         # 1. Микрофон
-        if target == "mic" or command == "toggle_mic_mute":
+        if target == "mic":
             if audio_manager is not None:
                 is_muted = audio_manager.toggle_mic_mute()
             else:
@@ -231,8 +228,8 @@ class AudioExecutor:
                     is_muted = AudioManager().toggle_master_mute()
                 msg = t("deck.notify.audio_muted") if is_muted else t("deck.notify.audio_unmuted")
                 return True, msg
-            elif command == "step":
-                delta = params.step_percent
+            elif command in ("volume_up", "volume_down"):
+                delta = abs(params.step_percent) if command == "volume_up" else -abs(params.step_percent)
                 if audio_manager is not None and hasattr(audio_manager, "step_master_volume"):
                     vol = audio_manager.step_master_volume(delta)
                 else:
@@ -241,62 +238,39 @@ class AudioExecutor:
                     vol = ev.step_volume(delta / 100.0)
                 pct = int(vol * 100) if isinstance(vol, float) else 50
                 return True, t("deck.notify.volume_updated", percent=pct)
-            else:
-                return True, t("deck.notify.volume_updated", percent=50)
+            return False, t("deck.notify.generic_error", error=f"Unknown master command: {command}")
 
-        # 3. Саундборд
-        if target == "soundboard":
-            f_path = (getattr(params, "file_path", None) or "").strip()
-            if not f_path and action_config and isinstance(action_config.params, dict):
-                f_path = action_config.params.get("file_path", "").strip()
-
-            if command == "stop_sound":
-                if sound_engine is not None:
-                    sound_engine.stop_soundboard()
-                if stop_sound_emitter is not None:
-                    stop_sound_emitter()
-                return True, t("deck.notify.soundboard_stopped")
-
-            if not f_path:
-                return False, t("deck.notify.empty_path")
-
-            vol = getattr(params, "volume", 1.0)
-            stop_oth = getattr(params, "stop_others", False)
-            if sound_engine is not None:
-                sound_engine.play_soundboard(f_path, vol, stop_oth)
-            if play_sound_emitter is not None:
-                play_sound_emitter(f_path, vol, stop_oth)
-
-            return True, t("deck.notify.sound_played", sound=os.path.basename(f_path))
-
-        # 4. Устройства вывода (device)
-        if target == "device" or command in ("toggle_device", "toggle_playback_device"):
+        # 3. Устройства вывода (device)
+        if target == "device" or command in ("toggle_device", "set_device"):
+            is_set_mode = command == "set_device" or params.mode == "set"
             if audio_manager is not None:
-                if params.mode == "set" and getattr(params, "target_device_id", None):
+                if is_set_mode:
+                    if not params.target_device_id:
+                        return False, t("deck.notify.device_set_error")
                     success = audio_manager.set_default_playback_device(params.target_device_id)
                     msg = t("deck.notify.device_set") if success else t("deck.notify.device_set_error")
                     return success, msg
-                else:
-                    dev = audio_manager.toggle_playback_device(params.devices)
-                    success = dev is not None
-                    msg = t("deck.notify.audio_switched", name=dev.name) if dev else t("deck.notify.audio_switch_error")
-                    return success, msg
+                dev = audio_manager.toggle_playback_device(params.devices or ["Наушники", "Динамики"])
+                success = dev is not None
+                msg = t("deck.notify.audio_switched", name=dev.name) if dev else t("deck.notify.audio_switch_error")
+                return success, msg
             else:
                 from modules.audio.platform.device_switcher import (
                     switch_default_device,
                     toggle_audio_device,
                 )
-                if params.mode == "set" and getattr(params, "target_device_id", None):
+                if is_set_mode:
+                    if not params.target_device_id:
+                        return False, t("deck.notify.device_set_error")
                     success = switch_default_device(params.target_device_id)
                     msg = t("deck.notify.device_set") if success else t("deck.notify.device_set_error")
                     return success, msg
-                else:
-                    dev = toggle_audio_device(params.devices)
-                    success = dev is not None
-                    msg = t("deck.notify.audio_switched", name=dev.name) if dev else t("deck.notify.audio_switch_error")
-                    return success, msg
+                dev = toggle_audio_device(params.devices or ["Наушники", "Динамики"])
+                success = dev is not None
+                msg = t("deck.notify.audio_switched", name=dev.name) if dev else t("deck.notify.audio_switch_error")
+                return success, msg
 
-        # 5. Фокусное приложение (focus_app)
+        # 4. Фокусное приложение (focus_app)
         if target == "focus_app":
             try:
                 from modules.audio.platform.session_volume import get_foreground_session_volume
@@ -306,10 +280,11 @@ class AudioExecutor:
                         is_m = sess.toggle_mute()
                         msg = t("deck.notify.audio_muted") if is_m else t("deck.notify.audio_unmuted")
                         return True, msg
-                    else:
-                        delta = params.step_percent / 100.0
+                    elif command in ("volume_up", "volume_down"):
+                        delta = (abs(params.step_percent) if command == "volume_up" else -abs(params.step_percent)) / 100.0
                         vol = sess.step_volume(delta)
                         return True, t("deck.notify.volume_updated", percent=int(vol * 100))
+                    return False, t("deck.notify.generic_error", error=f"Unknown focus_app command: {command}")
                 else:
                     # Fallback на мастер-звук
                     if audio_manager is not None:

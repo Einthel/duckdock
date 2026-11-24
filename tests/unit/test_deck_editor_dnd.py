@@ -227,10 +227,10 @@ def test_action_item_widget_drag_payload_has_category_id(qapp: QApplication) -> 
     from PySide6.QtCore import QEvent
 
     item_dto = ActionItemDTO(
-        id="create_folder",
-        title_key="deck.editor.drawer.actions.create_folder",
-        category_key="deck.editor.drawer.categories.navigation",
-        icon="📁",
+        id="nav_next_page",
+        title_key="deck.editor.presets.nav_next_page.title",
+        category_key="deck.editor.categories.navigation",
+        icon="▶",
     )
     assert item_dto.category_id == "navigation"
 

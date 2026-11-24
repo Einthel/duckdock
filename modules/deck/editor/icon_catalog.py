@@ -18,6 +18,7 @@ from PySide6.QtGui import QColor, QFont, QPainter, QPixmap
 logger = logging.getLogger("duckdock.deck.editor.icon_catalog")
 
 CUSTOM_ICONS_DIR = Path("resources/deck/custom_icons")
+DECK_ICONS_DIR = Path("resources/deck/icons/deck")
 SUPPORTED_IMAGE_EXTENSIONS = {".png", ".svg", ".ico", ".jpg", ".jpeg", ".webp"}
 
 
@@ -193,30 +194,38 @@ class IconCatalog:
 
     def scan_custom_icons(self) -> list[IconEntryDTO]:
         """
-        Сканирует директорию resources/deck/custom_icons/ и возвращает
-        список зарегистрированных пользовательских файлов.
+        Сканирует директории пользовательских иконок (resources/deck/custom_icons/
+        и resources/deck/icons/deck/) и возвращает список зарегистрированных файлов.
         """
         custom_icons: list[IconEntryDTO] = []
-        try:
-            CUSTOM_ICONS_DIR.mkdir(parents=True, exist_ok=True)
-            for entry in CUSTOM_ICONS_DIR.iterdir():
-                if entry.is_file() and entry.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
-                    stem_name = entry.stem.replace("_", " ").title()
-                    lower_name = entry.stem.lower()
-                    rel_path = str(entry).replace("\\", "/")
-                    custom_icons.append(
-                        IconEntryDTO(
-                            id=f"custom:{entry.name}",
-                            name=stem_name,
-                            category="custom",
-                            path_or_glyph=rel_path,
-                            is_glyph=False,
-                            keywords_ru=[lower_name],
-                            keywords_en=[lower_name],
+        scan_dirs = [
+            ("custom", CUSTOM_ICONS_DIR, True),
+            ("deck", DECK_ICONS_DIR, False),
+        ]
+        for prefix, folder, create_if_missing in scan_dirs:
+            try:
+                if create_if_missing:
+                    folder.mkdir(parents=True, exist_ok=True)
+                elif not folder.is_dir():
+                    continue
+                for entry in sorted(folder.iterdir(), key=lambda p: p.name.lower()):
+                    if entry.is_file() and entry.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
+                        stem_name = entry.stem.replace("_", " ").replace("-", " ").title()
+                        lower_name = entry.stem.lower()
+                        rel_path = str(entry).replace("\\", "/")
+                        custom_icons.append(
+                            IconEntryDTO(
+                                id=f"{prefix}:{entry.name}",
+                                name=stem_name,
+                                category="custom",
+                                path_or_glyph=rel_path,
+                                is_glyph=False,
+                                keywords_ru=[lower_name],
+                                keywords_en=[lower_name],
+                            )
                         )
-                    )
-        except Exception as exc:
-            logger.warning("Error scanning custom icons in '%s': %s", CUSTOM_ICONS_DIR, exc)
+            except Exception as exc:
+                logger.warning("Error scanning custom icons in '%s': %s", folder, exc)
 
         return custom_icons
 

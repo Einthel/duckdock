@@ -84,7 +84,7 @@ def test_adapter_dto_to_config_merge_preserves_extra_fields():
     assert merged.status_source == "audio_device"
     assert merged.sound_override == "resources/deck/sounds/click.wav"
     assert merged.toggle_action is not None
-    assert merged.toggle_action.action_type == "system"
+    assert merged.toggle_action.action_type == "audio"
 
 
 def test_adapter_save_atomic_write_and_backup(tmp_path: Path):

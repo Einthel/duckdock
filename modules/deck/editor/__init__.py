@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any
 
 from .actions_registry import get_default_action_catalog
 from .adapter import DeckConfigAdapter
-from .demo_data import get_demo_editor_profile, load_demo_profile_into_window
 from .dto import (
     ActionCategoryDTO,
     ActionItemDTO,
@@ -31,6 +30,7 @@ from .styles import (
 )
 
 if TYPE_CHECKING:
+    from .demo_data import get_demo_editor_profile, load_demo_profile_into_window
     from .widgets.action_category import ActionCategoryHeader, ActionCategorySection
     from .widgets.action_drawer import ActionAccordionWidget, ActionLibraryDrawer
     from .widgets.action_item import ActionItemWidget
@@ -108,6 +108,9 @@ __all__ = [
 
 
 def __getattr__(name: str) -> Any:
+    if name in ("get_demo_editor_profile", "load_demo_profile_into_window"):
+        from .demo_data import get_demo_editor_profile, load_demo_profile_into_window
+        return get_demo_editor_profile if name == "get_demo_editor_profile" else load_demo_profile_into_window
     if name == "DeckEditorManager":
         from .manager import DeckEditorManager
         return DeckEditorManager

@@ -236,7 +236,7 @@ def test_adapter_slot_to_dto_and_dto_to_slot_fidelity(sample_button_config: Deck
     assert dto.status_source == "mic_mute"
     assert dto.sound_override == "resources/deck/sounds/click.wav"
     assert dto.toggle_action is not None
-    assert dto.toggle_action.action_type == "system"
+    assert dto.toggle_action.action_type == "audio"
     assert "Ctrl" in dto.hotkey
     assert dto.original_config is not None
 
@@ -256,7 +256,7 @@ def test_adapter_slot_to_dto_and_dto_to_slot_fidelity(sample_button_config: Deck
     assert updated_cfg.status_source == "mic_mute"
     assert updated_cfg.sound_override == "resources/deck/sounds/click.wav"
     assert updated_cfg.toggle_action is not None
-    assert updated_cfg.toggle_action.action_type == "system"
+    assert updated_cfg.toggle_action.action_type == "audio"
     # Хоткей распарсен
     assert updated_cfg.action.action_type == "hotkey"
     assert "ctrl" in updated_cfg.action.params["keys"]

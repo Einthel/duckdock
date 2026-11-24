@@ -1,11 +1,12 @@
 """
 Сенсорный тайл кнопки макро-панели DuckDeck.
 """
+import os
 import time
 from typing import List, Optional, Tuple
 
 from PySide6.QtCore import Qt, QTimer, Signal, QPointF, QEvent
-from PySide6.QtGui import QMouseEvent, QTouchEvent, QEventPoint
+from PySide6.QtGui import QMouseEvent, QPixmap, QTouchEvent, QEventPoint
 from PySide6.QtWidgets import QFrame, QLabel, QVBoxLayout, QWidget
 
 from modules.deck.models import DeckButtonConfig
@@ -91,13 +92,14 @@ class DeckButtonWidget(QFrame):
         self._apply_content_offset()
 
         # Иконка тайла
-        self.lbl_icon = QLabel(self.button_config.icon, self)
+        self.lbl_icon = QLabel("", self)
         self.lbl_icon.setAlignment(Qt.AlignCenter)
         self.lbl_icon.setFocusPolicy(Qt.NoFocus)
         self.lbl_icon.setStyleSheet(
             f"font-size: {self.icon_font_size}px; color: {self.button_config.color_accent};"
         )
-        self._content_layout.addWidget(self.lbl_icon)
+        self._render_icon()
+        self._content_layout.addWidget(self.lbl_icon, 1)
 
         # Заголовок тайла
         self.lbl_title = QLabel(self.button_config.title, self)
@@ -248,6 +250,66 @@ class DeckButtonWidget(QFrame):
         """Автоматический возврат в состояние idle."""
         self.set_state("idle")
 
+    def _resolve_icon_file(self, candidate: Optional[str]) -> Optional[str]:
+        """Ищет файл иконки по абсолютному пути, относительно cwd или каталога resources/."""
+        if not candidate or not isinstance(candidate, str):
+            return None
+        clean = candidate.strip()
+        if not clean:
+            return None
+
+        search_paths = [
+            clean,
+            os.path.join("resources", clean),
+            os.path.join("resources", "deck", clean),
+            os.path.join("resources", "deck", "icons", "deck", clean),
+        ]
+        for path in search_paths:
+            if os.path.isfile(path):
+                return path
+        return None
+
+    def _render_icon(self, icon_str_or_path: Optional[str] = None) -> None:
+        """
+        Полиморфный рендеринг иконки тайла:
+        если передан существующий графический файл (PNG/SVG/ICO), отрисовывает QPixmap
+        в заданном icon_size с Qt.KeepAspectRatio; иначе — отображает Unicode/эмодзи.
+        """
+        candidates: List[Optional[str]] = (
+            [icon_str_or_path]
+            if icon_str_or_path is not None
+            else [self.button_config.icon_path, self.button_config.icon]
+        )
+        resolved_file: Optional[str] = None
+        for cand in candidates:
+            resolved_file = self._resolve_icon_file(cand)
+            if resolved_file is not None:
+                break
+
+        if resolved_file is not None:
+            pixmap = QPixmap(resolved_file)
+            if not pixmap.isNull():
+                reserve_h = 0 if self.button_config.hide_title else (self.title_font_size + 14)
+                max_w = max(48, self.tile_width - 24)
+                max_h = max(48, self.tile_height - 20 - reserve_h)
+                scaled = pixmap.scaled(
+                    max_w,
+                    max_h,
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation,
+                )
+                self.lbl_icon.setText("")
+                self.lbl_icon.setPixmap(scaled)
+                return
+
+        self.lbl_icon.setPixmap(QPixmap())
+        fallback_text = (
+            icon_str_or_path
+            if icon_str_or_path is not None
+            else (self.button_config.icon or "")
+        )
+        self.lbl_icon.setText(fallback_text)
+
     def update_status(
         self,
         status_text: Optional[str] = None,
@@ -257,7 +319,7 @@ class DeckButtonWidget(QFrame):
     ) -> None:
         """Централизованное обновление динамического содержимого живого тайла."""
         if icon is not None:
-            self.lbl_icon.setText(icon)
+            self._render_icon(icon)
         if title is not None:
             self.lbl_title.setText(title)
         if status_text is not None:
@@ -279,11 +341,11 @@ class DeckButtonWidget(QFrame):
     def update_config(self, button_config: DeckButtonConfig) -> None:
         """Обновляет конфигурацию кнопки in-place без пересоздания виджета."""
         self.button_config = button_config
-        self.lbl_icon.setText(button_config.icon or "")
         color = button_config.color_accent or "#38bdf8"
         self.lbl_icon.setStyleSheet(
             f"font-size: {self.icon_font_size}px; color: {color};"
         )
+        self._render_icon()
         self.lbl_title.setText(button_config.title or "")
 
         font_size = button_config.font_size or self.title_font_size

@@ -87,10 +87,16 @@ class ActionItemDTO:
     description_key: str = ""
     keywords: list[str] = field(default_factory=list)
     default_config: dict[str, Any] = field(default_factory=dict)
+    is_wip: bool = False
+    is_enabled: bool = True
+    raw_title: Optional[str] = None
+    is_custom: bool = False
 
     def get_title(self) -> str:
-        """Возвращает локализованное название действия."""
-        return t(self.title_key)
+        """Возвращает локализованное или пользовательское название действия."""
+        if self.is_custom and self.raw_title is not None:
+            return self.raw_title
+        return t(self.title_key) if self.title_key else (self.raw_title or "")
 
     @property
     def category_id(self) -> str:
@@ -109,7 +115,11 @@ class ActionCategoryDTO:
     icon: str = ""
     items: list[ActionItemDTO] = field(default_factory=list)
     is_expanded: bool = False
+    raw_title: Optional[str] = None
+    is_custom: bool = False
 
     def get_title(self) -> str:
-        """Возвращает локализованное название категории."""
-        return t(self.title_key)
+        """Возвращает локализованное или пользовательское название категории."""
+        if self.is_custom and self.raw_title is not None:
+            return self.raw_title
+        return t(self.title_key) if self.title_key else (self.raw_title or "")

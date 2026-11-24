@@ -5,10 +5,10 @@
 """
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFocusEvent, QKeyEvent, QKeySequence
+from PySide6.QtCore import QEvent, Qt, Signal
+from PySide6.QtGui import QContextMenuEvent, QFocusEvent, QKeyEvent, QKeySequence, QMouseEvent
 from PySide6.QtWidgets import QPushButton, QWidget
 
 from core.i18n import t
@@ -23,6 +23,10 @@ class HotkeyCaptureButton(QPushButton):
     hotkey_changed = Signal(str)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
+        self._capturing: bool = False
+        self._current_hotkey: str = ""
+        self._popover: Optional[Any] = None
+        self._open_popover_on_click: bool = False
         super().__init__(parent)
         self.setObjectName("hotkeyCaptureButton")
         self.setProperty("class", "HotkeyCaptureButton")
@@ -30,9 +34,6 @@ class HotkeyCaptureButton(QPushButton):
         self.setFixedHeight(INPUT_HEIGHT)
         self.setCursor(Qt.PointingHandCursor)
         self.setFocusPolicy(Qt.StrongFocus)
-
-        self._capturing: bool = False
-        self._current_hotkey: str = ""
 
         self._update_display_text()
         self.clicked.connect(self._on_clicked)
@@ -53,6 +54,8 @@ class HotkeyCaptureButton(QPushButton):
         Обновляет локализованный текст кнопки, строго сохраняя назначенный хоткей.
         """
         self._update_display_text()
+        if self._popover is not None:
+            self._popover.retranslate_ui()
 
     def set_hotkey(self, hotkey: str) -> None:
         """
@@ -77,10 +80,46 @@ class HotkeyCaptureButton(QPushButton):
         return self._capturing
 
     def _on_clicked(self) -> None:
+        if self._open_popover_on_click:
+            self._open_popover_on_click = False
+            self.open_builder_popover()
+            return
         if self._capturing:
             self.cancel_capture()
         else:
             self.start_capture()
+
+    def open_builder_popover(self) -> None:
+        """Открывает всплывающий конструктор комбинаций клавиш (по клику на ▾ или ПКМ)."""
+        if self._capturing:
+            self.cancel_capture()
+        if self._popover is None:
+            from modules.deck.editor.widgets.hotkey_popover import HotkeyBuilderPopover
+
+            self._popover = HotkeyBuilderPopover(parent=self.window())
+            self._popover.hotkey_selected.connect(self._on_popover_hotkey_selected)
+        self._popover.set_hotkey(self._current_hotkey)
+        self._popover.show_at_widget(self)
+
+    def _on_popover_hotkey_selected(self, combo: str) -> None:
+        """Применяет комбинацию, собранную в ручном конструкторе."""
+        self._current_hotkey = combo.strip()
+        self._update_display_text()
+        self.hotkey_changed.emit(self._current_hotkey)
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        """Определяет клик по зоне стрелки ▾ справа для открытия конструктора."""
+        if event.button() == Qt.LeftButton and not self._capturing:
+            pos_x = event.position().x() if hasattr(event, "position") else event.x()
+            self._open_popover_on_click = pos_x >= max(0, self.width() - 26)
+        else:
+            self._open_popover_on_click = False
+        super().mousePressEvent(event)
+
+    def contextMenuEvent(self, event: QContextMenuEvent) -> None:
+        """Открывает конструктор клавиш по правому клику."""
+        self.open_builder_popover()
+        event.accept()
 
     def start_capture(self) -> None:
         """
@@ -93,6 +132,7 @@ class HotkeyCaptureButton(QPushButton):
         self.update()
 
         self._update_display_text()
+        self.setFocus(Qt.OtherFocusReason)
         try:
             self.grabKeyboard()
         except Exception:
@@ -136,6 +176,21 @@ class HotkeyCaptureButton(QPushButton):
         self._update_display_text()
         self.hotkey_changed.emit(self._current_hotkey)
 
+    def event(self, event: QEvent) -> bool:
+        """
+        Перехватывает ShortcutOverride и KeyPress (включая Tab/Backtab) во время захвата,
+        чтобы QShortcut окна и навигация фокуса Qt не съедали комбинации клавиш.
+        """
+        if getattr(self, "_capturing", False):
+            ev_type = event.type()
+            if ev_type == QEvent.ShortcutOverride:
+                event.accept()
+                return True
+            if ev_type == QEvent.KeyPress:
+                self.keyPressEvent(event)  # type: ignore[arg-type]
+                return True
+        return super().event(event)
+
     def keyPressEvent(self, event: QKeyEvent) -> None:
         """
         Перехват нажатий клавиш клавиатуры при активном захвате.
@@ -157,14 +212,14 @@ class HotkeyCaptureButton(QPushButton):
             event.accept()
             return
 
-        # Нажатие Escape отменяет захват без изменений
-        if key == Qt.Key_Escape:
+        # Голый Escape (без модификаторов) отменяет захват без изменений
+        if key == Qt.Key_Escape and modifiers == Qt.NoModifier:
             self.cancel_capture()
             event.accept()
             return
 
-        # Backspace или Delete очищают назначенный хоткей
-        if key in (Qt.Key_Backspace, Qt.Key_Delete):
+        # Backspace или Delete (без модификаторов) очищают назначенный хоткей
+        if key in (Qt.Key_Backspace, Qt.Key_Delete) and modifiers == Qt.NoModifier:
             self.finish_capture("")
             event.accept()
             return
@@ -188,6 +243,16 @@ class HotkeyCaptureButton(QPushButton):
             key_str = chr(key)
         elif Qt.Key_F1 <= key <= Qt.Key_F24:
             key_str = f"F{key - Qt.Key_F1 + 1}"
+        elif key in (Qt.Key_Tab, Qt.Key_Backtab):
+            key_str = "Tab"
+        elif key == Qt.Key_Escape:
+            key_str = "Esc"
+        elif key in (Qt.Key_Return, Qt.Key_Enter):
+            key_str = "Enter"
+        elif key == Qt.Key_Space:
+            key_str = "Space"
+        elif key == Qt.Key_Print:
+            key_str = "PrintScreen"
         else:
             seq_str = QKeySequence(key).toString()
             if seq_str:

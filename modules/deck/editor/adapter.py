@@ -54,51 +54,27 @@ class DeckConfigAdapter:
             keys = action.params.get("keys", [])
             if keys:
                 hotkey_str = cls._format_keys_to_string(keys)
+            action_params = {
+                "mode": action.params.get("mode", "press"),
+                "keys": list(keys) if isinstance(keys, list) else [],
+                "toggle_keys": list(action.params.get("toggle_keys", [])) if isinstance(action.params.get("toggle_keys"), list) else [],
+            }
             action_type_display = "Hotkey"
             category_display = "System: Hotkey"
-        elif action.action_type == "hotkey_switch":
-            action_type_display = "Hotkey Switch"
-            category_display = "System: Hotkey Switch"
-        elif action.action_type == "website":
-            action_type_display = "Website"
-            category_display = "System: Website"
-        elif action.action_type == "open_path":
-            action_type_display = "Open Path"
-            category_display = "System: Open Path"
-        elif action.action_type == "open_app":
+        elif action.action_type == "launch":
             action_type_display = "Open Application"
             category_display = "System: Open Application"
-        elif action.action_type == "close_window":
-            action_type_display = "Close Window"
-            category_display = "System: Close Window"
-        elif action.action_type == "text_macro":
-            action_type_display = "Text Macro"
-            category_display = "System: Text Macro"
-        elif action.action_type == "multimedia":
-            action_type_display = "Multimedia"
-            category_display = "System: Multimedia"
-        elif action.action_type == "volume_control":
-            action_type_display = "Volume Control"
-            category_display = "Volume: Control"
-        elif action.action_type == "launch":
-            target_str = str(action.params.get("target", "") or action.params.get("path", "") or action.params.get("url", ""))
-            if action.params.get("is_http") or "method" in action.params or ("http" in target_str and "api" in target_str):
-                action_type_display = "HTTP Request"
-                category_display = "API: HTTP Request"
-            else:
-                action_type_display = "Open Application"
-                category_display = "System: Open Application"
-        elif action.action_type in ("audio_device", "audio"):
-            if action.params.get("command") == "toggle_device" or action.params.get("target") == "device" or "devices" in action.params:
+        elif action.action_type == "audio":
+            if action.params.get("target") == "device" or action.params.get("command") in ("toggle_device", "set_device"):
                 action_type_display = "Audio Device"
                 category_display = "System: Audio Device"
             else:
                 action_type_display = "Volume Control"
                 category_display = "Volume: Control"
-        elif action.action_type in ("media", "multimedia"):
+        elif action.action_type == "media":
             action_type_display = "Multimedia"
             category_display = "System: Multimedia"
-        elif action.action_type in ("text", "text_macro"):
+        elif action.action_type == "text":
             action_type_display = "Text Macro"
             category_display = "System: Text Macro"
         elif action.action_type == "system":
@@ -108,54 +84,12 @@ class DeckConfigAdapter:
             else:
                 action_type_display = "System"
                 category_display = "System"
-        elif action.action_type in ("macro", "multi_action", "multi_action_switch"):
-            action_type_display = "Multi Action"
-            category_display = "Multi Action"
-        elif action.action_type == "screenshot":
-            action_type_display = "Screenshot"
-            category_display = "System: Screenshot"
-        elif action.action_type == "http_request":
-            action_type_display = "HTTP Request"
-            category_display = "API: HTTP Request"
-        elif action.action_type in ("navigation", "deck_nav"):
+        elif action.action_type == "deck_nav":
             action_type_display = "Navigation"
             category_display = "Navigation"
-        elif action.action_type == "create_folder":
-            action_type_display = "Create Folder"
-            category_display = "Navigation: Create Folder"
-        elif action.action_type == "switch_profile":
-            action_type_display = "Switch Profile"
-            category_display = "Navigation: Switch Profile"
-        elif action.action_type == "prev_page":
-            action_type_display = "Previous Page"
-            category_display = "Navigation: Prev Page"
-        elif action.action_type == "next_page":
-            action_type_display = "Next Page"
-            category_display = "Navigation: Next Page"
-        elif action.action_type == "goto_page":
-            action_type_display = "Goto Page"
-            category_display = "Navigation: Goto Page"
-        elif action.action_type == "page_indicator":
-            action_type_display = "Page Indicator"
-            category_display = "Navigation: Page Indicator"
-        elif action.action_type == "play_audio":
-            action_type_display = "Play Audio"
-            category_display = "Soundboard: Play Audio"
-        elif action.action_type == "stop_audio":
-            action_type_display = "Stop Audio"
-            category_display = "Soundboard: Stop Audio"
-        elif action.action_type == "brightness":
-            action_type_display = "Brightness"
-            category_display = "Stream Deck: Brightness"
-        elif action.action_type == "sleep_display":
-            action_type_display = "Sleep Display"
-            category_display = "Stream Deck: Sleep Display"
-        elif action.action_type == "multi_action":
+        elif action.action_type == "macro":
             action_type_display = "Multi Action"
             category_display = "Multi Action"
-        elif action.action_type == "multi_action_switch":
-            action_type_display = "Multi Action Switch"
-            category_display = "Multi Action Switch"
         else:
             action_type_display = str(action.action_type).capitalize()
             category_display = str(button_config.category).capitalize()
@@ -223,21 +157,34 @@ class DeckConfigAdapter:
 
         # 6. Слияние с оригинальной конфигурацией
         if orig is not None:
-            action = orig.action.model_copy(deep=True)
-            category = orig.category
-
-            if dto.hotkey and dto.hotkey.strip():
-                parsed_keys = cls._parse_hotkey_string(dto.hotkey)
-                action = DeckActionConfig(action_type="hotkey", params={"keys": parsed_keys})
-                category = "shortcut"
-            elif dto.action_type:
+            if dto.action_type:
                 norm_type = cls._normalize_action_type(dto.action_type)
-                if norm_type != orig.action.action_type:
-                    action, category = cls._create_default_action(norm_type)
-                if dto.action_params:
-                    action.params.update(dto.action_params)
-            elif dto.action_params:
-                action.params.update(dto.action_params)
+            elif dto.hotkey and dto.hotkey.strip():
+                norm_type = "hotkey"
+            else:
+                norm_type = orig.action.action_type
+
+            if norm_type == "hotkey":
+                raw_p = dto.action_params if isinstance(dto.action_params, dict) else {}
+                mode = raw_p.get("mode", "press")
+                if mode not in ("press", "toggle"):
+                    mode = "press"
+                parsed_keys = cls._parse_hotkey_string(dto.hotkey) if dto.hotkey else list(raw_p.get("keys", []))
+                toggle_keys = list(raw_p.get("toggle_keys", [])) if mode == "toggle" else []
+                action = DeckActionConfig(
+                    action_type="hotkey",
+                    params={"mode": mode, "keys": parsed_keys, "toggle_keys": toggle_keys},
+                )
+                category = "shortcut"
+            else:
+                default_action, default_cat = cls._create_default_action(norm_type)
+                category = orig.category if norm_type == orig.action.action_type else default_cat
+                if dto.action_params and cls._is_params_valid_for_type(norm_type, dto.action_params):
+                    action = DeckActionConfig(action_type=norm_type, params=dict(dto.action_params))
+                elif norm_type == orig.action.action_type:
+                    action = orig.action.model_copy(deep=True)
+                else:
+                    action = default_action
 
             return DeckButtonConfig(
                 id=orig.id,
@@ -265,17 +212,31 @@ class DeckConfigAdapter:
         title = dto.title or ""
         icon = dto.icon or "⚡"
 
-        if dto.hotkey and dto.hotkey.strip():
-            parsed_keys = cls._parse_hotkey_string(dto.hotkey)
-            action = DeckActionConfig(action_type="hotkey", params={"keys": parsed_keys})
+        if dto.action_type:
+            norm_type = cls._normalize_action_type(dto.action_type)
+        elif dto.hotkey and dto.hotkey.strip():
+            norm_type = "hotkey"
+        else:
+            norm_type = "system"
+
+        if norm_type == "hotkey":
+            raw_p = dto.action_params if isinstance(dto.action_params, dict) else {}
+            mode = raw_p.get("mode", "press")
+            if mode not in ("press", "toggle"):
+                mode = "press"
+            parsed_keys = cls._parse_hotkey_string(dto.hotkey) if dto.hotkey else list(raw_p.get("keys", []))
+            toggle_keys = list(raw_p.get("toggle_keys", [])) if mode == "toggle" else []
+            action = DeckActionConfig(
+                action_type="hotkey",
+                params={"mode": mode, "keys": parsed_keys, "toggle_keys": toggle_keys},
+            )
             category = "shortcut"
         elif dto.action_type:
-            norm_type = cls._normalize_action_type(dto.action_type)
             action, category = cls._create_default_action(norm_type)
-            if dto.action_params:
-                action.params.update(dto.action_params)
+            if dto.action_params and cls._is_params_valid_for_type(norm_type, dto.action_params):
+                action = DeckActionConfig(action_type=norm_type, params=dict(dto.action_params))
         else:
-            action = DeckActionConfig(action_type="system", params={"command": "dimmer"})
+            action = DeckActionConfig(action_type="system", params={"command": "toggle_dimmer"})
             category = "system"
 
         return DeckButtonConfig(
@@ -737,7 +698,6 @@ class DeckConfigAdapter:
             "close_window",
             "close",
             "kill_window",
-            "brightness",
             "sleep_display",
             "dimmer",
             "toggle_dimmer",
@@ -749,13 +709,10 @@ class DeckConfigAdapter:
             "navigation",
             "page",
             "switch_page",
-            "create_folder",
             "switch_profile",
             "prev_page",
             "next_page",
             "goto_page",
-            "page_indicator",
-            "folder_open",
             "folder_back",
         ):
             return "deck_nav"
@@ -764,17 +721,59 @@ class DeckConfigAdapter:
         return "system"
 
     @classmethod
+    def _is_params_valid_for_type(cls, norm_type: str, params: dict[str, Any]) -> bool:
+        """
+        Проверяет, что словарь параметров соответствует целевому типу действия
+        и не содержит посторонних ключей/значений от другого примитива (защита от cross-contamination).
+        """
+        if not isinstance(params, dict) or not params:
+            return False
+
+        audio_targets = {"master", "mic", "microphone", "focus_app", "device"}
+        audio_commands = {"toggle_mute", "volume_up", "volume_down", "toggle_device", "set_device", "step"}
+
+        if norm_type == "launch":
+            if "step_percent" in params or params.get("target") in audio_targets or params.get("command") in audio_commands:
+                return False
+            allowed = {"target", "url", "path", "executable", "args", "working_dir", "kind", "detached"}
+            return any(k in allowed for k in params)
+
+        if norm_type == "system":
+            if "step_percent" in params or params.get("target") in audio_targets or params.get("command") in audio_commands:
+                return False
+            allowed = {"command", "screenshot_target", "target", "clipboard", "save_path"}
+            return any(k in allowed for k in params)
+
+        if norm_type == "audio":
+            allowed = {"target", "command", "step_percent", "mode", "devices", "target_device_id"}
+            return any(k in allowed for k in params)
+
+        if norm_type == "media":
+            return "command" in params and params.get("command") not in audio_commands - {"mute", "volume_up", "volume_down"}
+
+        if norm_type == "text":
+            return "text" in params or "send_enter" in params
+
+        if norm_type == "deck_nav":
+            return "target" in params or "page_id" in params
+
+        if norm_type == "macro":
+            return "steps" in params or "delay_ms" in params
+
+        return True
+
+    @classmethod
     def _create_default_action(cls, action_type: str) -> Tuple[DeckActionConfig, ActionCategory]:
         """Создает дефолтное действие DeckActionConfig и сопоставляет ActionCategory."""
         norm = cls._normalize_action_type(action_type)
         if norm == "hotkey":
             return (
-                DeckActionConfig(action_type="hotkey", params={"keys": []}),
+                DeckActionConfig(action_type="hotkey", params={"mode": "press", "keys": [], "toggle_keys": []}),
                 "shortcut",
             )
         if norm == "launch":
             return (
-                DeckActionConfig(action_type="launch", params={"target": "", "args": []}),
+                DeckActionConfig(action_type="launch", params={"kind": "app", "target": "", "args": []}),
                 "program",
             )
         if norm == "audio":
@@ -797,7 +796,7 @@ class DeckConfigAdapter:
             )
         if norm == "system":
             return (
-                DeckActionConfig(action_type="system", params={"command": "dimmer"}),
+                DeckActionConfig(action_type="system", params={"command": "toggle_dimmer"}),
                 "system",
             )
         if norm == "deck_nav":

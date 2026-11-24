@@ -192,7 +192,6 @@
       "volume_updated": "Громкость: {percent}%",
       "switch_state": "Переключено: {state}",
       "sound_played": "Воспроизведение: {sound}",
-      "soundboard_stopped": "Саундборд остановлен",
       "display_sleep": "Дисплей переведен в спящий режим",
       "macro_empty": "Макро-цепочка пуста",
       "macro_finished": "Выполнено шагов макроса: {success} из {total}"
@@ -242,7 +241,8 @@
           "copy": "Копировать",
           "paste": "Вставить",
           "cut": "Вырезать",
-          "duplicate": "Дублировать"
+          "duplicate": "Дублировать",
+          "save_to_library": "Сохранить в библиотеку..."
         },
         "pagination": {
           "home_tooltip": "Домашняя страница",
@@ -273,18 +273,19 @@
         "pick_preset": "Выбрать шаблон...",
         "unconfigured_title": "Слот не настроен",
         "unconfigured_placeholder": "Без названия",
-        "unconfigured_hint": "Слот пуст. Выберите примитив выше или примените шаблон",
+        "unconfigured_hint": "Слот пуст. Перетащите шаблон из правой панели или выберите действие выше",
         "select_action_type": "— Выберите действие —",
         "nav_commands": {
           "next_page": "Следующая страница",
           "prev_page": "Предыдущая страница",
           "goto_page": "Перейти к странице...",
-          "folder_open": "Открыть папку",
-          "folder_back": "Назад из папки"
+          "folder_back": "Назад из папки",
+          "switch_profile": "Сменить профиль (Скоро)"
         },
         "hints": {
           "no_params_required": "Действие не требует дополнительных параметров",
-          "stop_audio_hint": "Мгновенно глушит все играющие эффекты саундборда"
+          "stop_audio_hint": "Мгновенно глушит все играющие эффекты саундборда",
+          "macro_wip": "Редактор макро-цепочек в разработке"
         },
         "tooltips": {
           "delete_action": "Очистить действие кнопки",
@@ -322,30 +323,12 @@
           "click_sound_default": "По умолчанию",
           "click_sound_muted": "Без звука",
           "click_sound_custom": "Выбрать файл...",
-          "status_source": "Живой статус:"
+          "status_source": "Живой статус:",
+          "select_device": "Выберите устройство..."
         },
         "hotkey": {
           "click_to_assign": "Нажмите для назначения",
           "press_shortcut": "Нажмите сочетание..."
-        },
-        "actions_presets": {
-          "preset_actions": "Готовые действия",
-          "hotkey": "Хоткей",
-          "hotkey_switch": "Переключатель хоткеев",
-          "website": "Веб-сайт",
-          "open_app": "Запуск приложения",
-          "open_path": "Открыть папку / файл",
-          "close_window": "Закрыть окно",
-          "text_macro": "Текстовый макрос",
-          "multimedia": "Управление медиа",
-          "volume_control": "Регулятор громкости",
-          "audio_device": "Аудиоустройство",
-          "screenshot": "Скриншот",
-          "system": "Системная команда",
-          "play_audio": "Воспроизвести звук",
-          "stop_audio": "Остановить звуки",
-          "open_application": "Запуск приложения",
-          "media_control": "Управление медиа"
         },
         "audio_modes": {
           "toggle": "Переключение",
@@ -358,7 +341,9 @@
         "system_commands": {
           "toggle_dimmer": "Ночной режим (Диммер)",
           "lock_workstation": "Блокировка ПК",
-          "sleep_display": "Сон дисплея"
+          "sleep_display": "Сон дисплея",
+          "screenshot": "Скриншот",
+          "close_window": "Закрыть окно"
         },
         "media_commands": {
           "play_pause": "⏯️ Воспроизведение / Пауза",
@@ -404,6 +389,30 @@
           "refresh_2s": "2 сек",
           "refresh_5s": "5 сек",
           "overheat_alerts": "Оповещения о перегреве"
+        },
+        "hotkey_modes": {
+          "press": "Одиночное",
+          "toggle": "Тумблер"
+        },
+        "launch_kinds": {
+          "app": "Приложение",
+          "file": "Файл / папка",
+          "url": "Веб-ссылка"
+        },
+        "audio_categories": {
+          "volume": "Громкость / Mute",
+          "device": "Аудиоустройство"
+        },
+        "save_to_library_tooltip": "Сохранить кнопку в библиотеку",
+        "hotkey_builder": {
+          "title": "Конструктор клавиш",
+          "modifiers": "Модификаторы:",
+          "key": "Клавиша:",
+          "key_none": "Другая...",
+          "custom_key_placeholder": "Буква / цифра",
+          "presets": "Системные:",
+          "clear": "Очистить",
+          "apply": "Применить"
         }
       },
       "drawer": {
@@ -413,7 +422,6 @@
         "categories": {
           "multi_action": "Мульти-действие",
           "navigation": "Навигация",
-          "soundboard": "Саундборд",
           "stream_deck": "Stream Deck",
           "system": "Система",
           "volume_controller": "Регулятор громкости"
@@ -421,15 +429,12 @@
         "actions": {
           "multi_action": "Мульти-действие",
           "multi_action_switch": "Переключатель мульти-действий",
-          "create_folder": "Создать папку",
           "switch_profile": "Сменить профиль",
           "prev_page": "Предыдущая страница",
           "next_page": "Следующая страница",
           "goto_page": "Перейти на страницу",
-          "page_indicator": "Индикатор страниц",
           "play_audio": "Воспроизвести аудио",
           "stop_audio": "Остановить аудио",
-          "brightness": "Яркость",
           "sleep_display": "Спящий режим экрана",
           "hotkey": "Хоткей",
           "hotkey_switch": "Переключатель хоткеев",
@@ -448,6 +453,28 @@
           "volume_up": "Увеличить громкость",
           "volume_down": "Уменьшить громкость",
           "toggle_device": "Переключить устройство"
+        },
+        "custom": {
+          "add_tab": "+ Вкладка",
+          "add_tab_tooltip": "Создать пользовательскую вкладку",
+          "create_tab_title": "Новая вкладка",
+          "tab_name_label": "Название вкладки:",
+          "tab_name_placeholder": "Например: Стрим, Монтаж...",
+          "tab_icon_label": "Иконка:",
+          "rename_tab": "Переименовать вкладку",
+          "rename_tab_prompt": "Новое название вкладки:",
+          "delete_tab": "Удалить вкладку",
+          "delete_tab_confirm": "Удалить вкладку «{title}» и все её сохранённые кнопки?",
+          "rename_item": "Переименовать",
+          "rename_item_prompt": "Новое название кнопки:",
+          "delete_item": "Удалить из библиотеки",
+          "default_tab_name": "Мои кнопки",
+          "save_dialog_title": "Сохранить в библиотеку",
+          "button_title_label": "Название кнопки:",
+          "target_tab_label": "Вкладка:",
+          "new_tab_inline": "+ Новая вкладка",
+          "save_btn": "Сохранить",
+          "cancel_btn": "Отмена"
         }
       },
       "menu": {
@@ -493,7 +520,6 @@
         "system_control": "Система и экран",
         "input_macros": "Ввод и макросы",
         "navigation": "Навигация DuckDeck",
-        "soundboard": "Саундборд",
         "multi_action": "Мульти-действия и макросы"
       },
       "primitives": {
@@ -623,22 +649,15 @@
           "title": "Предыдущая страница",
           "desc": "Переход на предыдущую страницу макро-панели"
         },
-        "create_folder": {
-          "title": "Открыть папку",
-          "desc": "Переход во вложенную подсетку или папку"
-        },
-        "soundboard_play": {
-          "title": "Звуковой эффект",
-          "desc": "Воспроизведение аудиофайла через саундборд"
-        },
-        "soundboard_stop": {
-          "title": "Остановить саундборд",
-          "desc": "Мгновенная остановка всех звуков саундборда"
-        },
         "macro_sequence": {
           "title": "Макро-цепочка",
           "desc": "Последовательный запуск нескольких действий с задержкой"
-        }
+        },
+        "switch_profile_wip_badge": " (Скоро)",
+        "macro_wip_badge": " (В разработке)"
+      },
+      "tooltips": {
+        "wip_feature": "Функция находится в разработке"
       }
     }
   },

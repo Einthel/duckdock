@@ -30,30 +30,7 @@ from modules.deck.executors import (
     TextExecutor,
 )
 from modules.deck.models import (
-    AudioActionParams,
-    AudioDeviceParams,
-    CloseWindowParams,
     DeckActionConfig,
-    DeckNavActionParams,
-    HotkeyActionParams,
-    HotkeySwitchParams,
-    HttpRequestParams,
-    LaunchActionParams,
-    LaunchParams,
-    MacroActionParams,
-    MediaActionParams,
-    MultimediaParams,
-    NavigationParams,
-    OpenAppParams,
-    OpenPathParams,
-    ScreenshotParams,
-    SoundboardParams,
-    SystemActionParams,
-    SystemParams,
-    TextActionParams,
-    TextMacroParams,
-    VolumeControlParams,
-    WebsiteParams,
 )
 
 logger = logging.getLogger("duckdock.deck.dispatcher")
@@ -65,8 +42,6 @@ class WorkerSignals(QObject):
     """
     started = Signal(str)              # button_id
     finished = Signal(str, bool, str)  # button_id, success, message
-    play_sound_requested = Signal(str, float, bool)  # file_path, volume, stop_others
-    stop_sound_requested = Signal()
 
     def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)
@@ -109,109 +84,27 @@ class ActionRunnable(QRunnable):
             case "launch":
                 return LaunchExecutor.execute(typed_params, action_config=cfg)
 
-            case "audio" | "audio_device" | "volume_control":
-                # Конвертация VolumeControlParams в AudioActionParams если необходимо
-                if isinstance(typed_params, VolumeControlParams):
-                    cmd_val = "toggle_mute" if typed_params.command == "toggle_mute" else "step"
-                    step_val = typed_params.step_percent if typed_params.command == "volume_up" else -typed_params.step_percent
-                    target_val = "mic" if typed_params.target in ("mic", "microphone") else ("focus_app" if typed_params.target == "focus_app" else "master")
-                    audio_p = AudioActionParams(
-                        target=target_val,
-                        command=cmd_val,
-                        step_percent=step_val,
-                    )
-                else:
-                    audio_p = typed_params
+            case "audio":
                 return AudioExecutor.execute(
-                    params=audio_p,
+                    params=typed_params,
                     audio_manager=self.audio_manager,
-                    sound_engine=self.sound_engine,
-                    play_sound_emitter=self.signals.play_sound_requested.emit,
-                    stop_sound_emitter=self.signals.stop_sound_requested.emit,
                     action_config=cfg,
                 )
 
-            case "media" | "multimedia":
+            case "media":
                 return MediaExecutor.execute(typed_params)
 
-            case "text" | "text_macro":
+            case "text":
                 return TextExecutor.execute(typed_params)
 
             case "system":
                 return SystemExecutor.execute(typed_params, audio_manager=self.audio_manager)
 
-            case "deck_nav" | "navigation":
+            case "deck_nav":
                 return DeckNavExecutor.execute(typed_params)
 
             case "macro":
                 return MacroExecutor.execute(typed_params, single_action_runner=self._execute_sub_action)
-
-            # Legacy fallback cases для абсолютной обратной совместимости
-            case "hotkey_switch":
-                return HotkeyExecutor.execute(typed_params, action_config=cfg)
-
-            case "website" | "open_path" | "open_app":
-                return LaunchExecutor.execute(typed_params, action_config=cfg)
-
-            case "screenshot":
-                p: ScreenshotParams = typed_params
-                return capture_screen(
-                    target=p.target,
-                    clipboard=p.clipboard,
-                    save_path=p.save_path,
-                )
-
-            case "close_window":
-                p_cw: CloseWindowParams = typed_params
-                return SystemExecutor.execute(
-                    SystemActionParams(command="close_window"),
-                    audio_manager=self.audio_manager,
-                )
-
-            case "play_audio":
-                p_sb: SoundboardParams = typed_params
-                f_path = (p_sb.file_path or cfg.params.get("file_path", "")).strip()
-                vol = getattr(p_sb, "volume", 1.0)
-                stop_oth = getattr(p_sb, "stop_others", False)
-                return AudioExecutor.execute(
-                    params=AudioActionParams(
-                        target="soundboard",
-                        command="play_sound",
-                        file_path=f_path,
-                        volume=vol,
-                        stop_others=stop_oth,
-                    ),
-                    audio_manager=self.audio_manager,
-                    sound_engine=self.sound_engine,
-                    play_sound_emitter=self.signals.play_sound_requested.emit,
-                    stop_sound_emitter=self.signals.stop_sound_requested.emit,
-                    action_config=cfg,
-                )
-
-            case "stop_audio":
-                return AudioExecutor.execute(
-                    params=AudioActionParams(
-                        target="soundboard",
-                        command="stop_sound",
-                    ),
-                    audio_manager=self.audio_manager,
-                    sound_engine=self.sound_engine,
-                    play_sound_emitter=self.signals.play_sound_requested.emit,
-                    stop_sound_emitter=self.signals.stop_sound_requested.emit,
-                    action_config=cfg,
-                )
-
-            case "http_request":
-                hr_params: HttpRequestParams = typed_params
-                success, code, body = execute_http_request(
-                    url=hr_params.url,
-                    method=hr_params.method,
-                    headers=hr_params.headers,
-                    json_body=hr_params.json_body,
-                    timeout_sec=hr_params.timeout_sec,
-                )
-                msg = f"HTTP {code}" if success else f"HTTP {code}: {body[:80]}"
-                return success, msg
 
             case _:
                 return False, t("deck.notify.unsupported_action", action=action_type)
@@ -282,16 +175,6 @@ class DeckActionDispatcher(QObject):
         self._active_tasks: Dict[str, Tuple[ActionRunnable, WorkerSignals]] = {}
         self.action_finished.connect(self._on_action_finished_cleanup)
 
-    def _on_play_sound_requested(self, file_path: str, volume: float, stop_others: bool) -> None:
-        """Слот воспроизведения звука саундборда в главном UI потоке."""
-        if self.sound_engine is not None:
-            self.sound_engine.play_soundboard(file_path, volume, stop_others)
-
-    def _on_stop_sound_requested(self) -> None:
-        """Слот остановки саундборда в главном UI потоке."""
-        if self.sound_engine is not None:
-            self.sound_engine.stop_soundboard()
-
     @property
     def simulation_mode(self) -> bool:
         """Режим симуляции (Stubs Mode) без запуска фоновых задач."""
@@ -353,8 +236,6 @@ class DeckActionDispatcher(QObject):
         signals = WorkerSignals(self)
         signals.started.connect(self.action_started.emit)
         signals.finished.connect(self.action_finished.emit)
-        signals.play_sound_requested.connect(self._on_play_sound_requested)
-        signals.stop_sound_requested.connect(self._on_stop_sound_requested)
 
         runnable = ActionRunnable(
             button_id=button_id_str,
@@ -381,8 +262,6 @@ class DeckActionDispatcher(QObject):
         class SyncSignals(QObject):
             started = Signal(str)
             finished = Signal(str, bool, str)
-            play_sound_requested = Signal(str, float, bool)
-            stop_sound_requested = Signal()
 
         sig = SyncSignals()
         result = [False, ""]
@@ -392,9 +271,6 @@ class DeckActionDispatcher(QObject):
             result[1] = msg
 
         sig.finished.connect(on_finished)
-        if sound_engine is not None:
-            sig.play_sound_requested.connect(sound_engine.play_soundboard)
-            sig.stop_sound_requested.connect(sound_engine.stop_soundboard)
 
         runnable = ActionRunnable(
             button_id="test_run",

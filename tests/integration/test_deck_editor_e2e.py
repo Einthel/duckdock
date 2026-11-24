@@ -309,7 +309,7 @@ def test_deck_editor_e2e_full_journey(e2e_window, qtbot):
     sec_titles_ru = {s.category_dto.id: s.header.lbl_title.text() for s in drawer.accordion.sections}
     assert sec_titles_ru.get("navigation") in ("Навигация", "Навигация DuckDeck")
     assert sec_titles_ru.get("multi_action") in ("Мульти-действие", "Мульти-действия", "Мульти-действия и макросы")
-    assert sec_titles_ru.get("soundboard") == "Саундборд"
+    assert "soundboard" not in sec_titles_ru
 
     # Строка поиска
     assert drawer.search_bar.search_input.placeholderText() == "Поиск..."
@@ -597,16 +597,19 @@ def test_deck_editor_full_runtime_integration_journey(qapp, qtbot, tmp_path):
         button_form = inspector.button_form
         assert inspector.stack.currentIndex() == 1  # форма кнопки
 
-        # Выбираем website в комбобоксе
-        idx_web = button_form.combo_actions.findData("website")
-        assert idx_web >= 0
-        button_form.combo_actions.setCurrentIndex(idx_web)
+        # Выбираем launch -> url в комбобоксе
+        idx_launch = button_form.combo_actions.findData("launch")
+        assert idx_launch >= 0
+        button_form.combo_actions.setCurrentIndex(idx_launch)
+        idx_url = button_form.subform_launch.combo_kind.findData("url")
+        assert idx_url >= 0
+        button_form.subform_launch.combo_kind.setCurrentIndex(idx_url)
         qapp.processEvents()
 
         button_form.edit_title.setText("GitHub")
         button_form.edit_title.textEdited.emit("GitHub")
-        button_form.subform_path_url.edit_input.setText("https://github.com")
-        button_form.subform_path_url._on_text_edited("https://github.com")
+        button_form.subform_launch.edit_target.setText("https://github.com")
+        button_form.subform_launch._emit_params()
 
         # Фаза C: Выбор иконки и цвета акцента
         button_form.preview_tile.set_icon("🌐")
@@ -749,13 +752,14 @@ def test_deck_editor_e2e_preset_workflow_and_atomic_save(qapp, qtbot, tmp_path):
         assert dto_redone.color_accent == "#06b6d4"
         assert dto_redone.status_source == "audio_device"
 
-        # 6. Изменение параметров через подформу (смена режима на 'cycle')
-        subform = inspector.button_form.subform_audio_device
-        idx_cycle = subform.combo_mode.findData("cycle")
-        if idx_cycle >= 0:
-            subform.combo_mode.setCurrentIndex(idx_cycle)
-            qapp.processEvents()
-            assert window._button_slots[0].action_params.get("mode") == "cycle"
+        # 6. Выбираем слот 0 и меняем параметры через подформу AudioSubform (режим 'set')
+        inspector.load_button_slot(0, window._button_slots[0])
+        subform = inspector.button_form.subform_audio
+        idx_set = subform.combo_dev_mode.findData("set")
+        assert idx_set >= 0
+        subform.combo_dev_mode.setCurrentIndex(idx_set)
+        qapp.processEvents()
+        assert window._button_slots[0].action_params.get("mode") == "set"
 
         # 7. Атомарное сохранение конфигурации
         saved = window.save_configuration()
@@ -773,7 +777,7 @@ def test_deck_editor_e2e_preset_workflow_and_atomic_save(qapp, qtbot, tmp_path):
         assert btn.icon == "🎧"
         assert btn.color_accent == "#06b6d4"
         assert btn.status_source == "audio_device"
-        assert btn.action.params.get("command") == "toggle_device"
+        assert btn.action.params.get("command") == "set_device"
     finally:
         window.close()
         window.deleteLater()
@@ -937,7 +941,7 @@ def test_deck_editor_e2e_preset_drag_and_drop(qapp, qtbot, tmp_path):
         assert dto4.icon == "🌙"
         assert dto4.status_source == "dimmer"
         assert dto4.color_accent == "#f59e0b"
-        assert dto4.action_params.get("command") == "dimmer"
+        assert dto4.action_params.get("command") == "toggle_dimmer"
         assert cell4.lbl_icon.text() == "🌙"
 
         # Undo сброса

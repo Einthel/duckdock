@@ -349,19 +349,21 @@ def test_grid_cell_context_menu_structure_and_stubs(qapp):
 
     actions = menu.actions()
     action_texts = [a.text() for a in actions if not a.isSeparator()]
-    assert len(action_texts) == 5
+    assert len(action_texts) == 6
 
     # Проверка: заготовки под будущее отключены (disabled)
     act_copy = actions[0]
     act_cut = actions[1]
     act_paste = actions[2]
     act_duplicate = actions[3]
-    act_delete = actions[5]
+    act_save_lib = actions[5]
+    act_delete = actions[6]
 
     assert not act_copy.isEnabled()
     assert not act_cut.isEnabled()
     assert not act_paste.isEnabled()
     assert not act_duplicate.isEnabled()
+    assert act_save_lib.isEnabled()
     assert act_delete.isEnabled()
 
 

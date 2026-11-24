@@ -109,7 +109,7 @@ BORDER_TOUCHBAR = BORDER_SURFACE_1
 INSPECTOR_HEIGHT = 260
 PREVIEW_TILE_SIZE = 84
 INPUT_HEIGHT = 30
-FORM_LABEL_WIDTH = 60
+FORM_LABEL_WIDTH = 96
 ICON_BTN_SIZE = 20
 
 BG_INSPECTOR = SURFACE_1_PANEL
@@ -218,7 +218,7 @@ QComboBox {{
     background-color: #101522;
     border: 1px solid {BORDER_SURFACE_1};
     border-radius: 6px;
-    padding: 4px 10px 4px 10px;
+    padding: 2px 10px 2px 10px;
     color: {TEXT_PRIMARY_HIGH};
     font-size: 13px;
     font-weight: 500;
@@ -381,6 +381,25 @@ QPushButton.HeaderSaveButton[state="success"]:hover,
 QPushButton#btnSaveConfig[state="success"]:hover {{
     background-color: #10b981;
     border: 1px solid #34d399;
+    color: #ffffff;
+}}
+
+/* Кнопка "+ Вкладка" в ActionLibraryDrawer */
+QPushButton#btnAddTab,
+QPushButton.DrawerAddTabButton {{
+    background-color: {SURFACE_2_CARD};
+    border: 1px solid {BORDER_SURFACE_2};
+    border-radius: 6px;
+    color: {BORDER_FOCUS_NEON};
+    font-size: 12px;
+    font-weight: 600;
+    padding: 0px 10px;
+}}
+
+QPushButton#btnAddTab:hover,
+QPushButton.DrawerAddTabButton:hover {{
+    background-color: {SURFACE_3_HOVER};
+    border-color: {BORDER_FOCUS_NEON};
     color: #ffffff;
 }}
 
@@ -681,12 +700,18 @@ QFrame#propertyInspector,
 QFrame[class="KeyPropertyInspector"],
 KeyPropertyInspector {{
     background-color: {SURFACE_1_PANEL};
-    border: none;
+    border: 1px solid {BORDER_SURFACE_1};
+    border-radius: 10px;
+}}
+
+QWidget#buttonPropertyForm {{
+    background: transparent;
 }}
 
 /* Разделители форм инспектора и панелей */
 QFrame#formSeparator,
 QFrame#touchbarFormSeparator,
+QFrame#feedbackSeparator,
 QFrame.FormSeparator,
 QFrame#drawerInternalSeparator,
 QFrame.DrawerInternalSeparator {{
@@ -694,6 +719,13 @@ QFrame.DrawerInternalSeparator {{
     border: none;
     height: 1px;
     max-height: 1px;
+}}
+
+QFrame#formVerticalSeparator {{
+    background-color: {BORDER_SURFACE_1};
+    border: none;
+    width: 1px;
+    max-width: 1px;
 }}
 
 QLabel.InspectorPlaceholder,
@@ -852,8 +884,8 @@ TileCornerButton:pressed {{
 QLineEdit.InspectorLineEdit,
 QLineEdit[class="InspectorLineEdit"],
 InspectorLineEdit {{
-    min-height: {INPUT_HEIGHT}px;
-    max-height: {INPUT_HEIGHT}px;
+    min-height: {INPUT_HEIGHT - 2}px;
+    max-height: {INPUT_HEIGHT - 2}px;
     background-color: #101522;
     border: 1px solid {BORDER_SURFACE_1};
     border-radius: 6px;
@@ -873,6 +905,7 @@ InspectorLineEdit:hover {{
 QLineEdit.InspectorLineEdit:focus,
 QLineEdit[class="InspectorLineEdit"]:focus,
 InspectorLineEdit:focus {{
+    background-color: #121929;
     border: 1.5px solid {BORDER_FOCUS_NEON};
 }}
 
@@ -880,10 +913,10 @@ InspectorLineEdit:focus {{
 QPushButton.FontSettingButton,
 QPushButton[class="FontSettingButton"],
 FontSettingButton {{
-    min-width: {INPUT_HEIGHT}px;
-    max-width: {INPUT_HEIGHT}px;
-    min-height: {INPUT_HEIGHT}px;
-    max-height: {INPUT_HEIGHT}px;
+    min-width: {INPUT_HEIGHT - 2}px;
+    max-width: {INPUT_HEIGHT - 2}px;
+    min-height: {INPUT_HEIGHT - 2}px;
+    max-height: {INPUT_HEIGHT - 2}px;
     background-color: {SURFACE_2_CARD};
     border: 1px solid {BORDER_SURFACE_1};
     border-radius: 6px;
@@ -905,8 +938,8 @@ FontSettingButton:hover {{
 QPushButton.HotkeyCaptureButton,
 QPushButton[class="HotkeyCaptureButton"],
 HotkeyCaptureButton {{
-    min-height: {INPUT_HEIGHT}px;
-    max-height: {INPUT_HEIGHT}px;
+    min-height: {INPUT_HEIGHT - 2}px;
+    max-height: {INPUT_HEIGHT - 2}px;
     background-color: #101522;
     border: 1px solid {BORDER_SURFACE_1};
     border-radius: 6px;
@@ -948,18 +981,55 @@ InspectorFieldLabel {{
     background: transparent;
 }}
 
-/* Свотчи выбора акцентного цвета кнопки */
+/* Свотчи выбора акцентного цвета кнопки (14x14 px) */
 QPushButton.ColorAccentSwatch,
 QPushButton[class="ColorAccentSwatch"],
 ColorAccentSwatch {{
-    min-width: 18px;
-    max-width: 18px;
-    min-height: 18px;
-    max-height: 18px;
-    border-radius: 9px;
+    min-width: 14px;
+    max-width: 14px;
+    min-height: 14px;
+    max-height: 14px;
+    border-radius: 7px;
     border: 1px solid {BORDER_SURFACE_2};
     padding: 0px;
     margin: 0px;
+}}
+
+/* Кнопка сохранения в библиотеку (⭐) и кнопка '+ Вкладка' */
+QPushButton#btnSaveToLibrary {{
+    min-width: 28px;
+    max-width: 28px;
+    min-height: 28px;
+    max-height: 28px;
+    background-color: transparent;
+    border: none;
+    border-radius: 6px;
+    color: {TEXT_SECONDARY_MED};
+    font-size: 14px;
+    padding: 0px;
+}}
+
+QPushButton#btnSaveToLibrary:hover {{
+    background-color: rgba(245, 158, 11, 0.16);
+    color: #f59e0b;
+}}
+
+QPushButton#btnAddCustomTab {{
+    min-height: 28px;
+    max-height: 28px;
+    background-color: {SURFACE_2_CARD};
+    border: 1px solid {BORDER_SURFACE_2};
+    border-radius: 6px;
+    color: {TEXT_PRIMARY_HIGH};
+    font-size: 12px;
+    font-weight: 600;
+    padding: 0 10px;
+}}
+
+QPushButton#btnAddCustomTab:hover {{
+    background-color: {SURFACE_3_HOVER};
+    border: 1px solid {BORDER_FOCUS_NEON};
+    color: {BORDER_FOCUS_NEON};
 }}
 
 QPushButton.ColorAccentSwatch:hover,
@@ -978,8 +1048,8 @@ ColorAccentSwatch[selected="true"] {{
 QPushButton#btnPresetsMenu,
 QPushButton.InspectorPresetsButton,
 QPushButton[class="InspectorPresetsButton"] {{
-    min-height: {INPUT_HEIGHT}px;
-    max-height: {INPUT_HEIGHT}px;
+    min-height: {INPUT_HEIGHT - 2}px;
+    max-height: {INPUT_HEIGHT - 2}px;
     background-color: #101c2e;
     border: 1px solid #1e3a5f;
     border-radius: 6px;
@@ -1009,8 +1079,8 @@ QPushButton[class="InspectorPresetsButton"]:pressed {{
 QPushButton#btnUnconfiguredPresets,
 QPushButton.UnconfiguredPresetButton,
 QPushButton[class="UnconfiguredPresetButton"] {{
-    min-height: {INPUT_HEIGHT}px;
-    max-height: {INPUT_HEIGHT}px;
+    min-height: {INPUT_HEIGHT - 2}px;
+    max-height: {INPUT_HEIGHT - 2}px;
     background-color: #141f32;
     border: 1px dashed #38bdf8;
     border-radius: 6px;
@@ -1033,10 +1103,10 @@ QPushButton[class="UnconfiguredPresetButton"]:hover {{
 QPushButton.InspectorBrowseButton,
 QPushButton[class="InspectorBrowseButton"],
 InspectorBrowseButton {{
-    min-width: {INPUT_HEIGHT}px;
-    max-width: {INPUT_HEIGHT}px;
-    min-height: {INPUT_HEIGHT}px;
-    max-height: {INPUT_HEIGHT}px;
+    min-width: {INPUT_HEIGHT - 2}px;
+    max-width: {INPUT_HEIGHT - 2}px;
+    min-height: {INPUT_HEIGHT - 2}px;
+    max-height: {INPUT_HEIGHT - 2}px;
     background-color: {SURFACE_2_CARD};
     border: 1px solid {BORDER_SURFACE_1};
     border-radius: 6px;
