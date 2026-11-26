@@ -24,14 +24,76 @@ class RECT(ctypes.Structure):
         ("bottom", wintypes.LONG),
     ]
 
+
+class POINT(ctypes.Structure):
+    _fields_ = [
+        ("x", wintypes.LONG),
+        ("y", wintypes.LONG),
+    ]
+
+
+class MONITORINFO(ctypes.Structure):
+    _fields_ = [
+        ("cbSize", wintypes.DWORD),
+        ("rcMonitor", RECT),
+        ("rcWork", RECT),
+        ("dwFlags", wintypes.DWORD),
+    ]
+
+
+MONITOR_DEFAULTTOPRIMARY = 1
+
+
 class MouseBarrier:
     """Контроллер удержания мыши на основном экране через user32.ClipCursor."""
 
-    def __init__(self, primary_rect: Tuple[int, int, int, int] = (0, 0, 1920, 1080)):
-        self.primary_rect = primary_rect  # (x, y, w, h)
+    def __init__(self, primary_rect: Optional[Tuple[int, int, int, int]] = None):
+        self.primary_rect = (
+            primary_rect if primary_rect is not None else self.detect_primary_monitor_rect()
+        )  # (x, y, w, h) в физических пикселях
         self.enabled = False
         self._is_clipped = False
         atexit.register(self.release_barrier)
+
+    @staticmethod
+    def get_physical_primary_rect() -> Optional[Tuple[int, int, int, int]]:
+        """Получить физические координаты основного монитора через WinAPI."""
+        if sys.platform != "win32":
+            return None
+        try:
+            user32 = ctypes.windll.user32
+            hmon = user32.MonitorFromPoint(POINT(0, 0), MONITOR_DEFAULTTOPRIMARY)
+            if hmon:
+                info = MONITORINFO()
+                info.cbSize = ctypes.sizeof(MONITORINFO)
+                if user32.GetMonitorInfoW(hmon, ctypes.byref(info)):
+                    rc = info.rcMonitor
+                    w = rc.right - rc.left
+                    h = rc.bottom - rc.top
+                    if w > 0 and h > 0:
+                        return (int(rc.left), int(rc.top), int(w), int(h))
+
+            # Fallback через GetSystemMetrics (SM_CXSCREEN=0, SM_CYSCREEN=1)
+            w = int(user32.GetSystemMetrics(0))
+            h = int(user32.GetSystemMetrics(1))
+            if w > 0 and h > 0:
+                return (0, 0, w, h)
+        except Exception:
+            pass
+        return None
+
+    @classmethod
+    def detect_primary_monitor_rect(cls) -> Tuple[int, int, int, int]:
+        """Определить физический прямоугольник основного монитора с безопасным fallback."""
+        return cls.get_physical_primary_rect() or (0, 0, 1920, 1080)
+
+    def set_primary_rect(self, primary_rect: Tuple[int, int, int, int]) -> None:
+        """Обновить границы основного монитора и переприменить активный ClipCursor."""
+        if self.primary_rect == primary_rect:
+            return
+        self.primary_rect = primary_rect
+        if self.enabled and self._is_clipped:
+            self.apply_barrier()
 
     def is_alt_pressed(self) -> bool:
         """Проверить, зажата ли клавиша Alt."""

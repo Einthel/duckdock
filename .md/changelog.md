@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-11-26
+
+### Fixed
+- **Барьер курсора `MouseBarrier` на HiDPI-мониторах (`core/mouse_barrier.py`, `ui/main_window.py`)**:
+  - Устранено ошибочное ограничение курсора в левом верхнем прямоугольнике (например, `2048×1152` при масштабе Windows 125% на экране `2560×1440` или дефолтном `1920×1080`), возникавшее из-за передачи логических координат `QScreen.geometry()` в WinAPI `ClipCursor`.
+  - В `MouseBarrier` добавлен метод `get_physical_primary_rect()` (через `MonitorFromPoint(..., MONITOR_DEFAULTTOPRIMARY)` + `GetMonitorInfoW` с fallback на `GetSystemMetrics`), автоопределение физических границ в `__init__` и метод `set_primary_rect()` с мгновенным переприменением активного `ClipCursor`.
+  - В `MainWindow.reposition_to_subscreen()` выбор основного экрана переведён на `QGuiApplication.primaryScreen()`, а обновление `mouse_barrier` — на физические пиксели (WinAPI или `QScreen.geometry() * devicePixelRatio()`).
+  - Добавлены модульные и регрессионные тесты в `tests/core/test_mouse_barrier.py` и `tests/ui/test_main_window.py` (`555 passed`).
+
 ## [0.6.0] - 2026-11-25
 
 ### Added

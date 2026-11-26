@@ -50,3 +50,22 @@ def test_mouse_barrier_cursor_bounds_check():
 
     with patch("win32api.GetCursorPos", return_value=(2000, 500)):
         assert mb.is_cursor_in_primary() is False
+
+
+@pytest.mark.unit
+def test_mouse_barrier_auto_detect_primary_rect():
+    with patch.object(MouseBarrier, "get_physical_primary_rect", return_value=(0, 0, 2560, 1440)):
+        mb = MouseBarrier()
+        assert mb.primary_rect == (0, 0, 2560, 1440)
+
+
+@pytest.mark.unit
+def test_mouse_barrier_set_primary_rect_reapplies_clip():
+    mb = MouseBarrier(primary_rect=(0, 0, 1920, 1080))
+    mb.enabled = True
+    mb._is_clipped = True
+
+    with patch.object(mb, "apply_barrier", return_value=True) as mock_apply:
+        mb.set_primary_rect((0, 0, 2560, 1440))
+        assert mb.primary_rect == (0, 0, 2560, 1440)
+        mock_apply.assert_called_once()

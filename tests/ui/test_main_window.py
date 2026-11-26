@@ -75,3 +75,25 @@ def test_main_window_external_app_already_running(qapp):
         win = MainWindow(config)
         assert win is not None
         win.close()
+
+
+@pytest.mark.unit
+def test_main_window_mouse_barrier_uses_physical_dpi_pixels(qapp):
+    """
+    Регрессионный тест: при системном масштабировании Windows (напр. 125% -> 2048x1152 в Qt)
+    MouseBarrier должен получать физические пиксели (2560x1440), а не логические QScreen.geometry().
+    """
+    from PySide6.QtCore import QRect
+
+    mock_primary = MagicMock()
+    mock_primary.geometry.return_value = QRect(0, 0, 2048, 1152)
+    mock_primary.devicePixelRatio.return_value = 1.25
+
+    config = AppConfig()
+    with patch("core.window_manager.WindowManager.find_window_by_process_name", return_value=None), \
+         patch("core.mouse_barrier.MouseBarrier.get_physical_primary_rect", return_value=None), \
+         patch("PySide6.QtGui.QGuiApplication.primaryScreen", return_value=mock_primary), \
+         patch("PySide6.QtGui.QGuiApplication.screens", return_value=[mock_primary]):
+        win = MainWindow(config)
+        assert win.mouse_barrier.primary_rect == (0, 0, 2560, 1440)
+        win.close()

@@ -54,9 +54,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.config = config
         I18nManager().set_language(self.config.language, emit_signal=False)
-        self.mouse_barrier = MouseBarrier(
-            primary_rect=(0, 0, 1920, 1080)
-        )
+        self.mouse_barrier = MouseBarrier()
         self.focus_guardian = FocusGuardian(
             subscreen_rect=self.config.display.fallback_geometry,
             restore_delay_ms=self.config.stealth.focus_restore_delay_ms,
@@ -296,8 +294,7 @@ class MainWindow(QMainWindow):
         target_screen: Optional[QScreen] = None
         primary_screen: Optional[QScreen] = None
 
-        if screens:
-            primary_screen = screens[0]
+        primary_screen = QGuiApplication.primaryScreen() or (screens[0] if screens else None)
 
         # 1. Поиск экрана по высоте 600 (800x600 или 1024x600)
         for s in screens:
@@ -326,12 +323,19 @@ class MainWindow(QMainWindow):
             fb = self.config.display.fallback_geometry
             target_x, target_y, target_w, target_h = fb
 
-        # Обновляем геометрию барьера для основного монитора
-        if primary_screen:
+        # Обновляем геометрию барьера в физических пикселях основного монитора
+        phys_rect = self.mouse_barrier.get_physical_primary_rect()
+        if phys_rect is not None:
+            self.mouse_barrier.set_primary_rect(phys_rect)
+        elif primary_screen:
             p_geom = primary_screen.geometry()
-            self.mouse_barrier.primary_rect = (
-                p_geom.x(), p_geom.y(), p_geom.width(), p_geom.height()
-            )
+            dpr = primary_screen.devicePixelRatio() or 1.0
+            self.mouse_barrier.set_primary_rect((
+                round(p_geom.x() * dpr),
+                round(p_geom.y() * dpr),
+                round(p_geom.width() * dpr),
+                round(p_geom.height() * dpr),
+            ))
 
         # Адаптируем размер окна и рабочей зоны
         self.focus_guardian.subscreen_rect = (target_x, target_y, target_w, target_h)

@@ -291,7 +291,7 @@ flowchart TD
   - Экспорт функций быстрого доступа `t(key, **kwargs)` и `tp(key, count, **kwargs)`.
 - `event_bus.py`: Централизованная шина сигналов Qt `bus` (навигация, громкость, телеметрия, медиа, язык: `language_changed`, DuckDeck: `deck_notification`, `deck_page_changed`, `deck_config_updated`).
 - `focus_guardian.py`: Защита от перехвата фокуса и восстановление курсора мыши (`WS_EX_NOACTIVATE`, `SetWinEventHook`).
-- `mouse_barrier.py`: Аппаратный барьер курсора мыши (`ClipCursor`) для предотвращения случайного вылета на второй экран.
+- `mouse_barrier.py`: Аппаратный барьер курсора мыши (`ClipCursor`) с автоопределением физических границ основного монитора (`MonitorFromPoint` / `GetMonitorInfoW`, защита от искажения DPI-масштабом Qt) и переприменением границ (`set_primary_rect`) для предотвращения случайного вылета на второй экран.
 - `touch_filter.py`: Перехват сенсорных касаний и движок двухпальцевого вертикального свайпа (Swipe Engine).
 - `window_manager.py`: WinAPI фасад управления внешними окнами, удаление рамок и тайлинг на 944×600.
 - `ui_base.py`: Базовый класс экранов `TouchModuleView(QWidget)` с `Qt.NoFocus`, автоматической подпиской на `bus.language_changed`, виртуальным методом `retranslate_ui()` и гарантированной отпиской в `cleanup()`.
